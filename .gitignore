@@ -36,6 +36,10 @@ apm_modules/
 # Kind swap tracking
 .kind-swaps
 
+# Security audit / threat-model working artifacts
+security-audit/
+.threat-model-state/
+
 # Local tool binaries (built by make kind-prereqs)
 bin/
 
