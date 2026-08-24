@@ -647,6 +647,10 @@
     "defaultMessage": "Log out",
     "description": "Sign-out action in the masthead identity menu."
   },
+  "app.nav.dashboard": {
+    "defaultMessage": "Operational dashboard",
+    "description": "Page and navigation label for the HyperShell dashboard."
+  },
   "app.nav.gateways": {
     "defaultMessage": "OpenShell Gateways",
     "description": "Page and resource collection label for OpenShell gateways."
@@ -662,6 +666,10 @@
   "app.notifications": {
     "defaultMessage": "Notifications",
     "description": "Accessible label for transient application notifications."
+  },
+  "app.page.dashboard.description": {
+    "defaultMessage": "Operational metrics dashboard for HyperShell adoption and provisioned resources.",
+    "description": "Browser metadata description for the operational dashboard page."
   },
   "app.page.gateway.description": {
     "defaultMessage": "Connect to this gateway and review its configuration.",
