@@ -1,0 +1,15 @@
+/*
+ * Widget action menus render in a document-level popper. Hide Remove until product
+ * supports an add-widgets drawer to restore removed tiles.
+ */
+body.hypershell-operational-dashboard [data-ouia-component-id="remove-widget"] {
+  display: none;
+}
+
+.hypershell-dashboard-metric-card {
+  --pf-v6-c-content--MarginBottom: 0;
+}
+
+.hypershell-dashboard-metric-card .pf-v6-c-stack {
+  --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
+}

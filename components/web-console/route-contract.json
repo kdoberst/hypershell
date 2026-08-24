@@ -1,9 +1,11 @@
 {
+  "dashboard": "dashboard",
   "gatewayDetail": "gateways/:gatewayId",
   "gatewayNew": "gateways/new",
   "login": "login",
   "directNavigationExamples": [
     "/",
+    "/dashboard",
     "/login",
     "/gateways/new",
     "/gateways/gateway-1"

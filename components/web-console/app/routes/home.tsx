@@ -1,4 +1,5 @@
 import { GatewaysPage } from "@openshift-online/hypershell-gateway-management-ui";
+import { OperationalDashboardPage } from "@openshift-online/hypershell-operational-dashboard-ui";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import {
@@ -16,6 +17,10 @@ export default function HomeRoute() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParameters, setSearchParameters] = useSearchParams();
+  const hostname = globalThis.location.hostname;
+  if (hostname === "dashboard.hypershell.localhost") {
+    return <OperationalDashboardPage />;
+  }
   const collectionState = parseGatewayListState(searchParameters);
   const deletedGatewayName =
     typeof (location.state as { deletedGatewayName?: unknown } | null)
