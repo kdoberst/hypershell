@@ -65,6 +65,19 @@ export function persistTokenSet(
   }
 }
 
+/** Reads realm roles from standard OIDC claim shapes. */
+export function extractRealmRoles(
+  claims: Record<string, unknown>,
+): string[] {
+  for (const claimName of ["roles", "groups"] as const) {
+    const rawRoles = claims[claimName];
+    if (Array.isArray(rawRoles)) {
+      return rawRoles.filter((role): role is string => typeof role === "string");
+    }
+  }
+  return [];
+}
+
 /** Clears both session cookies on terminal authentication failure. */
 export function clearSession(request: {
   session: secureSession.Session;
@@ -223,11 +236,7 @@ export async function registerAuth(
         if (typeof claims.name === "string") {
           request.session.set("name", claims.name);
         }
-        const rawRoles = claims.roles;
-        const roles = Array.isArray(rawRoles)
-          ? rawRoles.filter((r): r is string => typeof r === "string")
-          : [];
-        request.session.set("roles", roles);
+        request.session.set("roles", extractRealmRoles(claims));
       }
 
       request.session.options({ maxAge: config.sessionTtlSeconds });

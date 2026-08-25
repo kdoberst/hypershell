@@ -8,6 +8,7 @@ import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance, LogController } from "fastify";
 
 import { clearSession, persistTokenSet, registerAuth } from "./auth.js";
+import { hasDashboardAdminRole } from "./roles.js";
 import {
   browserRuntimeConfig,
   type BrowserRuntimeConfig,
@@ -285,6 +286,13 @@ export async function buildApp(
         const accessToken = request.session.get("accessToken");
         if (!accessToken) {
           reply.redirect("/auth/login");
+          return;
+        }
+        if (
+          pathname === "/dashboard" &&
+          !hasDashboardAdminRole(request.session.get("roles") ?? [])
+        ) {
+          reply.redirect("/");
           return;
         }
       }

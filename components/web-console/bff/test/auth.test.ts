@@ -783,11 +783,62 @@ describe("web-console BFF with OIDC enabled", () => {
   // -----------------------------------------------------------------------
 
   it("redirects unauthenticated GETs to application routes to /auth/login", async () => {
-    for (const route of ["/", "/gateways/new", "/gateways/gw-1"]) {
+    for (const route of ["/", "/dashboard", "/gateways/new", "/gateways/gw-1"]) {
       const response = await app.inject({ method: "GET", url: route });
       expect(response.statusCode, route).toBe(302);
       expect(response.headers.location, route).toBe("/auth/login");
     }
+  });
+
+  it("redirects non-admin users away from /dashboard", async () => {
+    const session = app.createSecureSession({
+      accessToken: "test-access-token",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      roles: ["hypershell-users"],
+    });
+    const cookie = `session=${encodeURIComponent(app.encodeSecureSession(session))}`;
+    const response = await app.inject({
+      headers: { cookie },
+      method: "GET",
+      url: "/dashboard",
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe("/");
+  });
+
+  it("serves /dashboard to hypershell-admins", async () => {
+    const session = app.createSecureSession({
+      accessToken: "test-access-token",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      roles: ["hypershell-admins"],
+    });
+    const cookie = `session=${encodeURIComponent(app.encodeSecureSession(session))}`;
+    const response = await app.inject({
+      headers: { cookie },
+      method: "GET",
+      url: "/dashboard",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/html");
+  });
+
+  it("serves /dashboard to platform:admin", async () => {
+    const session = app.createSecureSession({
+      accessToken: "test-access-token",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      roles: ["platform:admin"],
+    });
+    const cookie = `session=${encodeURIComponent(app.encodeSecureSession(session))}`;
+    const response = await app.inject({
+      headers: { cookie },
+      method: "GET",
+      url: "/dashboard",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/html");
   });
 
   it("serves application routes when authenticated", async () => {

@@ -803,6 +803,14 @@
     "defaultMessage": "Notifications",
     "description": "Accessible label for transient application notifications."
   },
+  "app.page.dashboard.accessDenied.body": {
+    "defaultMessage": "The operational dashboard is available only to HyperShell administrators.",
+    "description": "Recovery guidance shown when a signed-in user lacks the admin role for the dashboard."
+  },
+  "app.page.dashboard.accessDenied.title": {
+    "defaultMessage": "Access denied",
+    "description": "Heading shown when a signed-in user lacks the admin role for the dashboard."
+  },
   "app.page.dashboard.description": {
     "defaultMessage": "Operational metrics dashboard for HyperShell adoption and provisioned resources.",
     "description": "Browser metadata description for the operational dashboard page."
