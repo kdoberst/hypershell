@@ -13,9 +13,12 @@ import {
   Title,
 } from "@patternfly/react-core";
 import type { PropsWithChildren } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
+
 import type { OperationalMetric } from "../application/dashboard-types";
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
 import { UtilizationChart } from "../dashboard/utilization-chart";
+import { messages } from "../messages";
 
 function WidgetContent({ children }: Readonly<PropsWithChildren>) {
   return (
@@ -30,6 +33,8 @@ export function MetricCard({
   subtitle,
   title,
 }: Readonly<{ metric: OperationalMetric; subtitle: string; title: string }>) {
+  const intl = useIntl();
+
   return (
     <WidgetContent>
       <Content className="hypershell-dashboard-metric-card">
@@ -38,7 +43,10 @@ export function MetricCard({
             <Flex justifyContent={{ default: "justifyContentCenter" }}>
               <FlexItem>
                 <Title headingLevel="h3" size="lg">
-                  {metric.value} {title.toLowerCase()}
+                  {intl.formatMessage(messages.metricValue, {
+                    label: title,
+                    value: metric.value,
+                  })}
                 </Title>
                 {subtitle ? <small>{subtitle}</small> : null}
               </FlexItem>
@@ -46,11 +54,7 @@ export function MetricCard({
           </StackItem>
           {metric.trend ? (
             <StackItem>
-              <TrendSparklineChart
-                trend={metric.trend}
-                label={title}
-                yAxisLabel={title.toLowerCase()}
-              />
+              <TrendSparklineChart trend={metric.trend} title={title} />
             </StackItem>
           ) : null}
         </Stack>
@@ -91,60 +95,93 @@ export function UtilizationCard({
 export function SummaryCard({
   metrics,
 }: Readonly<{ metrics: readonly OperationalMetric[] }>) {
+  const intl = useIntl();
+
   return (
     <WidgetContent>
       <Stack hasGutter>
         <StackItem>
-          <Title headingLevel="h3" size="md">Usage</Title>
+          <Title headingLevel="h3" size="md">
+            <FormattedMessage {...messages.summaryUsage} />
+          </Title>
         </StackItem>
         <StackItem>
-          <DescriptionList isHorizontal aria-label="Usage metrics"  >
+          <DescriptionList
+            isHorizontal
+            aria-label={intl.formatMessage(messages.summaryUsageAriaLabel)}
+          >
             <DescriptionListGroup>
-              <DescriptionListTerm>Users</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.users} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
                 {metrics.find((metric) => metric.id === "active-users")?.value}
               </DescriptionListDescription>
             </DescriptionListGroup>
             <DescriptionListGroup>
-              <DescriptionListTerm>Gateways</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.gateways} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "provisioned-gateways")?.value}
+                {
+                  metrics.find((metric) => metric.id === "provisioned-gateways")
+                    ?.value
+                }
               </DescriptionListDescription>
             </DescriptionListGroup>
             <DescriptionListGroup>
-              <DescriptionListTerm>Namespaces</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.namespaces} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
                 {metrics.find((metric) => metric.id === "namespaces")?.value}
               </DescriptionListDescription>
             </DescriptionListGroup>
             <DescriptionListGroup>
-              <DescriptionListTerm>Sandboxes</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.widgetSandboxes} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "provisioned-sandboxes")?.value}
+                {
+                  metrics.find(
+                    (metric) => metric.id === "provisioned-sandboxes",
+                  )?.value
+                }
               </DescriptionListDescription>
             </DescriptionListGroup>
           </DescriptionList>
         </StackItem>
         <hr />
         <StackItem>
-          <Title headingLevel="h3" size="md">System</Title>
+          <Title headingLevel="h3" size="md">
+            <FormattedMessage {...messages.summarySystem} />
+          </Title>
         </StackItem>
         <StackItem>
-          <DescriptionList isHorizontal aria-label="Usage metrics"  >
+          <DescriptionList
+            isHorizontal
+            aria-label={intl.formatMessage(messages.summarySystemAriaLabel)}
+          >
             <DescriptionListGroup>
-              <DescriptionListTerm>Memory</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.memory} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
                 {metrics.find((metric) => metric.id === "memory")?.value}
               </DescriptionListDescription>
             </DescriptionListGroup>
             <DescriptionListGroup>
-              <DescriptionListTerm>CPUs</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.cpus} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
                 {metrics.find((metric) => metric.id === "cpu")?.value}
               </DescriptionListDescription>
             </DescriptionListGroup>
             <DescriptionListGroup>
-              <DescriptionListTerm>Pods</DescriptionListTerm>
+              <DescriptionListTerm>
+                <FormattedMessage {...messages.pods} />
+              </DescriptionListTerm>
               <DescriptionListDescription>
                 {metrics.find((metric) => metric.id === "pods")?.value}
               </DescriptionListDescription>

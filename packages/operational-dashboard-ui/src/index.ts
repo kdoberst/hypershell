@@ -22,11 +22,10 @@ export {
   operationalDashboardMetricsQueryKey,
   operationalDashboardRefreshMilliseconds,
 } from "./dashboard/dashboard-data";
-export {
-  mockOperationalDashboardMetrics,
-} from "./fixtures/mock-operational-dashboard-metrics";
+export { mockOperationalDashboardMetrics } from "./fixtures/mock-operational-dashboard-metrics";
 export { ResourceRefreshButton } from "./shared/resource-refresh-button";
 export {
   OperationalDashboardPage,
   type OperationalDashboardPageProps,
 } from "./pages/operational-dashboard-page";
+export { messages as dashboardMessages } from "./messages";

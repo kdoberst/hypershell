@@ -26,10 +26,15 @@ import {
 } from "@patternfly/widgetized-dashboard";
 import "@patternfly/widgetized-dashboard/dist/esm/styles.css";
 import { useEffect, useMemo, useState } from "react";
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 
 import type { OperationalDashboardMetrics } from "../application/dashboard-types";
-import { defaultDashboardLayoutTemplate, SUMMARY_WIDGET_HEIGHT } from "../dashboard/dashboard-layout-template";
+import {
+  defaultDashboardLayoutTemplate,
+  SUMMARY_WIDGET_HEIGHT,
+} from "../dashboard/dashboard-layout-template";
 import { UtilizationChart } from "../dashboard/utilization-chart";
+import { messages } from "../messages";
 import { ResourceRefreshButton } from "../shared/resource-refresh-button";
 import "./dashboard-widget.css";
 import { MetricCard, SummaryCard } from "./dashboard-widget";
@@ -40,7 +45,6 @@ const OPERATIONAL_DASHBOARD_BODY_CLASS = "hypershell-operational-dashboard";
 const template = defaultDashboardLayoutTemplate;
 
 const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v6";
-const REFRESH_DASHBOARD_ARIA_LABEL = "Refresh dashboard metrics";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -84,6 +88,7 @@ const METRIC_WIDGET_DEFAULTS = { h: 3, maxH: 5, minH: 2, w: 1 };
 
 function createWidgetMapping(
   metrics: OperationalDashboardMetrics,
+  intl: IntlShape,
 ): WidgetMapping {
   const metricById = new Map(
     metrics.metrics.map((metric) => [metric.id, metric]),
@@ -92,17 +97,21 @@ function createWidgetMapping(
   const renderMetric = (
     metricId: string,
     subtitle: string,
-    title: string,
+    titleMessage: (typeof messages)[keyof typeof messages],
     metricType: "metric" | "utilization",
   ) => {
     const metric = metricById.get(metricId);
+    const title = intl.formatMessage(titleMessage);
+
     if (!metric) {
       return (
         <Bullseye>
           <EmptyState headingLevel="h3" variant={EmptyStateVariant.sm}>
-            <Title headingLevel="h3">Metric unavailable</Title>
+            <Title headingLevel="h3">
+              <FormattedMessage {...messages.metricUnavailableTitle} />
+            </Title>
             <EmptyStateBody>
-              This information not currently available.
+              <FormattedMessage {...messages.metricUnavailableBody} />
             </EmptyStateBody>
           </EmptyState>
         </Bullseye>
@@ -124,62 +133,92 @@ function createWidgetMapping(
         minH: METRIC_WIDGET_DEFAULTS.minH,
         w: 1,
       },
-      config: { icon: <UsersIcon />, title: "Summary" },
+      config: {
+        icon: <UsersIcon />,
+        title: intl.formatMessage(messages.summary),
+      },
       renderWidget: () => <SummaryCard metrics={metrics.metrics} />,
     },
     "active-users": {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <UsersIcon />, title: "Active users" },
+      config: {
+        icon: <UsersIcon />,
+        title: intl.formatMessage(messages.activeUsers),
+      },
       renderWidget: () =>
-        renderMetric("active-users", "", "Active users", "metric"),
+        renderMetric("active-users", "", messages.activeUsers, "metric"),
     },
     "provisioned-gateways": {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <ClusterIcon />, title: "Provisioned gateways" },
+      config: {
+        icon: <ClusterIcon />,
+        title: intl.formatMessage(messages.provisionedGateways),
+      },
       renderWidget: () =>
         renderMetric(
           "provisioned-gateways",
           "",
-          "Provisioned gateways",
+          messages.provisionedGateways,
           "metric",
         ),
     },
     "provisioned-sandboxes": {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <CubesIcon />, title: "Provisioned sandboxes" },
+      config: {
+        icon: <CubesIcon />,
+        title: intl.formatMessage(messages.provisionedSandboxes),
+      },
       renderWidget: () =>
         renderMetric(
           "provisioned-sandboxes",
           "",
-          "Provisioned sandboxes",
+          messages.provisionedSandboxes,
           "metric",
         ),
     },
     namespaces: {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <CubesIcon />, title: "Namespaces" },
+      config: {
+        icon: <CubesIcon />,
+        title: intl.formatMessage(messages.namespaces),
+      },
       renderWidget: () =>
-        renderMetric("namespaces", "", "Namespaces", "metric"),
+        renderMetric("namespaces", "", messages.namespaces, "metric"),
     },
     nodes: {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <ClusterIcon />, title: "Nodes" },
-      renderWidget: () => renderMetric("nodes", "", "Nodes", "metric"),
+      config: {
+        icon: <ClusterIcon />,
+        title: intl.formatMessage(messages.nodes),
+      },
+      renderWidget: () => renderMetric("nodes", "", messages.nodes, "metric"),
     },
     cpu: {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <MicrochipIcon />, title: "CPU" },
-      renderWidget: () => renderMetric("cpu", "", "CPU", "utilization"),
+      config: {
+        icon: <MicrochipIcon />,
+        title: intl.formatMessage(messages.widgetCpu),
+      },
+      renderWidget: () =>
+        renderMetric("cpu", "", messages.widgetCpu, "utilization"),
     },
     memory: {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <MemoryIcon />, title: "Memory" },
-      renderWidget: () => renderMetric("memory", "", "Memory", "utilization"),
+      config: {
+        icon: <MemoryIcon />,
+        title: intl.formatMessage(messages.widgetMemory),
+      },
+      renderWidget: () =>
+        renderMetric("memory", "", messages.widgetMemory, "utilization"),
     },
     pods: {
       defaults: METRIC_WIDGET_DEFAULTS,
-      config: { icon: <CubesIcon />, title: "Pods" },
-      renderWidget: () => renderMetric("pods", "", "Pods", "utilization"),
+      config: {
+        icon: <CubesIcon />,
+        title: intl.formatMessage(messages.widgetPods),
+      },
+      renderWidget: () =>
+        renderMetric("pods", "", messages.widgetPods, "utilization"),
     },
   };
 }
@@ -191,8 +230,10 @@ export interface OperationalDashboardPageProps {
 
 export function OperationalDashboardPage({
   metrics,
-  title = "HyperShell operational dashboard",
+  title,
 }: Readonly<OperationalDashboardPageProps>) {
+  const intl = useIntl();
+  const pageTitle = title ?? intl.formatMessage(messages.title);
   const metricsQuery = useGetMetricsData({
     enabled: metrics === undefined,
   });
@@ -229,8 +270,10 @@ export function OperationalDashboardPage({
   const [gridLayoutKey, setGridLayoutKey] = useState(0);
   const widgetMapping = useMemo(
     () =>
-      dashboardMetrics ? createWidgetMapping(dashboardMetrics) : undefined,
-    [dashboardMetrics],
+      dashboardMetrics
+        ? createWidgetMapping(dashboardMetrics, intl)
+        : undefined,
+    [dashboardMetrics, intl],
   );
 
   const handleTemplateChange = (nextTemplate: ExtendedTemplateConfig) => {
@@ -259,17 +302,16 @@ export function OperationalDashboardPage({
       >
         <FlexItem>
           <Content>
-            <Title headingLevel="h1">{title}</Title>
+            <Title headingLevel="h1">{pageTitle}</Title>
             <p>
-              Early dashboard aligned to HYPERSHELL-112 with mocked values for
-              signup, active user, and provisioned resource metrics.
+              <FormattedMessage {...messages.description} />
             </p>
           </Content>
         </FlexItem>
         {metrics === undefined ? (
           <FlexItem>
             <ResourceRefreshButton
-              ariaLabel={REFRESH_DASHBOARD_ARIA_LABEL}
+              ariaLabel={intl.formatMessage(messages.refresh)}
               isRefreshing={metricsQuery.isFetching}
               onRefresh={() => {
                 void metricsQuery.refetch();
@@ -280,17 +322,17 @@ export function OperationalDashboardPage({
       </Flex>
       {metricsQuery.isPending && metrics === undefined ? (
         <Bullseye>
-          <Spinner aria-label="Loading operational dashboard metrics" />
+          <Spinner aria-label={intl.formatMessage(messages.loading)} />
         </Bullseye>
       ) : null}
       {metricsQuery.isError && metrics === undefined ? (
         <Alert
-          title="Operational dashboard metrics are unavailable"
+          title={intl.formatMessage(messages.loadErrorTitle)}
           variant="danger"
         >
           {metricsQuery.error instanceof Error
             ? metricsQuery.error.message
-            : "An unexpected error occurred while loading dashboard metrics."}
+            : intl.formatMessage(messages.loadErrorBody)}
         </Alert>
       ) : null}
       {widgetMapping ? (

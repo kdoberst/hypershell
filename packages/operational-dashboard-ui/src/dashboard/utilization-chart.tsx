@@ -1,8 +1,11 @@
 import { ChartDonutUtilization } from "@patternfly/react-charts/victory";
+import { useIntl } from "react-intl";
+
 import type {
   OperationalMetric,
   OperationalMetricTrend,
 } from "../application/dashboard-types";
+import { messages } from "../messages";
 
 interface UsageData {
   x: string;
@@ -26,14 +29,19 @@ function isUtilizationMetric(
 export function UtilizationChart({
   metric,
 }: Readonly<{ metric: OperationalMetric }>) {
+  const intl = useIntl();
+
   if (!isUtilizationMetric(metric)) {
     return null;
   }
 
   const { unit, total, value } = metric;
   const percentage = Math.round((Number(value) / Number(total)) * 100);
+  const capacityLabel = intl.formatMessage(messages.utilizationCapacity, {
+    unit,
+  });
 
-  const data: UsageData = { x: `${unit} capacity`, y: percentage };
+  const data: UsageData = { x: capacityLabel, y: percentage };
 
   return (
     <div
@@ -41,20 +49,32 @@ export function UtilizationChart({
         aspectRatio: "1/1",
         height: "100%",
         marginInline: "auto",
- 
       }}
     >
       <ChartDonutUtilization
-        ariaDesc={`${unit} capacity`}
-        ariaTitle={`${unit} utilization chart`}
+        ariaDesc={capacityLabel}
+        ariaTitle={intl.formatMessage(messages.utilizationChartTitle, {
+          unit,
+        })}
         constrainToVisibleArea
         data={data}
         labels={({ datum }: { datum: UsageData }) =>
-          datum.x ? `${datum.x}: ${datum.y.toString()}%` : null
+          datum.x
+            ? intl.formatMessage(messages.utilizationDataLabel, {
+                capacity: datum.x,
+                percentage: datum.y,
+              })
+            : null
         }
         name="chart1"
-        subTitle={`of ${total} ${unit}`}
-        title={`${value} ${unit}`}
+        subTitle={intl.formatMessage(messages.utilizationSubtitle, {
+          total,
+          unit,
+        })}
+        title={intl.formatMessage(messages.utilizationLabel, {
+          unit,
+          value,
+        })}
         thresholds={[{ value: 60 }, { value: 90 }]}
       />
     </div>

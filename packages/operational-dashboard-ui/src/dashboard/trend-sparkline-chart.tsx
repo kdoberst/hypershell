@@ -5,8 +5,10 @@ import {
   ChartVoronoiContainer,
 } from "../patternfly/victory-charts";
 import { useEffect, useRef, useState } from "react";
+import { useIntl } from "react-intl";
 
 import type { OperationalMetricTrend } from "../application/dashboard-types";
+import { messages } from "../messages";
 
 interface SparklineDatum {
   name: string;
@@ -15,12 +17,13 @@ interface SparklineDatum {
 }
 
 export function TrendSparklineChart({
-  trend, label, yAxisLabel
+  trend,
+  title,
 }: Readonly<{
   trend: OperationalMetricTrend;
-  label: string;
-  yAxisLabel: string;
+  title: string;
 }>) {
+  const intl = useIntl();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(220);
 
@@ -48,19 +51,23 @@ export function TrendSparklineChart({
   }
 
   const chartData: SparklineDatum[] = trend.points.map((point) => ({
-    name: yAxisLabel,
+    name: title,
     x: point.label,
     y: point.value,
   }));
 
   const formatTooltip = (datum: SparklineDatum) =>
-    `${datum.x}: ${String(datum.y)} ${yAxisLabel.toLowerCase()}`;
+    intl.formatMessage(messages.trendTooltip, {
+      date: datum.x,
+      metric: title,
+      value: datum.y,
+    });
 
   return (
     <div ref={containerRef} style={{ height: 52, width: "100%" }}>
       <ChartGroup
-        ariaDesc={label}
-        ariaTitle={label}
+        ariaDesc={title}
+        ariaTitle={title}
         containerComponent={
           <ChartVoronoiContainer
             constrainToVisibleArea
