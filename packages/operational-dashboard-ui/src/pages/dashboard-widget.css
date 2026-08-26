@@ -20,7 +20,13 @@ body.hypershell-operational-dashboard [data-ouia-component-id="remove-widget"] {
 }
 
 .hypershell-dashboard-utilization-chart {
-  aspect-ratio: 1 / 1;
-  height: 100%;
-  margin-inline: auto;
+  padding-inline-start: var(--pf-t--global--spacer--sm);
+}
+
+.hypershell-dashboard-utilization-chart__label {
+  min-width: 0;
+}
+
+.hypershell-dashboard-utilization-chart__donut {
+  flex-shrink: 0;
 }

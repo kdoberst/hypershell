@@ -68,22 +68,11 @@ export function MetricCard({
 
 export function UtilizationCard({
   metric,
-  subtitle,
-}: Readonly<{ metric: OperationalMetric; subtitle: string; title: string }>) {
+}: Readonly<{ metric: OperationalMetric }>) {
   return (
     <WidgetContent>
       <Content>
         <Stack hasGutter>
-          <StackItem>
-            <Flex justifyContent={{ default: "justifyContentCenter" }}>
-              <FlexItem>
-                <h2>
-                  {metric.value} {metric.unit}
-                </h2>
-                <small>{subtitle}</small>
-              </FlexItem>
-            </Flex>
-          </StackItem>
           {isUtilizationMetric(metric) ? (
             <StackItem>
               <UtilizationChart metric={metric} />

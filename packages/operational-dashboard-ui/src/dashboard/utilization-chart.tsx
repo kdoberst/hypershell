@@ -1,4 +1,5 @@
 import { ChartDonutUtilization } from "@patternfly/react-charts/victory";
+import { Flex, FlexItem, Title } from "@patternfly/react-core";
 import { useIntl } from "react-intl";
 
 import type {
@@ -20,6 +21,17 @@ interface UtilizationMetric {
   unit: string;
   value: string;
 }
+
+/** Rendered pixel size; must match the donut wrapper and ChartDonutUtilization height/width. */
+const UTILIZATION_CHART_SIZE = 130;
+
+/** Extra left padding keeps hover tooltips inside the clipped widget body. */
+const UTILIZATION_CHART_PADDING = {
+  bottom: 10,
+  left: 32,
+  right: 10,
+  top: 10,
+} as const;
 
 export function isUtilizationMetric(
   metric: OperationalMetric,
@@ -43,35 +55,55 @@ export function UtilizationChart({
   });
 
   const data: UsageData = { x: capacityLabel, y: percentage };
+  const valueLabel = intl.formatMessage(messages.utilizationLabel, {
+    unit,
+    value,
+  });
+  const capacitySubtitle = intl.formatMessage(messages.utilizationSubtitle, {
+    total,
+    unit,
+  });
 
   return (
-    <div className="hypershell-dashboard-utilization-chart">
-      <ChartDonutUtilization
-        ariaDesc={capacityLabel}
-        ariaTitle={intl.formatMessage(messages.utilizationChartTitle, {
-          unit,
-        })}
-        constrainToVisibleArea
-        data={data}
-        labels={({ datum }: { datum: UsageData }) =>
-          datum.x
-            ? intl.formatMessage(messages.utilizationDataLabel, {
-                capacity: datum.x,
-                percentage: datum.y,
-              })
-            : null
-        }
-        name="chart1"
-        subTitle={intl.formatMessage(messages.utilizationSubtitle, {
-          total,
-          unit,
-        })}
-        title={intl.formatMessage(messages.utilizationLabel, {
-          unit,
-          value,
-        })}
-        thresholds={[{ value: 60 }, { value: 90 }]}
-      />
-    </div>
+    <Flex
+      alignItems={{ default: "alignItemsCenter" }}
+      className="hypershell-dashboard-utilization-chart"
+      gap={{ default: "gapSm" }}
+    >
+      <FlexItem
+        className="hypershell-dashboard-utilization-chart__donut"
+        style={{
+          height: UTILIZATION_CHART_SIZE,
+          width: UTILIZATION_CHART_SIZE,
+        }}
+      >
+        <ChartDonutUtilization
+          ariaDesc={capacityLabel}
+          ariaTitle={intl.formatMessage(messages.utilizationChartTitle, {
+            unit,
+          })}
+          constrainToVisibleArea
+          data={data}
+          height={UTILIZATION_CHART_SIZE}
+          labels={({ datum }: { datum: UsageData }) =>
+            datum.x
+              ? intl.formatMessage(messages.utilizationDataLabel, {
+                  capacity: datum.x,
+                  percentage: datum.y,
+                })
+              : null
+          }
+          padding={UTILIZATION_CHART_PADDING}
+          thresholds={[{ value: 60 }, { value: 90 }]}
+          width={UTILIZATION_CHART_SIZE}
+        />
+      </FlexItem>
+      <FlexItem className="hypershell-dashboard-utilization-chart__label">
+        <Title headingLevel="h3" size="lg">
+          {valueLabel}
+        </Title>
+        <small>{capacitySubtitle}</small>
+      </FlexItem>
+    </Flex>
   );
 }
