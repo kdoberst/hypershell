@@ -9,12 +9,19 @@ import {
   DescriptionListTerm,
   Flex,
   FlexItem,
+  Icon,
   Stack,
   StackItem,
   Title,
   Tooltip,
 } from "@patternfly/react-core";
-import { TrendDownIcon, TrendUpIcon } from "@patternfly/react-icons";
+import {
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+  TrendDownIcon,
+  TrendUpIcon,
+} from "@patternfly/react-icons";
 import type { PropsWithChildren } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -26,6 +33,8 @@ import {
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
 import {
+  getUtilizationPercentage,
+  getUtilizationStatusLevel,
   isUtilizationMetric,
   UtilizationChart,
 } from "../dashboard/utilization-chart";
@@ -163,6 +172,114 @@ function SummaryTrendIndicator({
   );
 }
 
+function UtilizationStatusIcon({
+  percentage,
+  total,
+  unit,
+  value,
+}: Readonly<{
+  percentage: number;
+  total: string;
+  unit: string;
+  value: string;
+}>) {
+  const intl = useIntl();
+  const statusLevel = getUtilizationStatusLevel(percentage);
+  const tooltipContent = intl.formatMessage(
+    messages.utilizationSummaryTooltip,
+    {
+      percent: percentage,
+      separator: "  | ",
+      total,
+      unit,
+      value,
+    },
+  );
+
+  const statusIcon = (() => {
+    switch (statusLevel) {
+      case "ok":
+        return (
+          <Icon isInline status="success">
+            <CheckCircleIcon aria-hidden />
+          </Icon>
+        );
+      case "warning":
+        return (
+          <Icon isInline status="warning">
+            <ExclamationTriangleIcon aria-hidden />
+          </Icon>
+        );
+      case "danger":
+        return (
+          <Icon isInline status="danger">
+            <ExclamationCircleIcon aria-hidden />
+          </Icon>
+        );
+    }
+  })();
+
+  return (
+    <Tooltip content={tooltipContent} aria="labelledby">
+      <Button
+        aria-label={tooltipContent}
+        className="hypershell-dashboard-summary-utilization-status"
+        isInline
+        variant="plain"
+      >
+        {statusIcon}
+      </Button>
+    </Tooltip>
+  );
+}
+
+function SummaryUtilizationValue({
+  metric,
+}: Readonly<{ metric: OperationalMetric | undefined }>) {
+  const intl = useIntl();
+
+  if (!metric) {
+    return null;
+  }
+
+  if (!isUtilizationMetric(metric)) {
+    return (
+      <>
+        {metric.unit
+          ? intl.formatMessage(messages.utilizationLabel, {
+              unit: metric.unit,
+              value: metric.value,
+            })
+          : metric.value}
+      </>
+    );
+  }
+
+  const percentage = getUtilizationPercentage(metric.value, metric.total);
+
+  return (
+    <Flex
+      alignItems={{ default: "alignItemsCenter" }}
+      spaceItems={{ default: "spaceItemsSm" }}
+    >
+      <FlexItem>
+        {intl.formatMessage(messages.utilizationLabel, {
+          unit: metric.unit,
+          value: metric.value,
+        })}
+      </FlexItem>
+      <FlexItem>
+        <UtilizationStatusIcon
+          percentage={percentage}
+          total={metric.total}
+          unit={metric.unit}
+          value={metric.value}
+        />
+      </FlexItem>
+    </Flex>
+  );
+}
+
 function SummaryMetricValue({
   metric,
 }: Readonly<{ metric: OperationalMetric | undefined }>) {
@@ -241,7 +358,9 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.memory} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            {metrics.find((metric) => metric.id === "memory")?.value}
+            <SummaryUtilizationValue
+              metric={metrics.find((metric) => metric.id === "memory")}
+            />
           </DescriptionListDescription>
         </DescriptionListGroup>
         <DescriptionListGroup>
@@ -249,7 +368,9 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.cpus} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            {metrics.find((metric) => metric.id === "cpu")?.value}
+            <SummaryUtilizationValue
+              metric={metrics.find((metric) => metric.id === "cpu")}
+            />
           </DescriptionListDescription>
         </DescriptionListGroup>
         <DescriptionListGroup>
@@ -257,7 +378,17 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.pods} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            {metrics.find((metric) => metric.id === "pods")?.value}
+            <SummaryUtilizationValue
+              metric={metrics.find((metric) => metric.id === "pods")}
+            />
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.nodes} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {metrics.find((metric) => metric.id === "nodes")?.value}
           </DescriptionListDescription>
         </DescriptionListGroup>
       </DescriptionList>

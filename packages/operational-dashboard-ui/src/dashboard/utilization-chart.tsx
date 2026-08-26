@@ -22,6 +22,32 @@ interface UtilizationMetric {
   value: string;
 }
 
+export const UTILIZATION_WARNING_THRESHOLD_PERCENT = 60;
+export const UTILIZATION_DANGER_THRESHOLD_PERCENT = 90;
+
+export const UTILIZATION_THRESHOLDS = [
+  { value: UTILIZATION_WARNING_THRESHOLD_PERCENT },
+  { value: UTILIZATION_DANGER_THRESHOLD_PERCENT },
+] as const;
+
+export type UtilizationStatusLevel = "danger" | "ok" | "warning";
+
+export function getUtilizationPercentage(value: string, total: string): number {
+  return Math.round((Number(value) / Number(total)) * 100);
+}
+
+export function getUtilizationStatusLevel(
+  percentage: number,
+): UtilizationStatusLevel {
+  if (percentage >= UTILIZATION_DANGER_THRESHOLD_PERCENT) {
+    return "danger";
+  }
+  if (percentage >= UTILIZATION_WARNING_THRESHOLD_PERCENT) {
+    return "warning";
+  }
+  return "ok";
+}
+
 /** Rendered pixel size; must match the donut wrapper and ChartDonutUtilization height/width. */
 const UTILIZATION_CHART_SIZE = 130;
 
@@ -49,7 +75,7 @@ export function UtilizationChart({
   }
 
   const { unit, total, value } = metric;
-  const percentage = Math.round((Number(value) / Number(total)) * 100);
+  const percentage = getUtilizationPercentage(value, total);
   const capacityLabel = intl.formatMessage(messages.utilizationCapacity, {
     unit,
   });
@@ -94,7 +120,7 @@ export function UtilizationChart({
               : null
           }
           padding={UTILIZATION_CHART_PADDING}
-          thresholds={[{ value: 60 }, { value: 90 }]}
+          thresholds={[...UTILIZATION_THRESHOLDS]}
           width={UTILIZATION_CHART_SIZE}
         />
       </FlexItem>

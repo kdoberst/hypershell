@@ -75,13 +75,13 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
       }),
       Object.freeze({
         id: "cpu",
-        value: "4.2",
+        value: "48",
         unit: "cores",
         total: "60",
       }),
       Object.freeze({
         id: "memory",
-        value: "92.3",
+        value: "220",
         unit: "GiB",
         total: "237",
       }),

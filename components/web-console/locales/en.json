@@ -175,6 +175,10 @@
     "defaultMessage": "of {total} {unit}",
     "description": "Subtitle for a utilization donut chart."
   },
+  "app.dashboard.utilization.summaryTooltip": {
+    "defaultMessage": "{percent}% capacity{separator}{value} of {total} {unit}",
+    "description": "Tooltip for utilization status in the system summary widget."
+  },
   "app.dashboard.widget.activeUsers": {
     "defaultMessage": "Active users",
     "description": "Title for the active users dashboard widget."

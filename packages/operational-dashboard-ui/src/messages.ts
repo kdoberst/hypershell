@@ -234,6 +234,11 @@ export const messages = defineMessages({
     defaultMessage: "of {total} {unit}",
     description: "Subtitle for a utilization donut chart.",
   },
+  utilizationSummaryTooltip: {
+    id: "app.dashboard.utilization.summaryTooltip",
+    defaultMessage: "{percent}% capacity{separator}{value} of {total} {unit}",
+    description: "Tooltip for utilization status in the system summary widget.",
+  },
   widgetCpu: {
     id: "app.dashboard.widget.cpu",
     defaultMessage: "CPU",
