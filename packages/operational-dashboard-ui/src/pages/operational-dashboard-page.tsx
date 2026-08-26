@@ -35,21 +35,27 @@ import {
   defaultDashboardLayoutTemplate,
   GATEWAY_STATUS_WIDGET_HEIGHT,
   localizeDashboardLayoutTemplate,
-  SUMMARY_WIDGET_HEIGHT,
+  SYSTEM_SUMMARY_WIDGET_HEIGHT,
+  USAGE_SUMMARY_WIDGET_HEIGHT,
 } from "../dashboard/dashboard-layout-template";
 import { UtilizationChart } from "../dashboard/utilization-chart";
 import { useDashboardUi } from "../dashboard-ui-provider";
 import { messages } from "../messages";
 import { ResourceRefreshButton } from "../shared/resource-refresh-button";
 import "./dashboard-widget.css";
-import { GatewayStatusCard, MetricCard, SummaryCard } from "./dashboard-widget";
+import {
+  GatewayStatusCard,
+  MetricCard,
+  SystemSummaryCard,
+  UsageSummaryCard,
+} from "./dashboard-widget";
 import { useGetMetricsData } from "./get-metrics-data";
 
 const OPERATIONAL_DASHBOARD_BODY_CLASS = "hypershell-operational-dashboard";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v10";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v12";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -156,18 +162,31 @@ function createWidgetMapping(
   };
 
   return {
-    summary: {
+    "usage-summary": {
       defaults: {
-        h: SUMMARY_WIDGET_HEIGHT,
-        maxH: SUMMARY_WIDGET_HEIGHT + 2,
+        h: USAGE_SUMMARY_WIDGET_HEIGHT,
+        maxH: USAGE_SUMMARY_WIDGET_HEIGHT + 2,
         minH: METRIC_WIDGET_DEFAULTS.minH,
         w: 1,
       },
       config: {
         icon: <UsersIcon />,
-        title: intl.formatMessage(messages.summary),
+        title: intl.formatMessage(messages.usageSummaryWidget),
       },
-      renderWidget: () => <SummaryCard metrics={metrics.metrics} />,
+      renderWidget: () => <UsageSummaryCard metrics={metrics.metrics} />,
+    },
+    "system-summary": {
+      defaults: {
+        h: SYSTEM_SUMMARY_WIDGET_HEIGHT,
+        maxH: SYSTEM_SUMMARY_WIDGET_HEIGHT + 2,
+        minH: METRIC_WIDGET_DEFAULTS.minH,
+        w: 1,
+      },
+      config: {
+        icon: <MemoryIcon />,
+        title: intl.formatMessage(messages.systemSummaryWidget),
+      },
+      renderWidget: () => <SystemSummaryCard metrics={metrics.metrics} />,
     },
     "active-users": {
       defaults: METRIC_WIDGET_DEFAULTS,

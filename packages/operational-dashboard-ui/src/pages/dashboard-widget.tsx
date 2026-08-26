@@ -128,103 +128,96 @@ export function UtilizationCard({
   );
 }
 
-export function SummaryCard({
+export function UsageSummaryCard({
   metrics,
 }: Readonly<{ metrics: readonly OperationalMetric[] }>) {
   const intl = useIntl();
 
   return (
     <WidgetContent>
-      <Stack hasGutter>
-        <StackItem>
-          <Title headingLevel="h3" size="md">
-            <FormattedMessage {...messages.summaryUsage} />
-          </Title>
-        </StackItem>
-        <StackItem>
-          <DescriptionList
-            isHorizontal
-            aria-label={intl.formatMessage(messages.summaryUsageAriaLabel)}
-          >
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.users} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "active-users")?.value}
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.gateways} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {
-                  metrics.find((metric) => metric.id === "provisioned-gateways")
-                    ?.value
-                }
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.namespaces} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "namespaces")?.value}
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.widgetSandboxes} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {
-                  metrics.find(
-                    (metric) => metric.id === "provisioned-sandboxes",
-                  )?.value
-                }
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          </DescriptionList>
-        </StackItem>
-        <hr />
-        <StackItem>
-          <Title headingLevel="h3" size="md">
-            <FormattedMessage {...messages.summarySystem} />
-          </Title>
-        </StackItem>
-        <StackItem>
-          <DescriptionList
-            isHorizontal
-            aria-label={intl.formatMessage(messages.summarySystemAriaLabel)}
-          >
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.memory} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "memory")?.value}
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.cpus} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "cpu")?.value}
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-            <DescriptionListGroup>
-              <DescriptionListTerm>
-                <FormattedMessage {...messages.pods} />
-              </DescriptionListTerm>
-              <DescriptionListDescription>
-                {metrics.find((metric) => metric.id === "pods")?.value}
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          </DescriptionList>
-        </StackItem>
-      </Stack>
+      <DescriptionList
+        isHorizontal
+        aria-label={intl.formatMessage(messages.summaryUsageAriaLabel)}
+      >
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.users} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {metrics.find((metric) => metric.id === "active-users")?.value}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.gateways} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {
+              metrics.find((metric) => metric.id === "provisioned-gateways")
+                ?.value
+            }
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.namespaces} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {metrics.find((metric) => metric.id === "namespaces")?.value}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.widgetSandboxes} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {
+              metrics.find((metric) => metric.id === "provisioned-sandboxes")
+                ?.value
+            }
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+      </DescriptionList>
+    </WidgetContent>
+  );
+}
+
+export function SystemSummaryCard({
+  metrics,
+}: Readonly<{ metrics: readonly OperationalMetric[] }>) {
+  const intl = useIntl();
+
+  return (
+    <WidgetContent>
+      <DescriptionList
+        isHorizontal
+        aria-label={intl.formatMessage(messages.summarySystemAriaLabel)}
+      >
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.memory} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {metrics.find((metric) => metric.id === "memory")?.value}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.cpus} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {metrics.find((metric) => metric.id === "cpu")?.value}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.pods} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            {metrics.find((metric) => metric.id === "pods")?.value}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+      </DescriptionList>
     </WidgetContent>
   );
 }

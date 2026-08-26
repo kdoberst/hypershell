@@ -6,16 +6,20 @@ import { messages } from "../messages";
 const METRIC_WIDGET_HEIGHT = 3;
 const METRIC_ROW_GAP = 1;
 const METRIC_ROW_STEP = METRIC_WIDGET_HEIGHT + METRIC_ROW_GAP;
-const METRIC_ROW_COUNT = 3;
-/** Height spanning all metric rows in adjacent columns (3 widgets + 2 gaps). */
-export const SUMMARY_WIDGET_HEIGHT =
-  METRIC_WIDGET_HEIGHT + (METRIC_ROW_COUNT - 1) * METRIC_ROW_STEP;
 /** Gateway status spans two metric rows plus the row gap between them. */
 export const GATEWAY_STATUS_WIDGET_HEIGHT =
   METRIC_WIDGET_HEIGHT * 2 + METRIC_ROW_GAP;
+const SUMMARY_COLUMN_HEIGHT = METRIC_WIDGET_HEIGHT + 2 * METRIC_ROW_STEP;
+/** Equal height for usage and system summary widgets in the left column. */
+export const SUMMARY_WIDGET_HEIGHT =
+  (SUMMARY_COLUMN_HEIGHT - METRIC_ROW_GAP) / 2;
+export const USAGE_SUMMARY_WIDGET_HEIGHT = SUMMARY_WIDGET_HEIGHT;
+export const SYSTEM_SUMMARY_WIDGET_HEIGHT = SUMMARY_WIDGET_HEIGHT;
+const SYSTEM_SUMMARY_WIDGET_Y = USAGE_SUMMARY_WIDGET_HEIGHT + METRIC_ROW_GAP;
 
 const WIDGET_TITLE_MESSAGES = {
-  summary: messages.summary,
+  "usage-summary": messages.usageSummaryWidget,
+  "system-summary": messages.systemSummaryWidget,
   "active-users": messages.activeUsers,
   "gateway-status": messages.gatewayStatusWidget,
   memory: messages.widgetMemory,
@@ -28,11 +32,11 @@ type DashboardWidgetType = keyof typeof WIDGET_TITLE_MESSAGES;
 
 const fourColumnLayout = [
   {
-    h: SUMMARY_WIDGET_HEIGHT,
-    i: "summary#1",
-    title: "Summary",
+    h: USAGE_SUMMARY_WIDGET_HEIGHT,
+    i: "usage-summary#1",
+    title: "Usage summary",
     w: 1,
-    widgetType: "summary",
+    widgetType: "usage-summary",
     x: 0,
     y: 0,
   },
@@ -62,6 +66,15 @@ const fourColumnLayout = [
     widgetType: "memory",
     x: 3,
     y: 0,
+  },
+  {
+    h: SYSTEM_SUMMARY_WIDGET_HEIGHT,
+    i: "system-summary#1",
+    title: "System summary",
+    w: 1,
+    widgetType: "system-summary",
+    x: 0,
+    y: SYSTEM_SUMMARY_WIDGET_Y,
   },
   {
     h: METRIC_WIDGET_HEIGHT,
@@ -98,13 +111,22 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
   md: [...fourColumnLayout],
   sm: [
     {
-      h: SUMMARY_WIDGET_HEIGHT,
-      i: "summary#1",
-      title: "Summary",
+      h: USAGE_SUMMARY_WIDGET_HEIGHT,
+      i: "usage-summary#1",
+      title: "Usage summary",
       w: 1,
-      widgetType: "summary",
+      widgetType: "usage-summary",
       x: 0,
       y: 0,
+    },
+    {
+      h: SYSTEM_SUMMARY_WIDGET_HEIGHT,
+      i: "system-summary#1",
+      title: "System summary",
+      w: 1,
+      widgetType: "system-summary",
+      x: 0,
+      y: SYSTEM_SUMMARY_WIDGET_Y,
     },
     {
       h: GATEWAY_STATUS_WIDGET_HEIGHT,
@@ -113,7 +135,10 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       w: 1,
       widgetType: "gateway-status",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT,
+      y:
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -122,7 +147,11 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       w: 1,
       widgetType: "namespaces",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + GATEWAY_STATUS_WIDGET_HEIGHT,
+      y:
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -131,7 +160,12 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       w: 1,
       widgetType: "memory",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + GATEWAY_STATUS_WIDGET_HEIGHT + METRIC_ROW_STEP,
+      y:
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT +
+        METRIC_ROW_STEP,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -141,7 +175,9 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       widgetType: "active-users",
       x: 0,
       y:
-        SUMMARY_WIDGET_HEIGHT +
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 2,
     },
@@ -153,7 +189,9 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       widgetType: "cpu",
       x: 0,
       y:
-        SUMMARY_WIDGET_HEIGHT +
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 3,
     },
@@ -165,7 +203,9 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       widgetType: "pods",
       x: 0,
       y:
-        SUMMARY_WIDGET_HEIGHT +
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 4,
     },

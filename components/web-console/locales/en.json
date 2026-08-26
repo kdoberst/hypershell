@@ -203,6 +203,14 @@
     "defaultMessage": "Summary",
     "description": "Title for the operational dashboard summary widget."
   },
+  "app.dashboard.widget.systemSummary": {
+    "defaultMessage": "System summary",
+    "description": "Title for the operational dashboard system summary widget."
+  },
+  "app.dashboard.widget.usageSummary": {
+    "defaultMessage": "Usage summary",
+    "description": "Title for the operational dashboard usage summary widget."
+  },
   "app.error.body": {
     "defaultMessage": "Refresh the page to try again.",
     "description": "Recovery guidance shown after an unexpected route failure."

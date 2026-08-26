@@ -167,6 +167,11 @@ export const messages = defineMessages({
     description:
       "Accessible label for the usage metrics list in the summary widget.",
   },
+  systemSummaryWidget: {
+    id: "app.dashboard.widget.systemSummary",
+    defaultMessage: "System summary",
+    description: "Title for the operational dashboard system summary widget.",
+  },
   title: {
     id: "app.dashboard.title",
     defaultMessage: "HyperShell operational dashboard",
@@ -181,6 +186,11 @@ export const messages = defineMessages({
     id: "app.dashboard.trend.tooltip",
     defaultMessage: "{date}: {value} {metric}",
     description: "Tooltip for a dashboard metric trend sparkline point.",
+  },
+  usageSummaryWidget: {
+    id: "app.dashboard.widget.usageSummary",
+    defaultMessage: "Usage summary",
+    description: "Title for the operational dashboard usage summary widget.",
   },
   users: {
     id: "app.dashboard.summary.users",
