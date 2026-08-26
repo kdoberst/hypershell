@@ -7,6 +7,12 @@ export type {
   DashboardControlPlane,
   DashboardInvocationContext,
   DashboardOperations,
+  DashboardProbe,
+  DashboardProbeAction,
+  DashboardProbeName,
+  DashboardProbeOutcome,
+  DashboardProbePublisher,
+  DashboardWorkflowAction,
   DashboardWorkflowRuntime,
   OperationalDashboardMetrics,
   OperationalMetric,
@@ -14,6 +20,7 @@ export type {
   OperationalMetricTrendPoint,
   SignupTrendPoint,
 } from "./application/dashboard-types";
+export { noopDashboardProbePublisher } from "./application/dashboard-probes";
 export {
   createDashboardOperations,
   type DashboardOperationDependencies,
@@ -22,7 +29,6 @@ export {
   operationalDashboardMetricsQueryKey,
   operationalDashboardRefreshMilliseconds,
 } from "./dashboard/dashboard-data";
-export { mockOperationalDashboardMetrics } from "./fixtures/mock-operational-dashboard-metrics";
 export { ResourceRefreshButton } from "./shared/resource-refresh-button";
 export {
   OperationalDashboardPage,

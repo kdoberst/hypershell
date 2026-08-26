@@ -17,7 +17,10 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import type { OperationalMetric } from "../application/dashboard-types";
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
-import { UtilizationChart } from "../dashboard/utilization-chart";
+import {
+  isUtilizationMetric,
+  UtilizationChart,
+} from "../dashboard/utilization-chart";
 import { messages } from "../messages";
 
 function WidgetContent({ children }: Readonly<PropsWithChildren>) {
@@ -81,7 +84,7 @@ export function UtilizationCard({
               </FlexItem>
             </Flex>
           </StackItem>
-          {metric.trend ? (
+          {isUtilizationMetric(metric) ? (
             <StackItem>
               <UtilizationChart metric={metric} />
             </StackItem>

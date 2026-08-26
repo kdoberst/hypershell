@@ -29,11 +29,15 @@ import { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 
 import type { OperationalDashboardMetrics } from "../application/dashboard-types";
+import type { DashboardProbe } from "../application/dashboard-probes";
+import { noopDashboardProbePublisher } from "../application/dashboard-probes";
 import {
   defaultDashboardLayoutTemplate,
+  localizeDashboardLayoutTemplate,
   SUMMARY_WIDGET_HEIGHT,
 } from "../dashboard/dashboard-layout-template";
 import { UtilizationChart } from "../dashboard/utilization-chart";
+import { useDashboardUi } from "../dashboard-ui-provider";
 import { messages } from "../messages";
 import { ResourceRefreshButton } from "../shared/resource-refresh-button";
 import "./dashboard-widget.css";
@@ -42,7 +46,7 @@ import { useGetMetricsData } from "./get-metrics-data";
 
 const OPERATIONAL_DASHBOARD_BODY_CLASS = "hypershell-operational-dashboard";
 
-const template = defaultDashboardLayoutTemplate;
+const baseTemplate = defaultDashboardLayoutTemplate;
 
 const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v6";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
@@ -55,8 +59,12 @@ const CUSTOM_COLUMNS: Record<Variants, number> = {
 function preservesRequiredWidgets(
   nextTemplate: ExtendedTemplateConfig,
 ): boolean {
-  for (const variant of Object.keys(template) as Variants[]) {
-    const requiredIds = new Set(template[variant].map((item) => item.i));
+  for (const variant of Object.keys(baseTemplate) as Variants[]) {
+    if (!Array.isArray(nextTemplate[variant])) {
+      return false;
+    }
+
+    const requiredIds = new Set(baseTemplate[variant].map((item) => item.i));
 
     for (const id of requiredIds) {
       if (!nextTemplate[variant].some((item) => item.i === id)) {
@@ -71,17 +79,34 @@ function preservesRequiredWidgets(
 function restoreRequiredWidgets(
   savedTemplate: ExtendedTemplateConfig,
 ): ExtendedTemplateConfig {
-  return (Object.keys(template) as Variants[]).reduce((acc, variant) => {
+  return (Object.keys(baseTemplate) as Variants[]).reduce((acc, variant) => {
     const savedById = new Map(
       savedTemplate[variant].map((item) => [item.i, item]),
     );
 
-    acc[variant] = template[variant].map(
+    acc[variant] = baseTemplate[variant].map(
       (defaultItem) => savedById.get(defaultItem.i) ?? defaultItem,
     );
 
     return acc;
   }, {} as ExtendedTemplateConfig);
+}
+
+function layoutProbe(
+  correlationId: string,
+  name: DashboardProbe["name"],
+  outcome: DashboardProbe["fields"]["outcome"],
+): DashboardProbe {
+  return Object.freeze({
+    context: Object.freeze({ correlationId }),
+    fields: Object.freeze({
+      action: "persist-layout-template",
+      outcome,
+    }),
+    name,
+    occurredAt: new Date().toISOString(),
+    schemaVersion: 1,
+  });
 }
 
 const METRIC_WIDGET_DEFAULTS = { h: 3, maxH: 5, minH: 2, w: 1 };
@@ -233,11 +258,16 @@ export function OperationalDashboardPage({
   title,
 }: Readonly<OperationalDashboardPageProps>) {
   const intl = useIntl();
+  const { probes = noopDashboardProbePublisher } = useDashboardUi();
   const pageTitle = title ?? intl.formatMessage(messages.title);
   const metricsQuery = useGetMetricsData({
     enabled: metrics === undefined,
   });
   const dashboardMetrics = metrics ?? metricsQuery.data;
+  const localizedBaseTemplate = useMemo(
+    () => localizeDashboardLayoutTemplate(baseTemplate, intl),
+    [intl],
+  );
 
   useEffect(() => {
     document.body.classList.add(OPERATIONAL_DASHBOARD_BODY_CLASS);
@@ -249,25 +279,32 @@ export function OperationalDashboardPage({
 
   const savedTemplate = useMemo<ExtendedTemplateConfig>(() => {
     if (typeof window === "undefined") {
-      return template;
+      return localizedBaseTemplate;
     }
 
     try {
       const rawTemplate = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
       if (!rawTemplate) {
-        return template;
+        return localizedBaseTemplate;
       }
 
-      return restoreRequiredWidgets(
-        JSON.parse(rawTemplate) as ExtendedTemplateConfig,
+      return localizeDashboardLayoutTemplate(
+        restoreRequiredWidgets(
+          JSON.parse(rawTemplate) as ExtendedTemplateConfig,
+        ),
+        intl,
       );
     } catch {
-      return template;
+      return localizedBaseTemplate;
     }
-  }, []);
+  }, [intl, localizedBaseTemplate]);
   const [dashboardTemplate, setDashboardTemplate] =
     useState<ExtendedTemplateConfig>(savedTemplate);
   const [gridLayoutKey, setGridLayoutKey] = useState(0);
+  const displayTemplate = useMemo(
+    () => localizeDashboardLayoutTemplate(dashboardTemplate, intl),
+    [dashboardTemplate, intl],
+  );
   const widgetMapping = useMemo(
     () =>
       dashboardMetrics
@@ -277,7 +314,16 @@ export function OperationalDashboardPage({
   );
 
   const handleTemplateChange = (nextTemplate: ExtendedTemplateConfig) => {
+    const correlationId = crypto.randomUUID();
+
     if (!preservesRequiredWidgets(nextTemplate)) {
+      probes.publish(
+        layoutProbe(
+          correlationId,
+          "dashboard.layout.template.invalid",
+          "failed",
+        ),
+      );
       setGridLayoutKey((currentKey) => currentKey + 1);
       return;
     }
@@ -288,10 +334,20 @@ export function OperationalDashboardPage({
       return;
     }
 
-    window.localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify(nextTemplate),
-    );
+    try {
+      window.localStorage.setItem(
+        LAYOUT_STORAGE_KEY,
+        JSON.stringify(nextTemplate),
+      );
+    } catch {
+      probes.publish(
+        layoutProbe(
+          correlationId,
+          "dashboard.layout.template.persistence-failed",
+          "failed",
+        ),
+      );
+    }
   };
 
   return (
@@ -340,7 +396,7 @@ export function OperationalDashboardPage({
           key={gridLayoutKey}
           columns={CUSTOM_COLUMNS}
           onTemplateChange={handleTemplateChange}
-          template={dashboardTemplate}
+          template={displayTemplate}
           widgetMapping={widgetMapping}
         />
       ) : null}

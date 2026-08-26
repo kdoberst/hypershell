@@ -9,6 +9,7 @@ import { useIntl } from "react-intl";
 
 import type { OperationalMetricTrend } from "../application/dashboard-types";
 import { messages } from "../messages";
+import "../pages/dashboard-widget.css";
 
 interface SparklineDatum {
   name: string;
@@ -64,7 +65,7 @@ export function TrendSparklineChart({
     });
 
   return (
-    <div ref={containerRef} style={{ height: 52, width: "100%" }}>
+    <div ref={containerRef} className="hypershell-dashboard-sparkline-chart">
       <ChartGroup
         ariaDesc={title}
         ariaTitle={title}

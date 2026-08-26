@@ -1,4 +1,7 @@
 import type { ExtendedTemplateConfig } from "@patternfly/widgetized-dashboard";
+import type { IntlShape } from "react-intl";
+
+import { messages } from "../messages";
 
 const METRIC_WIDGET_HEIGHT = 3;
 const METRIC_ROW_GAP = 1;
@@ -7,6 +10,20 @@ const METRIC_ROW_COUNT = 3;
 /** Height spanning all metric rows in adjacent columns (3 widgets + 2 gaps). */
 export const SUMMARY_WIDGET_HEIGHT =
   METRIC_WIDGET_HEIGHT + (METRIC_ROW_COUNT - 1) * METRIC_ROW_STEP;
+
+const WIDGET_TITLE_MESSAGES = {
+  summary: messages.summary,
+  "active-users": messages.activeUsers,
+  "provisioned-gateways": messages.provisionedGateways,
+  memory: messages.widgetMemory,
+  namespaces: messages.namespaces,
+  "provisioned-sandboxes": messages.provisionedSandboxes,
+  cpu: messages.widgetCpu,
+  nodes: messages.nodes,
+  pods: messages.widgetPods,
+} as const;
+
+type DashboardWidgetType = keyof typeof WIDGET_TITLE_MESSAGES;
 
 const fourColumnLayout = [
   {
@@ -180,3 +197,23 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
     },
   ],
 };
+
+export function localizeDashboardLayoutTemplate(
+  template: ExtendedTemplateConfig,
+  intl: IntlShape,
+): ExtendedTemplateConfig {
+  return (Object.keys(template) as (keyof ExtendedTemplateConfig)[]).reduce(
+    (localized, variant) => {
+      localized[variant] = template[variant].map((item) => {
+        const widgetType = item.widgetType as DashboardWidgetType;
+
+        return {
+          ...item,
+          title: intl.formatMessage(WIDGET_TITLE_MESSAGES[widgetType]),
+        };
+      });
+      return localized;
+    },
+    {} as ExtendedTemplateConfig,
+  );
+}

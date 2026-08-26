@@ -2,7 +2,7 @@ import type {
   DashboardControlPlane,
   DashboardInvocationContext,
 } from "@openshift-online/hypershell-operational-dashboard-ui";
-import { mockOperationalDashboardMetrics } from "@openshift-online/hypershell-operational-dashboard-ui";
+import { mockOperationalDashboardMetrics } from "@openshift-online/hypershell-operational-dashboard-ui/fixtures";
 
 export function createMockDashboardControlPlane(): DashboardControlPlane {
   return {
