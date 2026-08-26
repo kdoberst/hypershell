@@ -4,9 +4,9 @@ import { hasDashboardAdminRole } from "./session-roles";
 
 describe("hasDashboardAdminRole", () => {
   it("returns true when hypershell-admins is present", () => {
-    expect(hasDashboardAdminRole(["hypershell-users", "hypershell-admins"])).toBe(
-      true,
-    );
+    expect(
+      hasDashboardAdminRole(["hypershell-users", "hypershell-admins"]),
+    ).toBe(true);
   });
 
   it("returns true when platform:admin is present", () => {

@@ -1,4 +1,4 @@
-# Implementation Plan: Update Daily Note — Jira
+# Implementation Plan: Update Daily Note - Jira
 
 **Branch**: `004-daily-jira-items` | **Date**: 2026-08-20 | **Spec**: [spec.md](./spec.md)
 
@@ -18,22 +18,22 @@ Deliver a Node.js CLI (`sync-daily-jira-items.js`) that updates the jira-automat
 merge lines by issue key (never remove `- [x]` or manual content), remove configured placeholders
 only when inserting items, persist comment classification state in `.agents/state/daily-jira-items.json`,
 and optionally apply `#question-awaiting-reply` via a semver skill. Auth failure **stops
-immediately** with stderr alert — no fetch, no note writes. Script completes without the skill if
+immediately** with stderr alert - no fetch, no note writes. Script completes without the skill if
 question classification fails.
 
 ## Technical Context
 
 **Stack**: Constitution Principles VII–VIII (default; no deviations). External access: **Jira Cloud
-REST API v3** via Node built-in `fetch` — **sole** source for Jira data (issues, comments, viewer
+REST API v3** via Node built-in `fetch` - **sole** source for Jira data (issues, comments, viewer
 identity via `/rest/api/3/myself`).
 
 **Jira access**:
 
 - **Env vars** (required for Basic auth v1):
-  - `JIRA_SITE_URL` — e.g. `https://yoursite.atlassian.net` (trailing slash stripped)
-  - `JIRA_EMAIL` — Atlassian account email
-  - `JIRA_API_TOKEN` — API token from Atlassian account settings
-- **Optional**: `JIRA_OAUTH_TOKEN` — Bearer auth if set (legacy Bob supported; Basic preferred when
+  - `JIRA_SITE_URL` - e.g. `https://yoursite.atlassian.net` (trailing slash stripped)
+  - `JIRA_EMAIL` - Atlassian account email
+  - `JIRA_API_TOKEN` - API token from Atlassian account settings
+- **Optional**: `JIRA_OAUTH_TOKEN` - Bearer auth if set (legacy Bob supported; Basic preferred when
   token pair is set)
 - **Single account**: operator uses one Jira login; no multi-account switching in v1
 - **Auth gate**: verify all required env vars **before** reading the note or calling Jira. On
@@ -56,7 +56,7 @@ identity via `/rest/api/3/myself`).
 | `title`              | Locate region in note by markdown heading at depth `2 + nesting level` |
 | `placeholders[]`     | Removable stub lines (FR-009)                                          |
 
-Single flat list — no sub-buckets (unlike github's four regions).
+Single flat list - no sub-buckets (unlike github's four regions).
 
 **Fetch / apply pipeline** (internal; mirrors legacy Bob `sync.js fetch|apply`):
 
@@ -79,7 +79,7 @@ state cursor logic, ADF→text ping detection (in-memory only); manual validatio
 **Constraints**:
 
 - Zero runtime npm packages; `fetch` + `node:fs` for all Jira.com access
-- Auth failure is fatal — alert user and exit; no partial sync or silent skip
+- Auth failure is fatal - alert user and exit; no partial sync or silent skip
 - Section headings from config only (Principle VI)
 - `- [x]` lines never removed or modified (FR-012)
 - Skill under `.agents/skills/classify-jira-question/`; pass SkillSpector + skillsaw (Principle IX)
@@ -184,4 +184,4 @@ feature 003. State file path matches legacy Bob for migration continuity.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 | --------- | ---------- | ------------------------------------ |
-| —         | —          | —                                    |
+| -         | -          | -                                    |

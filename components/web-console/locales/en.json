@@ -28,7 +28,7 @@
     "description": "Tooltip for a button that copies text to the clipboard."
   },
   "app.dashboard.description": {
-    "defaultMessage": " This dashboard is in development and is currently using mocked data.",
+    "defaultMessage": "This dashboard is in development and is currently using mocked data.",
     "description": "Supporting text on the operational dashboard page."
   },
   "app.dashboard.loadError.body": {
@@ -870,6 +870,10 @@
   "app.productName": {
     "defaultMessage": "HyperShell",
     "description": "HyperShell product name."
+  },
+  "app.session.loading.ariaLabel": {
+    "defaultMessage": "Loading session",
+    "description": "Accessible label for the session loading spinner."
   },
   "app.skipToContent": {
     "defaultMessage": "Skip to content",
