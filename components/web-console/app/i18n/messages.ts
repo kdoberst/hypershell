@@ -20,7 +20,8 @@ export const messages = defineMessages({
     id: "app.page.dashboard.description",
     defaultMessage:
       "Operational metrics dashboard for HyperShell adoption and provisioned resources.",
-    description: "Browser metadata description for the operational dashboard page.",
+    description:
+      "Browser metadata description for the operational dashboard page.",
   },
   dashboardAccessDeniedBody: {
     id: "app.page.dashboard.accessDenied.body",
@@ -34,6 +35,11 @@ export const messages = defineMessages({
     defaultMessage: "Access denied",
     description:
       "Heading shown when a signed-in user lacks the admin role for the dashboard.",
+  },
+  sessionLoadingLabel: {
+    id: "app.session.loading.ariaLabel",
+    defaultMessage: "Loading session",
+    description: "Accessible label for the session loading spinner.",
   },
   errorBody: {
     id: "app.error.body",

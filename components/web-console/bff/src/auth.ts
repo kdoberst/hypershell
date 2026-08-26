@@ -66,13 +66,13 @@ export function persistTokenSet(
 }
 
 /** Reads realm roles from standard OIDC claim shapes. */
-export function extractRealmRoles(
-  claims: Record<string, unknown>,
-): string[] {
+export function extractRealmRoles(claims: Record<string, unknown>): string[] {
   for (const claimName of ["roles", "groups"] as const) {
     const rawRoles = claims[claimName];
     if (Array.isArray(rawRoles)) {
-      return rawRoles.filter((role): role is string => typeof role === "string");
+      return rawRoles.filter(
+        (role): role is string => typeof role === "string",
+      );
     }
   }
   return [];

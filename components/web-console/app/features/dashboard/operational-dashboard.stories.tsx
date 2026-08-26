@@ -15,7 +15,7 @@ import { ApplicationShell } from "../shell/application-shell";
 
 const stubNavigation: DashboardUiNavigation = {
   collectionHref: "/",
-  navigate: () => {},
+  navigate: () => undefined,
 };
 
 const stubDashboard = createDashboardOperations({
@@ -56,7 +56,9 @@ function ShellDashboardPreview() {
           <Route
             path="/"
             element={
-              <OperationalDashboardPage metrics={mockOperationalDashboardMetrics} />
+              <OperationalDashboardPage
+                metrics={mockOperationalDashboardMetrics}
+              />
             }
           />
         </Route>

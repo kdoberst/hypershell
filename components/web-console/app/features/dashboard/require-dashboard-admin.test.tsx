@@ -24,7 +24,7 @@ function renderGuard() {
     <IntlProvider locale="en" messages={englishMessages}>
       <QueryClientProvider client={queryClient}>
         <RequireDashboardAdmin>
-          <div>Dashboard content</div>
+          <div data-testid="dashboard-content" />
         </RequireDashboardAdmin>
       </QueryClientProvider>
     </IntlProvider>,
@@ -41,7 +41,7 @@ describe("RequireDashboardAdmin", () => {
 
     renderGuard();
 
-    expect(await screen.findByText("Dashboard content")).toBeTruthy();
+    expect(await screen.findByTestId("dashboard-content")).toBeTruthy();
   });
 
   it("renders children for hypershell-admins", async () => {
@@ -52,7 +52,7 @@ describe("RequireDashboardAdmin", () => {
 
     renderGuard();
 
-    expect(await screen.findByText("Dashboard content")).toBeTruthy();
+    expect(await screen.findByTestId("dashboard-content")).toBeTruthy();
   });
 
   it("renders children for platform:admin", async () => {
@@ -63,7 +63,7 @@ describe("RequireDashboardAdmin", () => {
 
     renderGuard();
 
-    expect(await screen.findByText("Dashboard content")).toBeTruthy();
+    expect(await screen.findByTestId("dashboard-content")).toBeTruthy();
   });
 
   it("shows access denied for authenticated non-admin users", async () => {
@@ -74,7 +74,9 @@ describe("RequireDashboardAdmin", () => {
 
     renderGuard();
 
-    expect(await screen.findByRole("heading", { name: "Access denied" })).toBeTruthy();
-    expect(screen.queryByText("Dashboard content")).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: "Access denied" }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-content")).toBeNull();
   });
 });

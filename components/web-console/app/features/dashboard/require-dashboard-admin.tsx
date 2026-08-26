@@ -5,7 +5,7 @@ import {
   PageSection,
   Spinner,
 } from "@patternfly/react-core";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { messages } from "../../i18n/messages";
 import { hasDashboardAdminRole } from "../../lib/session-roles";
@@ -16,12 +16,15 @@ export function RequireDashboardAdmin({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const intl = useIntl();
   const { data: session, isLoading } = useSession();
 
   if (isLoading) {
     return (
       <PageSection hasBodyWrapper={false} isFilled>
-        <Spinner aria-label="Loading session" />
+        <Spinner
+          aria-label={intl.formatMessage(messages.sessionLoadingLabel)}
+        />
       </PageSection>
     );
   }
@@ -31,7 +34,9 @@ export function RequireDashboardAdmin({
       <PageSection hasBodyWrapper={false} isFilled>
         <EmptyState
           variant={EmptyStateVariant.full}
-          titleText={<FormattedMessage {...messages.dashboardAccessDeniedTitle} />}
+          titleText={
+            <FormattedMessage {...messages.dashboardAccessDeniedTitle} />
+          }
           headingLevel="h1"
         >
           <EmptyStateBody>
