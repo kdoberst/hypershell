@@ -1,4 +1,5 @@
 import eslint from "@eslint/js";
+import formatjs from "eslint-plugin-formatjs";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -30,18 +31,32 @@ export default tseslint.config(
       },
     },
     plugins: {
+      formatjs,
       "jsx-a11y": jsxA11y,
       "react-compiler": reactCompiler,
       "react-hooks": reactHooks,
       "@tanstack/query": query,
     },
     rules: {
+      ...formatjs.configs.recommended.rules,
       ...jsxA11y.flatConfigs.recommended.rules,
       ...reactCompiler.configs.recommended.rules,
       ...reactHooks.configs.flat.recommended.rules,
       ...query.configs["flat/recommended"].rules,
       "@typescript-eslint/consistent-type-imports": "error",
+      "formatjs/enforce-default-message": "error",
+      "formatjs/enforce-id": "error",
       "no-console": "error",
+    },
+  },
+  {
+    files: ["src/messages.ts"],
+    rules: {
+      "sort-keys": [
+        "error",
+        "asc",
+        { caseSensitive: false, minKeys: 4, natural: true },
+      ],
     },
   },
 );
