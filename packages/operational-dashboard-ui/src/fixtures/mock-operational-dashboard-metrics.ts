@@ -13,10 +13,10 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
             Object.freeze({ label: "Day 4", value: 578 }),
             Object.freeze({ label: "Day 5", value: 590 }),
             Object.freeze({ label: "Day 6", value: 601 }),
-            Object.freeze({ label: "Day 7", value: 612 }),
+            Object.freeze({ label: "Day 7", value: 450 }),
           ]),
         }),
-        value: "612",
+        value: "450",
       }),
       Object.freeze({
         id: "provisioned-gateways",
@@ -28,7 +28,7 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
         }),
         trend: Object.freeze({
           points: Object.freeze([
-            Object.freeze({ label: "Day 1", value: 82 }),
+            Object.freeze({ label: "Day 1", value: 94 }),
             Object.freeze({ label: "Day 2", value: 84 }),
             Object.freeze({ label: "Day 3", value: 85 }),
             Object.freeze({ label: "Day 4", value: 89 }),

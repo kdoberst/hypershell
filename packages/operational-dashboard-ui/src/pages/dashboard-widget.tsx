@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardBody,
   Content,
@@ -11,11 +12,17 @@ import {
   Stack,
   StackItem,
   Title,
+  Tooltip,
 } from "@patternfly/react-core";
+import { TrendDownIcon, TrendUpIcon } from "@patternfly/react-icons";
 import type { PropsWithChildren } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import type { OperationalMetric } from "../application/dashboard-types";
+import {
+  getMetricTrendChange,
+  type MetricTrendChange,
+} from "../dashboard/metric-trend-change";
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
 import {
@@ -128,6 +135,68 @@ export function UtilizationCard({
   );
 }
 
+function SummaryTrendIndicator({
+  trendChange,
+}: Readonly<{ trendChange: MetricTrendChange }>) {
+  const intl = useIntl();
+  const isIncrease = trendChange.direction === "increase";
+  const tooltipContent = intl.formatMessage(
+    isIncrease ? messages.summaryTrendIncrease : messages.summaryTrendDecrease,
+    { percent: trendChange.percent },
+  );
+
+  return (
+    <Tooltip content={tooltipContent} aria="labelledby">
+      <Button
+        aria-label={tooltipContent}
+        className={
+          isIncrease
+            ? "hypershell-dashboard-summary-trend hypershell-dashboard-summary-trend--increase"
+            : "hypershell-dashboard-summary-trend hypershell-dashboard-summary-trend--decrease"
+        }
+        isInline
+        variant="plain"
+      >
+        {isIncrease ? <TrendUpIcon /> : <TrendDownIcon />}
+      </Button>
+    </Tooltip>
+  );
+}
+
+function SummaryMetricValue({
+  metric,
+}: Readonly<{ metric: OperationalMetric | undefined }>) {
+  const trendChange = metric ? getMetricTrendChange(metric) : undefined;
+
+  return (
+    <Flex
+      alignItems={{ default: "alignItemsCenter" }}
+      spaceItems={{ default: "spaceItemsSm" }}
+    >
+      <FlexItem>{metric?.value}</FlexItem>
+      {trendChange ? (
+        <FlexItem>
+          <SummaryTrendIndicator trendChange={trendChange} />
+        </FlexItem>
+      ) : null}
+    </Flex>
+  );
+}
+
+const USAGE_SUMMARY_METRIC_IDS = [
+  "active-users",
+  "provisioned-gateways",
+  "namespaces",
+  "provisioned-sandboxes",
+] as const;
+
+const USAGE_SUMMARY_LABELS = {
+  "active-users": messages.users,
+  "provisioned-gateways": messages.gateways,
+  namespaces: messages.namespaces,
+  "provisioned-sandboxes": messages.widgetSandboxes,
+} as const;
+
 export function UsageSummaryCard({
   metrics,
 }: Readonly<{ metrics: readonly OperationalMetric[] }>) {
@@ -139,44 +208,18 @@ export function UsageSummaryCard({
         isHorizontal
         aria-label={intl.formatMessage(messages.summaryUsageAriaLabel)}
       >
-        <DescriptionListGroup>
-          <DescriptionListTerm>
-            <FormattedMessage {...messages.users} />
-          </DescriptionListTerm>
-          <DescriptionListDescription>
-            {metrics.find((metric) => metric.id === "active-users")?.value}
-          </DescriptionListDescription>
-        </DescriptionListGroup>
-        <DescriptionListGroup>
-          <DescriptionListTerm>
-            <FormattedMessage {...messages.gateways} />
-          </DescriptionListTerm>
-          <DescriptionListDescription>
-            {
-              metrics.find((metric) => metric.id === "provisioned-gateways")
-                ?.value
-            }
-          </DescriptionListDescription>
-        </DescriptionListGroup>
-        <DescriptionListGroup>
-          <DescriptionListTerm>
-            <FormattedMessage {...messages.namespaces} />
-          </DescriptionListTerm>
-          <DescriptionListDescription>
-            {metrics.find((metric) => metric.id === "namespaces")?.value}
-          </DescriptionListDescription>
-        </DescriptionListGroup>
-        <DescriptionListGroup>
-          <DescriptionListTerm>
-            <FormattedMessage {...messages.widgetSandboxes} />
-          </DescriptionListTerm>
-          <DescriptionListDescription>
-            {
-              metrics.find((metric) => metric.id === "provisioned-sandboxes")
-                ?.value
-            }
-          </DescriptionListDescription>
-        </DescriptionListGroup>
+        {USAGE_SUMMARY_METRIC_IDS.map((metricId) => (
+          <DescriptionListGroup key={metricId}>
+            <DescriptionListTerm>
+              <FormattedMessage {...USAGE_SUMMARY_LABELS[metricId]} />
+            </DescriptionListTerm>
+            <DescriptionListDescription>
+              <SummaryMetricValue
+                metric={metrics.find((metric) => metric.id === metricId)}
+              />
+            </DescriptionListDescription>
+          </DescriptionListGroup>
+        ))}
       </DescriptionList>
     </WidgetContent>
   );

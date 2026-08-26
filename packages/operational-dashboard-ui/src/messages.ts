@@ -156,6 +156,18 @@ export const messages = defineMessages({
     description:
       "Accessible label for the system metrics list in the summary widget.",
   },
+  summaryTrendDecrease: {
+    id: "app.dashboard.summary.trendDecrease",
+    defaultMessage: "{percent}% decrease",
+    description:
+      "Tooltip for a usage summary metric that decreased since the start of its trend.",
+  },
+  summaryTrendIncrease: {
+    id: "app.dashboard.summary.trendIncrease",
+    defaultMessage: "{percent}% increase",
+    description:
+      "Tooltip for a usage summary metric that increased since the start of its trend.",
+  },
   summaryUsage: {
     id: "app.dashboard.summary.usage",
     defaultMessage: "Usage",

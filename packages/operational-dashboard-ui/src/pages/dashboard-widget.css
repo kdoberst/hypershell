@@ -53,3 +53,17 @@ body.hypershell-operational-dashboard [data-ouia-component-id="remove-widget"] {
   );
   --pf-v6-chart-global--label--Fill: var(--pf-t--global--text--color--regular);
 }
+
+.hypershell-dashboard-summary-trend {
+  --pf-v6-c-button--PaddingBlock: 0;
+  --pf-v6-c-button--PaddingInline: 0;
+  min-height: auto;
+}
+
+.hypershell-dashboard-summary-trend--increase {
+  color: var(--pf-t--global--icon--color--status--success--default);
+}
+
+.hypershell-dashboard-summary-trend--decrease {
+  color: var(--pf-t--global--icon--color--status--danger--default);
+}

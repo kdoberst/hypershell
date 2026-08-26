@@ -123,6 +123,14 @@
     "defaultMessage": "System metrics",
     "description": "Accessible label for the system metrics list in the summary widget."
   },
+  "app.dashboard.summary.trendDecrease": {
+    "defaultMessage": "{percent}% decrease",
+    "description": "Tooltip for a usage summary metric that decreased since the start of its trend."
+  },
+  "app.dashboard.summary.trendIncrease": {
+    "defaultMessage": "{percent}% increase",
+    "description": "Tooltip for a usage summary metric that increased since the start of its trend."
+  },
   "app.dashboard.summary.usage": {
     "defaultMessage": "Usage",
     "description": "Heading for adoption metrics in the summary widget."
