@@ -20,6 +20,12 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
       }),
       Object.freeze({
         id: "provisioned-gateways",
+        status: Object.freeze({
+          degraded: 6,
+          failed: 2,
+          provisioning: 9,
+          running: 80,
+        }),
         trend: Object.freeze({
           points: Object.freeze([
             Object.freeze({ label: "Day 1", value: 82 }),

@@ -10,16 +10,17 @@ const METRIC_ROW_COUNT = 3;
 /** Height spanning all metric rows in adjacent columns (3 widgets + 2 gaps). */
 export const SUMMARY_WIDGET_HEIGHT =
   METRIC_WIDGET_HEIGHT + (METRIC_ROW_COUNT - 1) * METRIC_ROW_STEP;
+/** Gateway status spans two metric rows plus the row gap between them. */
+export const GATEWAY_STATUS_WIDGET_HEIGHT =
+  METRIC_WIDGET_HEIGHT * 2 + METRIC_ROW_GAP;
 
 const WIDGET_TITLE_MESSAGES = {
   summary: messages.summary,
   "active-users": messages.activeUsers,
-  "provisioned-gateways": messages.provisionedGateways,
+  "gateway-status": messages.gatewayStatusWidget,
   memory: messages.widgetMemory,
   namespaces: messages.namespaces,
-  "provisioned-sandboxes": messages.provisionedSandboxes,
   cpu: messages.widgetCpu,
-  nodes: messages.nodes,
   pods: messages.widgetPods,
 } as const;
 
@@ -36,20 +37,20 @@ const fourColumnLayout = [
     y: 0,
   },
   {
-    h: METRIC_WIDGET_HEIGHT,
-    i: "active-users#1",
-    title: "Active users",
+    h: GATEWAY_STATUS_WIDGET_HEIGHT,
+    i: "gateway-status#1",
+    title: "Gateway status",
     w: 1,
-    widgetType: "active-users",
+    widgetType: "gateway-status",
     x: 1,
     y: 0,
   },
   {
     h: METRIC_WIDGET_HEIGHT,
-    i: "provisioned-gateways#1",
-    title: "Provisioned gateways",
+    i: "namespaces#1",
+    title: "Namespaces",
     w: 1,
-    widgetType: "provisioned-gateways",
+    widgetType: "namespaces",
     x: 2,
     y: 0,
   },
@@ -64,19 +65,10 @@ const fourColumnLayout = [
   },
   {
     h: METRIC_WIDGET_HEIGHT,
-    i: "namespaces#1",
-    title: "Namespaces",
+    i: "active-users#1",
+    title: "Active users",
     w: 1,
-    widgetType: "namespaces",
-    x: 1,
-    y: METRIC_ROW_STEP,
-  },
-  {
-    h: METRIC_WIDGET_HEIGHT,
-    i: "provisioned-sandboxes#1",
-    title: "Provisioned sandboxes",
-    w: 1,
-    widgetType: "provisioned-sandboxes",
+    widgetType: "active-users",
     x: 2,
     y: METRIC_ROW_STEP,
   },
@@ -88,15 +80,6 @@ const fourColumnLayout = [
     widgetType: "cpu",
     x: 3,
     y: METRIC_ROW_STEP,
-  },
-  {
-    h: METRIC_WIDGET_HEIGHT,
-    i: "nodes#1",
-    title: "Nodes",
-    w: 1,
-    widgetType: "nodes",
-    x: 1,
-    y: METRIC_ROW_STEP * 2,
   },
   {
     h: METRIC_WIDGET_HEIGHT,
@@ -124,31 +107,13 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       y: 0,
     },
     {
-      h: METRIC_WIDGET_HEIGHT,
-      i: "active-users#1",
-      title: "Active users",
+      h: GATEWAY_STATUS_WIDGET_HEIGHT,
+      i: "gateway-status#1",
+      title: "Gateway status",
       w: 1,
-      widgetType: "active-users",
+      widgetType: "gateway-status",
       x: 0,
       y: SUMMARY_WIDGET_HEIGHT,
-    },
-    {
-      h: METRIC_WIDGET_HEIGHT,
-      i: "provisioned-gateways#1",
-      title: "Provisioned gateways",
-      w: 1,
-      widgetType: "provisioned-gateways",
-      x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP,
-    },
-    {
-      h: METRIC_WIDGET_HEIGHT,
-      i: "memory#1",
-      title: "Memory",
-      w: 1,
-      widgetType: "memory",
-      x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP * 2,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -157,16 +122,28 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       w: 1,
       widgetType: "namespaces",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP * 3,
+      y: SUMMARY_WIDGET_HEIGHT + GATEWAY_STATUS_WIDGET_HEIGHT,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
-      i: "provisioned-sandboxes#1",
-      title: "Provisioned sandboxes",
+      i: "memory#1",
+      title: "Memory",
       w: 1,
-      widgetType: "provisioned-sandboxes",
+      widgetType: "memory",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP * 4,
+      y: SUMMARY_WIDGET_HEIGHT + GATEWAY_STATUS_WIDGET_HEIGHT + METRIC_ROW_STEP,
+    },
+    {
+      h: METRIC_WIDGET_HEIGHT,
+      i: "active-users#1",
+      title: "Active users",
+      w: 1,
+      widgetType: "active-users",
+      x: 0,
+      y:
+        SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT +
+        METRIC_ROW_STEP * 2,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -175,16 +152,10 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       w: 1,
       widgetType: "cpu",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP * 5,
-    },
-    {
-      h: METRIC_WIDGET_HEIGHT,
-      i: "nodes#1",
-      title: "Nodes",
-      w: 1,
-      widgetType: "nodes",
-      x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP * 6,
+      y:
+        SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT +
+        METRIC_ROW_STEP * 3,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -193,7 +164,10 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
       w: 1,
       widgetType: "pods",
       x: 0,
-      y: SUMMARY_WIDGET_HEIGHT + METRIC_ROW_STEP * 7,
+      y:
+        SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT +
+        METRIC_ROW_STEP * 4,
     },
   ],
 };

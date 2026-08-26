@@ -17,6 +17,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import type { OperationalMetric } from "../application/dashboard-types";
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
+import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
 import {
   isUtilizationMetric,
   UtilizationChart,
@@ -33,9 +34,15 @@ function WidgetContent({ children }: Readonly<PropsWithChildren>) {
 
 export function MetricCard({
   metric,
+  showTrend = true,
   subtitle,
   title,
-}: Readonly<{ metric: OperationalMetric; subtitle: string; title: string }>) {
+}: Readonly<{
+  metric: OperationalMetric;
+  showTrend?: boolean;
+  subtitle: string;
+  title: string;
+}>) {
   const intl = useIntl();
 
   return (
@@ -55,10 +62,47 @@ export function MetricCard({
               </FlexItem>
             </Flex>
           </StackItem>
-          {metric.trend ? (
+          {showTrend && metric.trend ? (
             <StackItem>
               <TrendSparklineChart trend={metric.trend} title={title} />
             </StackItem>
+          ) : null}
+        </Stack>
+      </Content>
+    </WidgetContent>
+  );
+}
+
+export function GatewayStatusCard({
+  metric,
+}: Readonly<{ metric: OperationalMetric }>) {
+  const intl = useIntl();
+  const trendTitle = intl.formatMessage(messages.provisionedGateways);
+  const trendDayCount = metric.trend?.points.length ?? 0;
+
+  return (
+    <WidgetContent>
+      <Content className="hypershell-dashboard-gateway-status-card">
+        <Stack hasGutter>
+          <StackItem>
+            <GatewayStatusChart metric={metric} />
+          </StackItem>
+          {metric.trend ? (
+            <>
+              <StackItem>
+                <TrendSparklineChart trend={metric.trend} title={trendTitle} />
+              </StackItem>
+              {trendDayCount > 0 ? (
+                <StackItem>
+                  <small>
+                    <FormattedMessage
+                      {...messages.trendLastDays}
+                      values={{ days: trendDayCount }}
+                    />
+                  </small>
+                </StackItem>
+              ) : null}
+            </>
           ) : null}
         </Stack>
       </Content>

@@ -33,6 +33,7 @@ import type { DashboardProbe } from "../application/dashboard-probes";
 import { noopDashboardProbePublisher } from "../application/dashboard-probes";
 import {
   defaultDashboardLayoutTemplate,
+  GATEWAY_STATUS_WIDGET_HEIGHT,
   localizeDashboardLayoutTemplate,
   SUMMARY_WIDGET_HEIGHT,
 } from "../dashboard/dashboard-layout-template";
@@ -41,14 +42,14 @@ import { useDashboardUi } from "../dashboard-ui-provider";
 import { messages } from "../messages";
 import { ResourceRefreshButton } from "../shared/resource-refresh-button";
 import "./dashboard-widget.css";
-import { MetricCard, SummaryCard } from "./dashboard-widget";
+import { GatewayStatusCard, MetricCard, SummaryCard } from "./dashboard-widget";
 import { useGetMetricsData } from "./get-metrics-data";
 
 const OPERATIONAL_DASHBOARD_BODY_CLASS = "hypershell-operational-dashboard";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v6";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v10";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -123,7 +124,7 @@ function createWidgetMapping(
     metricId: string,
     subtitle: string,
     titleMessage: (typeof messages)[keyof typeof messages],
-    metricType: "metric" | "utilization",
+    metricType: "metric" | "status" | "utilization",
   ) => {
     const metric = metricById.get(metricId);
     const title = intl.formatMessage(titleMessage);
@@ -143,11 +144,15 @@ function createWidgetMapping(
       );
     }
 
-    return metricType === "metric" ? (
-      <MetricCard metric={metric} subtitle={subtitle} title={title} />
-    ) : (
-      <UtilizationChart metric={metric} />
-    );
+    if (metricType === "metric") {
+      return <MetricCard metric={metric} subtitle={subtitle} title={title} />;
+    }
+
+    if (metricType === "status") {
+      return <GatewayStatusCard metric={metric} />;
+    }
+
+    return <UtilizationChart metric={metric} />;
   };
 
   return {
@@ -173,32 +178,23 @@ function createWidgetMapping(
       renderWidget: () =>
         renderMetric("active-users", "", messages.activeUsers, "metric"),
     },
-    "provisioned-gateways": {
-      defaults: METRIC_WIDGET_DEFAULTS,
+    "gateway-status": {
+      defaults: {
+        h: GATEWAY_STATUS_WIDGET_HEIGHT,
+        maxH: GATEWAY_STATUS_WIDGET_HEIGHT + 2,
+        minH: METRIC_WIDGET_DEFAULTS.minH,
+        w: 1,
+      },
       config: {
         icon: <ClusterIcon />,
-        title: intl.formatMessage(messages.provisionedGateways),
+        title: intl.formatMessage(messages.gatewayStatusWidget),
       },
       renderWidget: () =>
         renderMetric(
           "provisioned-gateways",
           "",
-          messages.provisionedGateways,
-          "metric",
-        ),
-    },
-    "provisioned-sandboxes": {
-      defaults: METRIC_WIDGET_DEFAULTS,
-      config: {
-        icon: <CubesIcon />,
-        title: intl.formatMessage(messages.provisionedSandboxes),
-      },
-      renderWidget: () =>
-        renderMetric(
-          "provisioned-sandboxes",
-          "",
-          messages.provisionedSandboxes,
-          "metric",
+          messages.gatewayStatusWidget,
+          "status",
         ),
     },
     namespaces: {
@@ -209,14 +205,6 @@ function createWidgetMapping(
       },
       renderWidget: () =>
         renderMetric("namespaces", "", messages.namespaces, "metric"),
-    },
-    nodes: {
-      defaults: METRIC_WIDGET_DEFAULTS,
-      config: {
-        icon: <ClusterIcon />,
-        title: intl.formatMessage(messages.nodes),
-      },
-      renderWidget: () => renderMetric("nodes", "", messages.nodes, "metric"),
     },
     cpu: {
       defaults: METRIC_WIDGET_DEFAULTS,

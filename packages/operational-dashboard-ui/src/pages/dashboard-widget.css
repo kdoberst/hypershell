@@ -30,3 +30,26 @@ body.hypershell-operational-dashboard [data-ouia-component-id="remove-widget"] {
 .hypershell-dashboard-utilization-chart__donut {
   flex-shrink: 0;
 }
+
+.hypershell-dashboard-gateway-status-card {
+  --pf-v6-c-content--MarginBottom: 0;
+}
+
+.hypershell-dashboard-gateway-status-card .pf-v6-c-stack {
+  --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
+}
+
+.hypershell-dashboard-gateway-status-chart {
+  min-width: 0;
+  /*
+   * ChartDonut title, subtitle, and legend use chart label tokens that fall back
+   * to dark gray. Re-map them to global text tokens so dark mode stays readable.
+   */
+  --pf-v6-chart-donut--label--subtitle--Fill: var(
+    --pf-t--global--text--color--subtle
+  );
+  --pf-v6-chart-donut--label--title--Fill: var(
+    --pf-t--global--text--color--regular
+  );
+  --pf-v6-chart-global--label--Fill: var(--pf-t--global--text--color--regular);
+}

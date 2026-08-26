@@ -22,6 +22,51 @@ export const messages = defineMessages({
     defaultMessage: "Gateways",
     description: "Summary label for provisioned gateways.",
   },
+  gatewayStatusAriaDesc: {
+    id: "app.dashboard.gatewayStatus.ariaDesc",
+    defaultMessage: "Gateway count by status",
+    description: "Accessible description for the gateway status donut chart.",
+  },
+  gatewayStatusChartTitle: {
+    id: "app.dashboard.gatewayStatus.chartTitle",
+    defaultMessage: "Gateway status chart",
+    description: "Accessible title for the gateway status donut chart.",
+  },
+  gatewayStatusDataLabel: {
+    id: "app.dashboard.gatewayStatus.dataLabel",
+    defaultMessage: "{status}: {count}",
+    description: "Data label for a gateway status donut chart segment.",
+  },
+  gatewayStatusDegraded: {
+    id: "app.dashboard.gatewayStatus.degraded",
+    defaultMessage: "Degraded",
+    description: "Legend label for degraded gateways.",
+  },
+  gatewayStatusFailed: {
+    id: "app.dashboard.gatewayStatus.failed",
+    defaultMessage: "Failed",
+    description: "Legend label for failed gateways.",
+  },
+  gatewayStatusLegend: {
+    id: "app.dashboard.gatewayStatus.legend",
+    defaultMessage: "{status}: {count}",
+    description: "Legend entry for a gateway status donut chart segment.",
+  },
+  gatewayStatusProvisioning: {
+    id: "app.dashboard.gatewayStatus.provisioning",
+    defaultMessage: "Provisioning",
+    description: "Legend label for provisioning gateways.",
+  },
+  gatewayStatusRunning: {
+    id: "app.dashboard.gatewayStatus.running",
+    defaultMessage: "Running",
+    description: "Legend label for running gateways.",
+  },
+  gatewayStatusWidget: {
+    id: "app.dashboard.widget.gatewayStatus",
+    defaultMessage: "Gateway status",
+    description: "Title for the gateway status dashboard widget.",
+  },
   loadErrorBody: {
     id: "app.dashboard.loadError.body",
     defaultMessage:
@@ -126,6 +171,11 @@ export const messages = defineMessages({
     id: "app.dashboard.title",
     defaultMessage: "HyperShell operational dashboard",
     description: "Main heading on the operational dashboard page.",
+  },
+  trendLastDays: {
+    id: "app.dashboard.trend.lastDays",
+    defaultMessage: "Last {days} days",
+    description: "Caption below a trend sparkline showing the lookback window.",
   },
   trendTooltip: {
     id: "app.dashboard.trend.tooltip",

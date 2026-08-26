@@ -7,8 +7,16 @@ export interface OperationalMetricTrend {
   points: readonly OperationalMetricTrendPoint[];
 }
 
+export interface OperationalMetricStatus {
+  degraded?: number;
+  failed?: number;
+  provisioning?: number;
+  running?: number;
+}
+
 export interface OperationalMetric {
   id: string;
+  status?: OperationalMetricStatus;
   total?: string;
   trend?: OperationalMetricTrend;
   unit?: string;

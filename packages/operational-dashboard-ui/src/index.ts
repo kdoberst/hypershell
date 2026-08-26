@@ -16,6 +16,7 @@ export type {
   DashboardWorkflowRuntime,
   OperationalDashboardMetrics,
   OperationalMetric,
+  OperationalMetricStatus,
   OperationalMetricTrend,
   OperationalMetricTrendPoint,
   SignupTrendPoint,
