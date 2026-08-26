@@ -13,3 +13,14 @@ body.hypershell-operational-dashboard [data-ouia-component-id="remove-widget"] {
 .hypershell-dashboard-metric-card .pf-v6-c-stack {
   --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
 }
+
+.hypershell-dashboard-sparkline-chart {
+  height: 52px;
+  width: 100%;
+}
+
+.hypershell-dashboard-utilization-chart {
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  margin-inline: auto;
+}

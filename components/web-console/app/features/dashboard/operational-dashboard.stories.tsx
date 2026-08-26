@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   createDashboardOperations,
   DashboardUiProvider,
-  mockOperationalDashboardMetrics,
   OperationalDashboardPage,
   type DashboardUiNavigation,
 } from "@openshift-online/hypershell-operational-dashboard-ui";
+import { mockOperationalDashboardMetrics } from "@openshift-online/hypershell-operational-dashboard-ui/fixtures";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter, Route, Routes } from "react-router";
 

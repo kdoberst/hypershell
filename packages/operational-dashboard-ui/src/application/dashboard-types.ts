@@ -48,3 +48,12 @@ export interface DashboardOperations {
 export interface DashboardWorkflowRuntime {
   createCorrelationId(): string;
 }
+
+export type {
+  DashboardProbe,
+  DashboardProbeAction,
+  DashboardProbeName,
+  DashboardProbeOutcome,
+  DashboardProbePublisher,
+  DashboardWorkflowAction,
+} from "./dashboard-probes";

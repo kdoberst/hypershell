@@ -82,7 +82,7 @@ state cursor logic, ADF→text ping detection (in-memory only); manual validatio
 - Auth failure is fatal - alert user and exit; no partial sync or silent skip
 - Section headings from config only (Principle VI)
 - `- [x]` lines never removed or modified (FR-012)
-- Skill under `.agents/skills/classify-jira-question/`; pass SkillSpector + skillsaw (Principle IX)
+- Skill under `.agents/skills/classify-jira-question/`; pass SkillSpector + skillsaw (Principle IX); register the skill path in `.github/component-paths.json` and update `.github/workflows/lint.yml` via `/maintain-ci` when the skill is added
 - Skill authored with `kim-write-for-llm`; concise LLM-oriented prose
 - Title/URL never from classification payload (FR-014)
 

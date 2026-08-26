@@ -392,6 +392,9 @@ importers:
       '@eslint/js':
         specifier: 9.39.5
         version: 9.39.5
+      '@openshift-online/hypershell-domain-probes':
+        specifier: workspace:0.0.0
+        version: link:../../components/web-console/domain-probes
       '@patternfly/react-charts':
         specifier: 8.6.1
         version: 8.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(victory-area@37.3.6(react@19.2.8))(victory-axis@37.3.6(react@19.2.8))(victory-bar@37.3.6(react@19.2.8))(victory-box-plot@37.3.6(react@19.2.8))(victory-chart@37.3.6(react@19.2.8))(victory-core@37.3.6(react@19.2.8))(victory-create-container@37.3.6(react@19.2.8))(victory-cursor-container@37.3.6(react@19.2.8))(victory-group@37.3.6(react@19.2.8))(victory-legend@37.3.6(react@19.2.8))(victory-line@37.3.6(react@19.2.8))(victory-pie@37.3.6(react@19.2.8))(victory-scatter@37.3.6(react@19.2.8))(victory-stack@37.3.6(react@19.2.8))(victory-tooltip@37.3.6(react@19.2.8))(victory-voronoi-container@37.3.6(react@19.2.8))(victory-zoom-container@37.3.6(react@19.2.8))

@@ -1,6 +1,7 @@
 import { createContext, type PropsWithChildren, useContext } from "react";
 
 import type { DashboardOperations } from "./application/dashboard-types";
+import type { DashboardProbePublisher } from "./application/dashboard-probes";
 
 export interface DashboardUiNavigation {
   collectionHref: string;
@@ -10,6 +11,7 @@ export interface DashboardUiNavigation {
 export interface DashboardUiServices {
   dashboard: DashboardOperations;
   navigation: DashboardUiNavigation;
+  probes?: DashboardProbePublisher;
 }
 
 const DashboardUiContext = createContext<DashboardUiServices | undefined>(
@@ -20,9 +22,10 @@ export function DashboardUiProvider({
   children,
   dashboard,
   navigation,
+  probes,
 }: PropsWithChildren<DashboardUiServices>) {
   return (
-    <DashboardUiContext.Provider value={{ dashboard, navigation }}>
+    <DashboardUiContext.Provider value={{ dashboard, navigation, probes }}>
       {children}
     </DashboardUiContext.Provider>
   );

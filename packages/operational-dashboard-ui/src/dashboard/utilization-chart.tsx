@@ -6,6 +6,7 @@ import type {
   OperationalMetricTrend,
 } from "../application/dashboard-types";
 import { messages } from "../messages";
+import "../pages/dashboard-widget.css";
 
 interface UsageData {
   x: string;
@@ -20,7 +21,7 @@ interface UtilizationMetric {
   value: string;
 }
 
-function isUtilizationMetric(
+export function isUtilizationMetric(
   metric: OperationalMetric,
 ): metric is UtilizationMetric {
   return typeof metric.unit === "string" && typeof metric.total === "string";
@@ -44,13 +45,7 @@ export function UtilizationChart({
   const data: UsageData = { x: capacityLabel, y: percentage };
 
   return (
-    <div
-      style={{
-        aspectRatio: "1/1",
-        height: "100%",
-        marginInline: "auto",
-      }}
-    >
+    <div className="hypershell-dashboard-utilization-chart">
       <ChartDonutUtilization
         ariaDesc={capacityLabel}
         ariaTitle={intl.formatMessage(messages.utilizationChartTitle, {
