@@ -7,6 +7,7 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Divider,
   Flex,
   FlexItem,
   Icon,
@@ -31,6 +32,7 @@ import {
   type MetricTrendChange,
 } from "../dashboard/metric-trend-change";
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
+import { getGatewayExceptionStatusCounts } from "../dashboard/gateway-exception-status-counts";
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
 import {
   getUtilizationPercentage,
@@ -287,6 +289,131 @@ function SummaryMetricValue({
   );
 }
 
+function SummaryGatewayStatusCount({
+  count,
+  statusLabel,
+  variant,
+}: Readonly<{
+  count: number;
+  statusLabel: string;
+  variant: "danger" | "warning";
+}>) {
+  const intl = useIntl();
+  const accessibleLabel = intl.formatMessage(messages.gatewayStatusLegend, {
+    count,
+    status: statusLabel,
+  });
+  const statusIcon =
+    variant === "danger" ? (
+      <Icon isInline status="danger">
+        <ExclamationCircleIcon aria-hidden />
+      </Icon>
+    ) : (
+      <Icon isInline status="warning">
+        <ExclamationTriangleIcon aria-hidden />
+      </Icon>
+    );
+
+  return (
+    <Flex
+      alignItems={{ default: "alignItemsCenter" }}
+      direction={{ default: "row" }}
+      flexWrap={{ default: "nowrap" }}
+      spaceItems={{ default: "spaceItemsXs" }}
+    >
+      <FlexItem>
+        <Tooltip content={statusLabel} aria="labelledby">
+          <Button
+            aria-label={statusLabel}
+            className="hypershell-dashboard-summary-gateway-status__icon"
+            isInline
+            variant="plain"
+          >
+            {statusIcon}
+          </Button>
+        </Tooltip>
+      </FlexItem>
+      <FlexItem>
+        <span aria-label={accessibleLabel}>{count}</span>
+      </FlexItem>
+    </Flex>
+  );
+}
+
+function SummaryGatewayStatusCounts({
+  metric,
+}: Readonly<{ metric: OperationalMetric }>) {
+  const intl = useIntl();
+
+  if (metric.status === undefined) {
+    return null;
+  }
+
+  const { failed: failedCount, degraded: degradedCount } =
+    getGatewayExceptionStatusCounts(metric.status);
+
+  if (failedCount === 0 && degradedCount === 0) {
+    return null;
+  }
+
+  const failedLabel = intl.formatMessage(messages.gatewayStatusFailed);
+  const degradedLabel = intl.formatMessage(messages.gatewayStatusDegraded);
+
+  return (
+    <Flex
+      alignItems={{ default: "alignItemsCenter" }}
+      className="hypershell-dashboard-summary-gateway-status"
+      direction={{ default: "row" }}
+      flexWrap={{ default: "nowrap" }}
+      spaceItems={{ default: "spaceItemsSm" }}
+    >
+      {failedCount > 0 ? (
+        <FlexItem>
+          <SummaryGatewayStatusCount
+            count={failedCount}
+            statusLabel={failedLabel}
+            variant="danger"
+          />
+        </FlexItem>
+      ) : null}
+      {failedCount > 0 && degradedCount > 0 ? (
+        <FlexItem>
+          <Divider
+            className="hypershell-dashboard-summary-gateway-status__divider"
+            orientation={{ default: "vertical" }}
+          />
+        </FlexItem>
+      ) : null}
+      {degradedCount > 0 ? (
+        <FlexItem>
+          <SummaryGatewayStatusCount
+            count={degradedCount}
+            statusLabel={degradedLabel}
+            variant="warning"
+          />
+        </FlexItem>
+      ) : null}
+    </Flex>
+  );
+}
+
+function SummaryGatewayValue({
+  metric,
+}: Readonly<{ metric: OperationalMetric | undefined }>) {
+  return (
+    <Stack hasGutter className="hypershell-dashboard-summary-gateway-value">
+      <StackItem>
+        <SummaryMetricValue metric={metric} />
+      </StackItem>
+      {metric ? (
+        <StackItem>
+          <SummaryGatewayStatusCounts metric={metric} />
+        </StackItem>
+      ) : null}
+    </Stack>
+  );
+}
+
 const USAGE_SUMMARY_METRIC_IDS = [
   "active-users",
   "provisioned-gateways",
@@ -318,9 +445,15 @@ export function UsageSummaryCard({
               <FormattedMessage {...USAGE_SUMMARY_LABELS[metricId]} />
             </DescriptionListTerm>
             <DescriptionListDescription>
-              <SummaryMetricValue
-                metric={metrics.find((metric) => metric.id === metricId)}
-              />
+              {metricId === "provisioned-gateways" ? (
+                <SummaryGatewayValue
+                  metric={metrics.find((metric) => metric.id === metricId)}
+                />
+              ) : (
+                <SummaryMetricValue
+                  metric={metrics.find((metric) => metric.id === metricId)}
+                />
+              )}
             </DescriptionListDescription>
           </DescriptionListGroup>
         ))}
@@ -383,7 +516,7 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.provisionTime} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-          <SummaryUtilizationValue
+            <SummaryUtilizationValue
               metric={metrics.find((metric) => metric.id === "provision-time")}
             />
           </DescriptionListDescription>
