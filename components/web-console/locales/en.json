@@ -211,6 +211,10 @@
     "defaultMessage": "Provisioned sandboxes",
     "description": "Title for the provisioned sandboxes dashboard widget."
   },
+  "app.dashboard.widget.provisionTime": {
+    "defaultMessage": "Provision time",
+    "description": "Title for the provision time dashboard widget."
+  },
   "app.dashboard.widget.summary": {
     "defaultMessage": "Summary",
     "description": "Title for the operational dashboard summary widget."

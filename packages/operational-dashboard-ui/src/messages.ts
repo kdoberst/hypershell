@@ -133,6 +133,11 @@ export const messages = defineMessages({
     defaultMessage: "Provisioned sandboxes",
     description: "Title for the provisioned sandboxes dashboard widget.",
   },
+  provisionTime: {
+    id: "app.dashboard.summary.provisionTime",
+    defaultMessage: "Provision time",
+    description: "Summary label for provision time.",
+  },
   refresh: {
     id: "app.dashboard.refresh",
     defaultMessage: "Refresh dashboard metrics",

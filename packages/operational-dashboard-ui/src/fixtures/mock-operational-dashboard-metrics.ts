@@ -102,6 +102,11 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
           ]),
         }),
       }),
+      Object.freeze({
+        id: "provision-time",
+        value: "5.25",
+        unit: "minutes",
+      }),
     ]),
     lastSuccessfulRefresh: new Date("2026-08-25T10:55:00.000Z"),
   });

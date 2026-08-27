@@ -378,6 +378,16 @@ export function SystemSummaryCard({
             {metrics.find((metric) => metric.id === "nodes")?.value}
           </DescriptionListDescription>
         </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.provisionTime} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+          <SummaryUtilizationValue
+              metric={metrics.find((metric) => metric.id === "provision-time")}
+            />
+          </DescriptionListDescription>
+        </DescriptionListGroup>
       </DescriptionList>
     </WidgetContent>
   );
