@@ -55,21 +55,6 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
         value: "214",
       }),
       Object.freeze({
-        id: "namespaces",
-        trend: Object.freeze({
-          points: Object.freeze([
-            Object.freeze({ label: "Day 1", value: 12 }),
-            Object.freeze({ label: "Day 2", value: 18 }),
-            Object.freeze({ label: "Day 3", value: 20 }),
-            Object.freeze({ label: "Day 4", value: 27 }),
-            Object.freeze({ label: "Day 5", value: 55 }),
-            Object.freeze({ label: "Day 6", value: 74 }),
-            Object.freeze({ label: "Day 7", value: 80 }),
-          ]),
-        }),
-        value: "80",
-      }),
-      Object.freeze({
         id: "nodes",
         value: "8",
       }),

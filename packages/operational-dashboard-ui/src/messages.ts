@@ -113,11 +113,6 @@ export const messages = defineMessages({
     defaultMessage: "{value} {label}",
     description: "Formatted count for a dashboard metric card heading.",
   },
-  namespaces: {
-    id: "app.dashboard.widget.namespaces",
-    defaultMessage: "Namespaces",
-    description: "Title for the namespaces dashboard widget.",
-  },
   nodes: {
     id: "app.dashboard.widget.nodes",
     defaultMessage: "Nodes",
@@ -132,11 +127,6 @@ export const messages = defineMessages({
     id: "app.dashboard.widget.provisionedGateways",
     defaultMessage: "Provisioned gateways",
     description: "Title for the provisioned gateways dashboard widget.",
-  },
-  provisionedSandboxes: {
-    id: "app.dashboard.widget.provisionedSandboxes",
-    defaultMessage: "Provisioned sandboxes",
-    description: "Title for the provisioned sandboxes dashboard widget.",
   },
   provisionTime: {
     id: "app.dashboard.summary.provisionTime",
@@ -273,6 +263,7 @@ export const messages = defineMessages({
   widgetSandboxes: {
     id: "app.dashboard.summary.sandboxes",
     defaultMessage: "Sandboxes",
-    description: "Summary label for provisioned sandboxes.",
+    description:
+      "Label for provisioned sandboxes on the operational dashboard.",
   },
 });

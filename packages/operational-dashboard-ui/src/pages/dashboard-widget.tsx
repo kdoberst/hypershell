@@ -417,14 +417,12 @@ function SummaryGatewayValue({
 const USAGE_SUMMARY_METRIC_IDS = [
   "active-users",
   "provisioned-gateways",
-  "namespaces",
   "provisioned-sandboxes",
 ] as const;
 
 const USAGE_SUMMARY_LABELS = {
   "active-users": messages.users,
   "provisioned-gateways": messages.gateways,
-  namespaces: messages.namespaces,
   "provisioned-sandboxes": messages.widgetSandboxes,
 } as const;
 

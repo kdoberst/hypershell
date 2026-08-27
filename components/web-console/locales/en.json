@@ -121,7 +121,7 @@
   },
   "app.dashboard.summary.sandboxes": {
     "defaultMessage": "Sandboxes",
-    "description": "Summary label for provisioned sandboxes."
+    "description": "Label for provisioned sandboxes on the operational dashboard."
   },
   "app.dashboard.summary.system": {
     "defaultMessage": "System",
@@ -203,10 +203,6 @@
     "defaultMessage": "Memory",
     "description": "Title for the memory utilization dashboard widget."
   },
-  "app.dashboard.widget.namespaces": {
-    "defaultMessage": "Namespaces",
-    "description": "Title for the namespaces dashboard widget."
-  },
   "app.dashboard.widget.nodes": {
     "defaultMessage": "Nodes",
     "description": "Title for the nodes dashboard widget."
@@ -218,10 +214,6 @@
   "app.dashboard.widget.provisionedGateways": {
     "defaultMessage": "Provisioned gateways",
     "description": "Title for the provisioned gateways dashboard widget."
-  },
-  "app.dashboard.widget.provisionedSandboxes": {
-    "defaultMessage": "Provisioned sandboxes",
-    "description": "Title for the provisioned sandboxes dashboard widget."
   },
   "app.dashboard.widget.summary": {
     "defaultMessage": "Summary",

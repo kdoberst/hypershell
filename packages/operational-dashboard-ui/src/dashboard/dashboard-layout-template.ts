@@ -22,7 +22,7 @@ const WIDGET_TITLE_MESSAGES = {
   "active-users": messages.activeUsers,
   "gateway-status": messages.gatewayStatusWidget,
   memory: messages.widgetMemory,
-  namespaces: messages.namespaces,
+  "provisioned-sandboxes": messages.widgetSandboxes,
   cpu: messages.widgetCpu,
   pods: messages.widgetPods,
 } as const;
@@ -50,10 +50,10 @@ const fourColumnLayout = [
   },
   {
     h: METRIC_WIDGET_HEIGHT,
-    i: "namespaces#1",
-    title: "Namespaces",
+    i: "provisioned-sandboxes#1",
+    title: "Sandboxes",
     w: 1,
-    widgetType: "namespaces",
+    widgetType: "provisioned-sandboxes",
     x: 2,
     y: 0,
   },
@@ -141,10 +141,10 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
     },
     {
       h: METRIC_WIDGET_HEIGHT,
-      i: "namespaces#1",
-      title: "Namespaces",
+      i: "provisioned-sandboxes#1",
+      title: "Sandboxes",
       w: 1,
-      widgetType: "namespaces",
+      widgetType: "provisioned-sandboxes",
       x: 0,
       y:
         USAGE_SUMMARY_WIDGET_HEIGHT +

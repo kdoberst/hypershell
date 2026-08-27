@@ -60,7 +60,7 @@ import { useGetMetricsData } from "./get-metrics-data";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v12";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v13";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -230,14 +230,19 @@ function createWidgetMapping(
           "status",
         ),
     },
-    namespaces: {
+    "provisioned-sandboxes": {
       defaults: METRIC_WIDGET_DEFAULTS,
       config: {
         icon: <CubesIcon />,
-        title: intl.formatMessage(messages.namespaces),
+        title: intl.formatMessage(messages.widgetSandboxes),
       },
       renderWidget: () =>
-        renderMetric("namespaces", "", messages.namespaces, "metric"),
+        renderMetric(
+          "provisioned-sandboxes",
+          "",
+          messages.widgetSandboxes,
+          "metric",
+        ),
     },
     cpu: {
       defaults: METRIC_WIDGET_DEFAULTS,
