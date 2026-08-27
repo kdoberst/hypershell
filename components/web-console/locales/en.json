@@ -31,49 +31,9 @@
     "defaultMessage": "Add widgets",
     "description": "Label for the button that opens the widget drawer."
   },
-  "app.dashboard.resetToDefault": {
-    "defaultMessage": "Reset to default",
-    "description": "Label for restoring the operational dashboard default layout."
-  },
   "app.dashboard.description": {
     "defaultMessage": "This dashboard is in development and is currently using mocked data.",
     "description": "Supporting text on the operational dashboard page."
-  },
-  "app.dashboard.loadError.body": {
-    "defaultMessage": "An unexpected error occurred while loading dashboard metrics.",
-    "description": "Recovery guidance when operational dashboard metrics cannot be loaded."
-  },
-  "app.dashboard.loadError.title": {
-    "defaultMessage": "Operational dashboard metrics are unavailable",
-    "description": "Title shown when operational dashboard metrics cannot be loaded."
-  },
-  "app.dashboard.loading": {
-    "defaultMessage": "Loading operational dashboard metrics",
-    "description": "Accessible status shown while operational dashboard metrics load."
-  },
-  "app.dashboard.metric.value": {
-    "defaultMessage": "{value} {label}",
-    "description": "Formatted count for a dashboard metric card heading."
-  },
-  "app.dashboard.metricUnavailable.body": {
-    "defaultMessage": "This information is not currently available.",
-    "description": "Recovery guidance when an individual dashboard metric is missing."
-  },
-  "app.dashboard.metricUnavailable.title": {
-    "defaultMessage": "Metric unavailable",
-    "description": "Heading shown when an individual dashboard metric is missing."
-  },
-  "app.dashboard.refresh": {
-    "defaultMessage": "Refresh dashboard metrics",
-    "description": "Accessible label for refreshing operational dashboard metrics."
-  },
-  "app.dashboard.summary.cpus": {
-    "defaultMessage": "CPUs",
-    "description": "Summary label for provisioned CPU capacity."
-  },
-  "app.dashboard.summary.gateways": {
-    "defaultMessage": "Gateways",
-    "description": "Summary label for provisioned gateways."
   },
   "app.dashboard.gatewayStatus.ariaDesc": {
     "defaultMessage": "Gateway count by status",
@@ -107,9 +67,45 @@
     "defaultMessage": "Running",
     "description": "Legend label for running gateways."
   },
-  "app.dashboard.widget.gatewayStatus": {
-    "defaultMessage": "Gateway status",
-    "description": "Title for the gateway status dashboard widget."
+  "app.dashboard.loadError.body": {
+    "defaultMessage": "An unexpected error occurred while loading dashboard metrics.",
+    "description": "Recovery guidance when operational dashboard metrics cannot be loaded."
+  },
+  "app.dashboard.loadError.title": {
+    "defaultMessage": "Operational dashboard metrics are unavailable",
+    "description": "Title shown when operational dashboard metrics cannot be loaded."
+  },
+  "app.dashboard.loading": {
+    "defaultMessage": "Loading operational dashboard metrics",
+    "description": "Accessible status shown while operational dashboard metrics load."
+  },
+  "app.dashboard.metric.value": {
+    "defaultMessage": "{value} {label}",
+    "description": "Formatted count for a dashboard metric card heading."
+  },
+  "app.dashboard.metricUnavailable.body": {
+    "defaultMessage": "This information is not currently available.",
+    "description": "Recovery guidance when an individual dashboard metric is missing."
+  },
+  "app.dashboard.metricUnavailable.title": {
+    "defaultMessage": "Metric unavailable",
+    "description": "Heading shown when an individual dashboard metric is missing."
+  },
+  "app.dashboard.refresh": {
+    "defaultMessage": "Refresh dashboard metrics",
+    "description": "Accessible label for refreshing operational dashboard metrics."
+  },
+  "app.dashboard.resetToDefault": {
+    "defaultMessage": "Reset to default",
+    "description": "Label for restoring the operational dashboard default layout."
+  },
+  "app.dashboard.summary.cpus": {
+    "defaultMessage": "CPUs",
+    "description": "Summary label for provisioned CPU capacity."
+  },
+  "app.dashboard.summary.gateways": {
+    "defaultMessage": "Gateways",
+    "description": "Summary label for provisioned gateways."
   },
   "app.dashboard.summary.memory": {
     "defaultMessage": "Memory",
@@ -118,6 +114,10 @@
   "app.dashboard.summary.pods": {
     "defaultMessage": "Pods",
     "description": "Summary label for pod utilization."
+  },
+  "app.dashboard.summary.provisionTime": {
+    "defaultMessage": "Provision time",
+    "description": "Summary label for provision time."
   },
   "app.dashboard.summary.sandboxes": {
     "defaultMessage": "Sandboxes",
@@ -195,6 +195,10 @@
     "defaultMessage": "CPU",
     "description": "Title for the CPU utilization dashboard widget."
   },
+  "app.dashboard.widget.gatewayStatus": {
+    "defaultMessage": "Gateway status",
+    "description": "Title for the gateway status dashboard widget."
+  },
   "app.dashboard.widget.memory": {
     "defaultMessage": "Memory",
     "description": "Title for the memory utilization dashboard widget."
@@ -218,10 +222,6 @@
   "app.dashboard.widget.provisionedSandboxes": {
     "defaultMessage": "Provisioned sandboxes",
     "description": "Title for the provisioned sandboxes dashboard widget."
-  },
-  "app.dashboard.widget.provisionTime": {
-    "defaultMessage": "Provision time",
-    "description": "Title for the provision time dashboard widget."
   },
   "app.dashboard.widget.summary": {
     "defaultMessage": "Summary",
