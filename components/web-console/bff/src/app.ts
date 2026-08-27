@@ -375,6 +375,8 @@ export async function buildApp(
     },
   ) => {
     const pathname = new URL(request.url, "http://bff.invalid").pathname;
+    // Dashboard admin enforcement applies only when OIDC is configured. In
+    // no-auth dev mode (OIDC_ISSUER unset) the operational dashboard is open.
     if (
       config.oidcIssuer &&
       requiresDashboardAdminAccess(pathname, request.headers.host) &&

@@ -29,22 +29,28 @@ export function RequireDashboardAdmin({
     );
   }
 
+  const accessDenied = (
+    <PageSection hasBodyWrapper={false} isFilled>
+      <EmptyState
+        variant={EmptyStateVariant.full}
+        titleText={
+          <FormattedMessage {...messages.dashboardAccessDeniedTitle} />
+        }
+        headingLevel="h1"
+      >
+        <EmptyStateBody>
+          <FormattedMessage {...messages.dashboardAccessDeniedBody} />
+        </EmptyStateBody>
+      </EmptyState>
+    </PageSection>
+  );
+
+  if (session?.authEnabled && !session.authenticated) {
+    return accessDenied;
+  }
+
   if (session?.authenticated && !hasDashboardAdminRole(session.roles)) {
-    return (
-      <PageSection hasBodyWrapper={false} isFilled>
-        <EmptyState
-          variant={EmptyStateVariant.full}
-          titleText={
-            <FormattedMessage {...messages.dashboardAccessDeniedTitle} />
-          }
-          headingLevel="h1"
-        >
-          <EmptyStateBody>
-            <FormattedMessage {...messages.dashboardAccessDeniedBody} />
-          </EmptyStateBody>
-        </EmptyState>
-      </PageSection>
-    );
+    return accessDenied;
   }
 
   return children;

@@ -36,17 +36,37 @@ describe("RequireDashboardAdmin", () => {
     vi.clearAllMocks();
   });
 
-  it("renders children when the session is unauthenticated", async () => {
-    getSessionMock.mockResolvedValue({ authenticated: false, roles: [] });
+  it("renders children when auth is disabled (no-auth mode)", async () => {
+    getSessionMock.mockResolvedValue({
+      authenticated: false,
+      authEnabled: false,
+      roles: [],
+    });
 
     renderGuard();
 
     expect(await screen.findByTestId("dashboard-content")).toBeTruthy();
   });
 
+  it("shows access denied when auth is enabled but the session is unauthenticated", async () => {
+    getSessionMock.mockResolvedValue({
+      authenticated: false,
+      authEnabled: true,
+      roles: [],
+    });
+
+    renderGuard();
+
+    expect(
+      await screen.findByRole("heading", { name: "Access denied" }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-content")).toBeNull();
+  });
+
   it("renders children for hypershell-admins", async () => {
     getSessionMock.mockResolvedValue({
       authenticated: true,
+      authEnabled: true,
       roles: ["hypershell-admins"],
     });
 
@@ -58,6 +78,7 @@ describe("RequireDashboardAdmin", () => {
   it("renders children for platform:admin", async () => {
     getSessionMock.mockResolvedValue({
       authenticated: true,
+      authEnabled: true,
       roles: ["platform:admin"],
     });
 
@@ -69,6 +90,7 @@ describe("RequireDashboardAdmin", () => {
   it("shows access denied for authenticated non-admin users", async () => {
     getSessionMock.mockResolvedValue({
       authenticated: true,
+      authEnabled: true,
       roles: ["hypershell-users"],
     });
 
