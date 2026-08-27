@@ -94,7 +94,6 @@ export function GatewayStatusCard({
 }: Readonly<{ metric: OperationalMetric }>) {
   const intl = useIntl();
   const trendTitle = intl.formatMessage(messages.provisionedGateways);
-  const trendDayCount = metric.trend?.points.length ?? 0;
 
   return (
     <WidgetContent>
@@ -104,21 +103,9 @@ export function GatewayStatusCard({
             <GatewayStatusChart metric={metric} />
           </StackItem>
           {metric.trend ? (
-            <>
-              <StackItem>
-                <TrendSparklineChart trend={metric.trend} title={trendTitle} />
-              </StackItem>
-              {trendDayCount > 0 ? (
-                <StackItem>
-                  <small>
-                    <FormattedMessage
-                      {...messages.trendLastDays}
-                      values={{ days: trendDayCount }}
-                    />
-                  </small>
-                </StackItem>
-              ) : null}
-            </>
+            <StackItem>
+              <TrendSparklineChart trend={metric.trend} title={trendTitle} />
+            </StackItem>
           ) : null}
         </Stack>
       </Content>

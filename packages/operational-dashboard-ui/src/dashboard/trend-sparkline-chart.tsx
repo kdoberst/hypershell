@@ -17,6 +17,8 @@ interface SparklineDatum {
   y: number;
 }
 
+const SPARKLINE_PLOT_HEIGHT = 36;
+
 export function TrendSparklineChart({
   trend,
   title,
@@ -64,24 +66,31 @@ export function TrendSparklineChart({
       value: datum.y,
     });
 
+  const trendDayCount = trend.points.length.toString();
+
   return (
     <div ref={containerRef} className="hypershell-dashboard-sparkline-chart">
-      <ChartGroup
-        ariaDesc={title}
-        ariaTitle={title}
-        containerComponent={
-          <ChartVoronoiContainer
-            constrainToVisibleArea
-            labels={({ datum }) => formatTooltip(datum as SparklineDatum)}
-          />
-        }
-        height={52}
-        padding={{ bottom: 2, left: 2, right: 2, top: 2 }}
-        themeColor={ChartThemeColor.blue}
-        width={width}
-      >
-        <ChartArea data={chartData} />
-      </ChartGroup>
+      <div className="hypershell-dashboard-sparkline-chart__plot">
+        <ChartGroup
+          ariaDesc={title}
+          ariaTitle={title}
+          containerComponent={
+            <ChartVoronoiContainer
+              constrainToVisibleArea
+              labels={({ datum }) => formatTooltip(datum as SparklineDatum)}
+            />
+          }
+          height={SPARKLINE_PLOT_HEIGHT}
+          padding={{ bottom: 1, left: 2, right: 2, top: 1 }}
+          themeColor={ChartThemeColor.blue}
+          width={width}
+        >
+          <ChartArea data={chartData} />
+        </ChartGroup>
+      </div>
+      <small className="hypershell-dashboard-sparkline-chart__caption">
+        {intl.formatMessage(messages.trendLastDays, { days: trendDayCount })}
+      </small>
     </div>
   );
 }

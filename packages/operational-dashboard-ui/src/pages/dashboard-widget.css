@@ -15,8 +15,18 @@ body.hypershell-operational-dashboard [data-ouia-component-id="remove-widget"] {
 }
 
 .hypershell-dashboard-sparkline-chart {
-  height: 52px;
   width: 100%;
+}
+
+.hypershell-dashboard-sparkline-chart__plot {
+  height: 36px;
+}
+
+.hypershell-dashboard-sparkline-chart__caption {
+  display: block;
+  line-height: 1.2;
+  margin-block-start: var(--pf-t--global--spacer--xs);
+  text-align: center;
 }
 
 .hypershell-dashboard-utilization-chart {
