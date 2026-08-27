@@ -133,9 +133,7 @@ export const WithRefresh: Story = {
 };
 
 export const InitialLoadFailed: Story = {
-  render: () => (
-    <DashboardPreview dashboard={initialLoadFailedDashboard} />
-  ),
+  render: () => <DashboardPreview dashboard={initialLoadFailedDashboard} />,
 };
 
 export const RefreshFailed: Story = {
