@@ -139,6 +139,19 @@ export const messages = defineMessages({
     description:
       "Accessible label for refreshing operational dashboard metrics.",
   },
+  refreshErrorBody: {
+    id: "app.dashboard.refreshError.body",
+    defaultMessage:
+      "Showing the last successful metrics. Try refreshing again.",
+    description:
+      "Recovery guidance when operational dashboard metrics cannot be refreshed.",
+  },
+  refreshErrorTitle: {
+    id: "app.dashboard.refreshError.title",
+    defaultMessage: "Could not refresh dashboard metrics",
+    description:
+      "Title shown when operational dashboard metrics cannot be refreshed.",
+  },
   resetToDefault: {
     id: "app.dashboard.resetToDefault",
     defaultMessage: "Reset to default",

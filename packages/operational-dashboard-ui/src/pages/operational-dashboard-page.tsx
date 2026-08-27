@@ -290,6 +290,13 @@ export function OperationalDashboardPage({
     enabled: metrics === undefined,
   });
   const dashboardMetrics = metrics ?? metricsQuery.data;
+  const showInitialLoadError =
+    metrics === undefined && metricsQuery.isError && !metricsQuery.data;
+  const showRefreshError =
+    metrics === undefined &&
+    metricsQuery.isError &&
+    Boolean(metricsQuery.data) &&
+    !metricsQuery.isFetching;
   const localizedBaseTemplate = useMemo(
     () => localizeDashboardLayoutTemplate(baseTemplate, intl),
     [intl],
@@ -456,7 +463,7 @@ export function OperationalDashboardPage({
           <Spinner aria-label={intl.formatMessage(messages.loading)} />
         </Bullseye>
       ) : null}
-      {metricsQuery.isError && metrics === undefined ? (
+      {showInitialLoadError ? (
         <Alert
           title={intl.formatMessage(messages.loadErrorTitle)}
           variant="danger"
@@ -464,6 +471,16 @@ export function OperationalDashboardPage({
           {metricsQuery.error instanceof Error
             ? metricsQuery.error.message
             : intl.formatMessage(messages.loadErrorBody)}
+        </Alert>
+      ) : null}
+      {showRefreshError ? (
+        <Alert
+          title={intl.formatMessage(messages.refreshErrorTitle)}
+          variant="warning"
+        >
+          {metricsQuery.error instanceof Error
+            ? metricsQuery.error.message
+            : intl.formatMessage(messages.refreshErrorBody)}
         </Alert>
       ) : null}
       {widgetMapping ? (
