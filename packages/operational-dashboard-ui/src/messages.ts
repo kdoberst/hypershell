@@ -6,6 +6,11 @@ export const messages = defineMessages({
     defaultMessage: "Active users",
     description: "Title for the active users dashboard widget.",
   },
+  addWidgets: {
+    id: "app.dashboard.addWidgets",
+    defaultMessage: "Add widgets",
+    description: "Label for the button that opens the widget drawer.",
+  },
   cpus: {
     id: "app.dashboard.summary.cpus",
     defaultMessage: "CPUs",
@@ -143,6 +148,12 @@ export const messages = defineMessages({
     defaultMessage: "Refresh dashboard metrics",
     description:
       "Accessible label for refreshing operational dashboard metrics.",
+  },
+  resetToDefault: {
+    id: "app.dashboard.resetToDefault",
+    defaultMessage: "Reset to default",
+    description:
+      "Label for restoring the operational dashboard default layout.",
   },
   summary: {
     id: "app.dashboard.widget.summary",

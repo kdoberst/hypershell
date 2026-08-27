@@ -1,6 +1,7 @@
 import {
   Alert,
   Bullseye,
+  Button,
   Content,
   EmptyState,
   EmptyStateBody,
@@ -10,6 +11,10 @@ import {
   Flex,
   FlexItem,
   Title,
+  Toolbar,
+  ToolbarContent,
+  ToolbarGroup,
+  ToolbarItem,
 } from "@patternfly/react-core";
 import {
   ClusterIcon,
@@ -19,13 +24,15 @@ import {
   MemoryIcon,
 } from "@patternfly/react-icons";
 import {
+  AddWidgetsButton,
   GridLayout,
+  WidgetDrawer,
   type ExtendedTemplateConfig,
   type Variants,
   type WidgetMapping,
 } from "@patternfly/widgetized-dashboard";
 import "@patternfly/widgetized-dashboard/dist/esm/styles.css";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl, type IntlShape } from "react-intl";
 
 import type { OperationalDashboardMetrics } from "../application/dashboard-types";
@@ -51,8 +58,6 @@ import {
 } from "./dashboard-widget";
 import { useGetMetricsData } from "./get-metrics-data";
 
-const OPERATIONAL_DASHBOARD_BODY_CLASS = "hypershell-operational-dashboard";
-
 const baseTemplate = defaultDashboardLayoutTemplate;
 
 const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v12";
@@ -63,38 +68,47 @@ const CUSTOM_COLUMNS: Record<Variants, number> = {
   sm: 1,
 };
 
-function preservesRequiredWidgets(
-  nextTemplate: ExtendedTemplateConfig,
-): boolean {
-  for (const variant of Object.keys(baseTemplate) as Variants[]) {
-    if (!Array.isArray(nextTemplate[variant])) {
-      return false;
-    }
+function isValidSavedTemplate(savedTemplate: ExtendedTemplateConfig): boolean {
+  return (Object.keys(baseTemplate) as Variants[]).every((variant) =>
+    Array.isArray(savedTemplate[variant]),
+  );
+}
 
-    const requiredIds = new Set(baseTemplate[variant].map((item) => item.i));
+function getActiveWidgetTypes(template: ExtendedTemplateConfig): string[] {
+  const types = new Set<string>();
 
-    for (const id of requiredIds) {
-      if (!nextTemplate[variant].some((item) => item.i === id)) {
-        return false;
-      }
+  for (const variant of Object.keys(template) as Variants[]) {
+    for (const item of template[variant]) {
+      types.add(item.widgetType);
     }
   }
 
-  return true;
+  return [...types];
 }
 
-function restoreRequiredWidgets(
-  savedTemplate: ExtendedTemplateConfig,
+function getAddedWidgetTypes(
+  currentTemplate: ExtendedTemplateConfig,
+  nextTemplate: ExtendedTemplateConfig,
+): string[] {
+  const currentTypes = new Set(getActiveWidgetTypes(currentTemplate));
+
+  return getActiveWidgetTypes(nextTemplate).filter(
+    (type) => !currentTypes.has(type),
+  );
+}
+
+function sanitizeDashboardTemplate(
+  template: ExtendedTemplateConfig,
 ): ExtendedTemplateConfig {
-  return (Object.keys(baseTemplate) as Variants[]).reduce((acc, variant) => {
-    const savedById = new Map(
-      savedTemplate[variant].map((item) => [item.i, item]),
-    );
-
-    acc[variant] = baseTemplate[variant].map(
-      (defaultItem) => savedById.get(defaultItem.i) ?? defaultItem,
-    );
-
+  return (Object.keys(template) as Variants[]).reduce((acc, variant) => {
+    const seen = new Set<string>();
+    acc[variant] = template[variant].filter((item) => {
+      if (seen.has(item.widgetType)) {
+        return false;
+      }
+      seen.add(item.widgetType);
+      return true;
+    });
     return acc;
   }, {} as ExtendedTemplateConfig);
 }
@@ -275,14 +289,11 @@ export function OperationalDashboardPage({
     () => localizeDashboardLayoutTemplate(baseTemplate, intl),
     [intl],
   );
-
-  useEffect(() => {
-    document.body.classList.add(OPERATIONAL_DASHBOARD_BODY_CLASS);
-
-    return () => {
-      document.body.classList.remove(OPERATIONAL_DASHBOARD_BODY_CLASS);
-    };
-  }, []);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [gridLayoutKey, setGridLayoutKey] = useState(0);
+  const [droppingWidgetType, setDroppingWidgetType] = useState<
+    string | undefined
+  >();
 
   const savedTemplate = useMemo<ExtendedTemplateConfig>(() => {
     if (typeof window === "undefined") {
@@ -295,22 +306,25 @@ export function OperationalDashboardPage({
         return localizedBaseTemplate;
       }
 
-      return localizeDashboardLayoutTemplate(
-        restoreRequiredWidgets(
-          JSON.parse(rawTemplate) as ExtendedTemplateConfig,
-        ),
-        intl,
-      );
+      const parsed = JSON.parse(rawTemplate) as ExtendedTemplateConfig;
+      if (!isValidSavedTemplate(parsed)) {
+        return localizedBaseTemplate;
+      }
+
+      return localizeDashboardLayoutTemplate(parsed, intl);
     } catch {
       return localizedBaseTemplate;
     }
   }, [intl, localizedBaseTemplate]);
   const [dashboardTemplate, setDashboardTemplate] =
     useState<ExtendedTemplateConfig>(savedTemplate);
-  const [gridLayoutKey, setGridLayoutKey] = useState(0);
   const displayTemplate = useMemo(
     () => localizeDashboardLayoutTemplate(dashboardTemplate, intl),
     [dashboardTemplate, intl],
+  );
+  const activeWidgetTypes = useMemo(
+    () => getActiveWidgetTypes(displayTemplate),
+    [displayTemplate],
   );
   const widgetMapping = useMemo(
     () =>
@@ -319,23 +333,44 @@ export function OperationalDashboardPage({
         : undefined,
     [dashboardMetrics, intl],
   );
+  const hasWidgetsToAdd = useMemo(() => {
+    if (!widgetMapping) {
+      return false;
+    }
+
+    return Object.keys(widgetMapping).some(
+      (type) => !activeWidgetTypes.includes(type),
+    );
+  }, [widgetMapping, activeWidgetTypes]);
 
   const handleTemplateChange = (nextTemplate: ExtendedTemplateConfig) => {
-    const correlationId = crypto.randomUUID();
+    const addedTypes = getAddedWidgetTypes(dashboardTemplate, nextTemplate);
 
-    if (!preservesRequiredWidgets(nextTemplate)) {
-      probes.publish(
-        layoutProbe(
-          correlationId,
-          "dashboard.layout.template.invalid",
-          "failed",
-        ),
-      );
+    if (addedTypes.length > 0 && droppingWidgetType === undefined) {
       setGridLayoutKey((currentKey) => currentKey + 1);
       return;
     }
 
-    setDashboardTemplate(nextTemplate);
+    if (
+      droppingWidgetType !== undefined &&
+      activeWidgetTypes.includes(droppingWidgetType)
+    ) {
+      setGridLayoutKey((currentKey) => currentKey + 1);
+      return;
+    }
+
+    const sanitized = sanitizeDashboardTemplate(nextTemplate);
+    const correlationId = crypto.randomUUID();
+
+    setDashboardTemplate(sanitized);
+
+    const sanitizedTypes = getActiveWidgetTypes(sanitized);
+    if (
+      widgetMapping &&
+      Object.keys(widgetMapping).every((type) => sanitizedTypes.includes(type))
+    ) {
+      setDrawerOpen(false);
+    }
 
     if (typeof window === "undefined") {
       return;
@@ -344,7 +379,35 @@ export function OperationalDashboardPage({
     try {
       window.localStorage.setItem(
         LAYOUT_STORAGE_KEY,
-        JSON.stringify(nextTemplate),
+        JSON.stringify(sanitized),
+      );
+    } catch {
+      probes.publish(
+        layoutProbe(
+          correlationId,
+          "dashboard.layout.template.persistence-failed",
+          "failed",
+        ),
+      );
+    }
+  };
+
+  const handleResetToDefault = () => {
+    const defaultTemplate = localizeDashboardLayoutTemplate(baseTemplate, intl);
+    const correlationId = crypto.randomUUID();
+
+    setDashboardTemplate(defaultTemplate);
+    setDrawerOpen(false);
+    setGridLayoutKey((currentKey) => currentKey + 1);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        LAYOUT_STORAGE_KEY,
+        JSON.stringify(defaultTemplate),
       );
     } catch {
       probes.publish(
@@ -399,13 +462,50 @@ export function OperationalDashboardPage({
         </Alert>
       ) : null}
       {widgetMapping ? (
-        <GridLayout
-          key={gridLayoutKey}
-          columns={CUSTOM_COLUMNS}
-          onTemplateChange={handleTemplateChange}
-          template={displayTemplate}
-          widgetMapping={widgetMapping}
-        />
+        <>
+          <Toolbar isSticky>
+            <ToolbarContent>
+              <ToolbarGroup align={{ default: "alignEnd" }}>
+                <ToolbarItem>
+                  <Button variant="link" onClick={handleResetToDefault}>
+                    {intl.formatMessage(messages.resetToDefault)}
+                  </Button>
+                </ToolbarItem>
+                {hasWidgetsToAdd ? (
+                  <ToolbarItem>
+                    <AddWidgetsButton
+                      onClick={() => {
+                        setDrawerOpen(!drawerOpen);
+                      }}
+                    >
+                      {intl.formatMessage(messages.addWidgets)}
+                    </AddWidgetsButton>
+                  </ToolbarItem>
+                ) : null}
+              </ToolbarGroup>
+            </ToolbarContent>
+          </Toolbar>
+          <WidgetDrawer
+            currentlyUsedWidgets={activeWidgetTypes}
+            isOpen={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            onWidgetDragEnd={() => {
+              setDroppingWidgetType(undefined);
+            }}
+            onWidgetDragStart={setDroppingWidgetType}
+            widgetMapping={widgetMapping}
+          >
+            <GridLayout
+              key={gridLayoutKey}
+              columns={CUSTOM_COLUMNS}
+              droppingWidgetType={droppingWidgetType}
+              onDrawerExpandChange={setDrawerOpen}
+              onTemplateChange={handleTemplateChange}
+              template={displayTemplate}
+              widgetMapping={widgetMapping}
+            />
+          </WidgetDrawer>
+        </>
       ) : null}
     </PageSection>
   );
