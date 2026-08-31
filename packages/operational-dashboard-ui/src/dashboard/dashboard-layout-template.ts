@@ -19,7 +19,7 @@ const SYSTEM_SUMMARY_WIDGET_Y = USAGE_SUMMARY_WIDGET_HEIGHT + METRIC_ROW_GAP;
 const WIDGET_TITLE_MESSAGES = {
   "usage-summary": messages.usageSummaryWidget,
   "system-summary": messages.systemSummaryWidget,
-  "active-users": messages.activeUsers,
+  "registered-users": messages.registeredUsers,
   "gateway-status": messages.gatewayStatusWidget,
   memory: messages.widgetMemory,
   "provisioned-sandboxes": messages.widgetSandboxes,
@@ -77,10 +77,10 @@ const fourColumnLayout = [
   },
   {
     h: METRIC_WIDGET_HEIGHT,
-    i: "active-users#1",
-    title: "Active users",
+    i: "registered-users#1",
+    title: "Registered users",
     w: 1,
-    widgetType: "active-users",
+    widgetType: "registered-users",
     x: 2,
     y: METRIC_ROW_STEP,
   },
@@ -168,10 +168,10 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
     },
     {
       h: METRIC_WIDGET_HEIGHT,
-      i: "active-users#1",
-      title: "Active users",
+      i: "registered-users#1",
+      title: "Registered users",
       w: 1,
-      widgetType: "active-users",
+      widgetType: "registered-users",
       x: 0,
       y:
         USAGE_SUMMARY_WIDGET_HEIGHT +
