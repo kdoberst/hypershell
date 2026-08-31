@@ -62,7 +62,7 @@ esac
 restore_web_console_from_overlay() {
   local out applied=false f
   out="$(mktemp -d)"
-  if kustomize build "${REPO_ROOT}/deploy/kind" -o "${out}" 2>/dev/null; then
+  if kustomize build --load-restrictor=LoadRestrictionsNone "${REPO_ROOT}/deploy/kind" -o "${out}" 2>/dev/null; then
     for f in "${out}"/*hypershell-web-console*.yaml; do
       [[ -e "${f}" ]] || continue
       kube apply -f "${f}" && applied=true

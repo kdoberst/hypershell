@@ -181,10 +181,6 @@ patch_cluster_coredns() {
   local gw_ip="$1"
   local existing
   existing=$(kube get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' 2>/dev/null || true)
-  if echo "${existing}" | grep -q "hypershell.localhost"; then
-    info "Cluster CoreDNS already patched for hypershell.localhost"
-    return
-  fi
   # All *.hypershell.localhost hosts (including keycloak) resolve to the gateway
   # LB IP so in-cluster traffic goes through the gateway's HTTPS listener on :443.
   # The gateway terminates TLS with the *.hypershell.localhost cert and forwards
@@ -192,7 +188,6 @@ patch_cluster_coredns() {
   # OIDC tokens against the canonical issuer (https://keycloak.hypershell.localhost)
   # exactly as the host does, trusting the self-signed CA via the
   # gateway-trusted-ca ConfigMap (SSL_CERT_FILE).
-  info "Patching cluster CoreDNS: *.hypershell.localhost -> ${gw_ip} (gateway LB)..."
   local hosts_block
   hosts_block="hypershell.localhost:53 {
     hosts {
@@ -203,6 +198,20 @@ patch_cluster_coredns() {
       fallthrough
     }
   }"
+  if echo "${existing}" | grep -q "${gw_ip} keycloak.hypershell.localhost"; then
+    info "Cluster CoreDNS already patched for hypershell.localhost"
+    return
+  fi
+  if echo "${existing}" | grep -q "hypershell.localhost"; then
+    info "Updating cluster CoreDNS: *.hypershell.localhost -> ${gw_ip} (gateway LB changed)..."
+    existing=$(printf '%s\n' "${existing}" | awk '
+      /^hypershell\.localhost:53 \{/ { skip=1; next }
+      skip && /^  \}$/ { skip=0; next }
+      !skip { print }
+    ')
+  else
+    info "Patching cluster CoreDNS: *.hypershell.localhost -> ${gw_ip} (gateway LB)..."
+  fi
   local patched
   patched="${hosts_block}
 ${existing}"

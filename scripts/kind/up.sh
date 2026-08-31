@@ -226,6 +226,8 @@ if [[ "${DB_PROVIDER}" != "deployment" ]]; then
   info "Waiting for CNPG operator..."
   kube wait --for=condition=available deployment/cnpg-controller-manager -n cnpg-system --timeout=120s
 fi
+info "Waiting for Prometheus Operator..."
+kube wait --for=condition=available deployment/prometheus-operator -n default --timeout=180s
 success "Infrastructure ready"
 echo ""
 
@@ -731,6 +733,10 @@ success "Control plane ready"
 info "Waiting for web console..."
 kube rollout status deployment/hypershell-web-console -n "${KIND_NAMESPACE}" --timeout=120s
 success "Web console ready"
+
+info "Waiting for Prometheus..."
+kube wait --for=condition=Available prometheus/prometheus -n "${KIND_NAMESPACE}" --timeout=180s
+success "Prometheus ready"
 echo ""
 
 # --- Seed Gateway via REST API ---

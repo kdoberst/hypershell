@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
-  name: hypershell
+  name: prometheus
   namespace: hypershell-system
 spec:
   serviceAccountName: prometheus
