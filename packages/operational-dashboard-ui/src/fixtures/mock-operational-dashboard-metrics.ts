@@ -45,6 +45,10 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
       }),
       Object.freeze({
         id: "nodes",
+        status: Object.freeze({
+          failed: 0,
+          healthy: 8,
+        }),
         value: "8",
       }),
       Object.freeze({

@@ -506,7 +506,9 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.nodes} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            {metrics.find((metric) => metric.id === "nodes")?.value}
+            <SummaryGatewayValue
+              metric={metrics.find((metric) => metric.id === "nodes")}
+            />
           </DescriptionListDescription>
         </DescriptionListGroup>
         <DescriptionListGroup>

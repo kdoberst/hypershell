@@ -62,6 +62,17 @@ function mockClusterMetricsResponses(
         ok: true,
       });
     }
+    if (url === "/api/metrics/cluster-nodes") {
+      return Promise.resolve({
+        json: () =>
+          Promise.resolve({
+            not_ready_nodes: 0,
+            ready_nodes: 8,
+            total_nodes: 8,
+          }),
+        ok: true,
+      });
+    }
     return Promise.reject(new Error(`unexpected fetch url: ${url}`));
   });
 }
@@ -182,6 +193,7 @@ describe("createDashboardControlPlaneAdapter", () => {
     const memoryMetric = metrics.metrics.find((metric) => metric.id === "memory");
     const cpuMetric = metrics.metrics.find((metric) => metric.id === "cpu");
     const podsMetric = metrics.metrics.find((metric) => metric.id === "pods");
+    const nodesMetric = metrics.metrics.find((metric) => metric.id === "nodes");
 
     expect(gatewaysMetric?.value).toBe("150");
     expect(gatewaysMetric?.status).toEqual({
@@ -210,6 +222,14 @@ describe("createDashboardControlPlaneAdapter", () => {
       unit: "pods",
       value: "548",
     });
+    expect(nodesMetric).toEqual({
+      id: "nodes",
+      status: {
+        failed: 0,
+        healthy: 8,
+      },
+      value: "8",
+    });
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-memory", {
       credentials: "same-origin",
       signal: undefined,
@@ -219,6 +239,10 @@ describe("createDashboardControlPlaneAdapter", () => {
       signal: undefined,
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-pods", {
+      credentials: "same-origin",
+      signal: undefined,
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-nodes", {
       credentials: "same-origin",
       signal: undefined,
     });
@@ -319,6 +343,10 @@ describe("createDashboardControlPlaneAdapter", () => {
       credentials: "same-origin",
       signal: controller.signal,
     });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-nodes", {
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
   });
 
   it("fails when cluster memory metrics are unavailable", async () => {
@@ -347,6 +375,17 @@ describe("createDashboardControlPlaneAdapter", () => {
               available_pods: 1452,
               capacity_pods: 2000,
               used_pods: 548,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-nodes") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              not_ready_nodes: 0,
+              ready_nodes: 8,
+              total_nodes: 8,
             }),
           ok: true,
         });
@@ -397,6 +436,17 @@ describe("createDashboardControlPlaneAdapter", () => {
           ok: true,
         });
       }
+      if (url === "/api/metrics/cluster-nodes") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              not_ready_nodes: 0,
+              ready_nodes: 8,
+              total_nodes: 8,
+            }),
+          ok: true,
+        });
+      }
       return Promise.reject(new Error(`unexpected fetch url: ${url}`));
     });
     usersListApi.mockResolvedValueOnce({
@@ -443,6 +493,17 @@ describe("createDashboardControlPlaneAdapter", () => {
           status: 502,
         });
       }
+      if (url === "/api/metrics/cluster-nodes") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              not_ready_nodes: 0,
+              ready_nodes: 8,
+              total_nodes: 8,
+            }),
+          ok: true,
+        });
+      }
       return Promise.reject(new Error(`unexpected fetch url: ${url}`));
     });
     usersListApi.mockResolvedValueOnce({
@@ -456,6 +517,63 @@ describe("createDashboardControlPlaneAdapter", () => {
 
     await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
       "Failed to fetch cluster pods metrics: 502",
+    );
+  });
+
+  it("fails when cluster nodes metrics are unavailable", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/metrics/cluster-memory") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_bytes: 512 * 1024 ** 2,
+              capacity_bytes: 1024 ** 3,
+              used_bytes: 512 * 1024 ** 2,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-cpu") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_cores: 11.8,
+              capacity_cores: 60,
+              used_cores: 48.2,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-pods") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_pods: 1452,
+              capacity_pods: 2000,
+              used_pods: 548,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-nodes") {
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch url: ${url}`));
+    });
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+    gatewayListApi.mockResolvedValueOnce(gatewayList([gateway()], 1, 1));
+
+    await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
+      "Failed to fetch cluster nodes metrics: 502",
     );
   });
 });
