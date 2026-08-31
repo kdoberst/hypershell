@@ -100,6 +100,12 @@ export function createDashboardControlPlaneAdapter(
       context.signal?.throwIfAborted();
 
       const aggregate = await aggregateGatewayList(context, apiFactory);
+      const client = apiFactory(context.correlationId);
+      const userList = await client.users.list(
+        { orderBy: "username asc", page: 1, size: 1 },
+        { signal: context.signal },
+      );
+
       const metrics: OperationalMetric[] = [
         gatewayDisplayCountsToMetric(
           aggregate.total,
@@ -110,6 +116,11 @@ export function createDashboardControlPlaneAdapter(
       metrics.push({
         id: "provisioned-sandboxes",
         value: String(aggregate.activeSandboxCount),
+      });
+
+      metrics.push({
+        id: "registered-users",
+        value: String(userList.total),
       });
 
       return {

@@ -1,11 +1,6 @@
 import { defineMessages } from "react-intl";
 
 export const messages = defineMessages({
-  activeUsers: {
-    id: "app.dashboard.widget.activeUsers",
-    defaultMessage: "Active users",
-    description: "Title for the active users dashboard widget.",
-  },
   addWidgets: {
     id: "app.dashboard.addWidgets",
     defaultMessage: "Add widgets",
@@ -152,6 +147,16 @@ export const messages = defineMessages({
     description:
       "Title shown when operational dashboard metrics cannot be refreshed.",
   },
+  registeredUsers: {
+    id: "app.dashboard.widget.registeredUsers",
+    defaultMessage: "Registered users",
+    description: "Title for the registered users dashboard widget.",
+  },
+  registeredUsersSummary: {
+    id: "app.dashboard.summary.registeredUsers",
+    defaultMessage: "Registered users",
+    description: "Summary label for registered users.",
+  },
   resetToDefault: {
     id: "app.dashboard.resetToDefault",
     defaultMessage: "Reset to default",
@@ -222,11 +227,6 @@ export const messages = defineMessages({
     id: "app.dashboard.widget.usageSummary",
     defaultMessage: "Usage summary",
     description: "Title for the operational dashboard usage summary widget.",
-  },
-  users: {
-    id: "app.dashboard.summary.users",
-    defaultMessage: "Users",
-    description: "Summary label for active users.",
   },
   utilizationCapacity: {
     id: "app.dashboard.utilization.capacity",

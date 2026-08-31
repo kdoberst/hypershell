@@ -104,6 +104,7 @@ Class | Method | HTTP request | Description
 *DefaultAPI* | [**GetMetadata**](docs/DefaultAPI.md#getmetadata) | **Get** /api/hypershell/v1/metadata | Service metadata
 *DefaultAPI* | [**GetRole**](docs/DefaultAPI.md#getrole) | **Get** /api/hypershell/v1/roles/{id} | Get a role by ID
 *DefaultAPI* | [**GetRoleBinding**](docs/DefaultAPI.md#getrolebinding) | **Get** /api/hypershell/v1/role_bindings/{id} | Get a role binding by ID
+*DefaultAPI* | [**GetUser**](docs/DefaultAPI.md#getuser) | **Get** /api/hypershell/v1/users/{id} | Get a registered user by ID
 *DefaultAPI* | [**ListFleets**](docs/DefaultAPI.md#listfleets) | **Get** /api/hypershell/v1/fleets | Returns a list of fleets
 *DefaultAPI* | [**ListGatewayNetworks**](docs/DefaultAPI.md#listgatewaynetworks) | **Get** /api/hypershell/v1/gateway_networks | Returns a list of gatewayNetworks
 *DefaultAPI* | [**ListGatewayReleases**](docs/DefaultAPI.md#listgatewayreleases) | **Get** /api/hypershell/v1/gateway_releases | Returns a list of gatewayReleases
@@ -113,6 +114,7 @@ Class | Method | HTTP request | Description
 *DefaultAPI* | [**ListManagedDatabases**](docs/DefaultAPI.md#listmanageddatabases) | **Get** /api/hypershell/v1/managed_databases | Returns a list of managedDatabases
 *DefaultAPI* | [**ListRoleBindings**](docs/DefaultAPI.md#listrolebindings) | **Get** /api/hypershell/v1/role_bindings | List role bindings
 *DefaultAPI* | [**ListRoles**](docs/DefaultAPI.md#listroles) | **Get** /api/hypershell/v1/roles | List all roles
+*DefaultAPI* | [**ListUsers**](docs/DefaultAPI.md#listusers) | **Get** /api/hypershell/v1/users | List registered users
 *DefaultAPI* | [**RevokeGatewayServiceAccount**](docs/DefaultAPI.md#revokegatewayserviceaccount) | **Post** /api/hypershell/v1/gateways/{gateway_id}/service_accounts/{service_account_id}/revoke | Permanently revoke an OpenShell gateway service account
 *DefaultAPI* | [**UpdateFleet**](docs/DefaultAPI.md#updatefleet) | **Patch** /api/hypershell/v1/fleets/{id} | Update an fleet
 *DefaultAPI* | [**UpdateGateway**](docs/DefaultAPI.md#updategateway) | **Patch** /api/hypershell/v1/gateways/{id} | Update an gateway
@@ -161,6 +163,8 @@ Class | Method | HTTP request | Description
  - [RoleBinding](docs/RoleBinding.md)
  - [RoleBindingList](docs/RoleBindingList.md)
  - [RoleList](docs/RoleList.md)
+ - [User](docs/User.md)
+ - [UserList](docs/UserList.md)
 
 
 ## Documentation For Authorization

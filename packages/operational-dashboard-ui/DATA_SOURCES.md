@@ -10,17 +10,17 @@ Data is loaded through `useGetMetricsData` → `dashboard.getOperationalMetrics`
 
 ## Connected metrics
 
-| Widget / metric ID      | Source                                                       | Notes                                                                                                                                                                                                                               |
-| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provisioned-gateways`  | HyperShell API `GET /api/hypershell/v1/gateways` (paginated) | Display-status breakdown (`healthy`, `provisioning`, `degraded`, `failed`) using the same phase/status presentation rules as the gateway list. Total count. Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
-| `gateway-status`        | Same as `provisioned-gateways`                               | Uses the `status` field on the provisioned-gateways metric.                                                                                                                                                                         |
-| `provisioned-sandboxes` | HyperShell API `GET /api/hypershell/v1/gateways` (paginated) | Sum of `active_sandbox_count` across all gateways. Advisory control-plane field; omitted from the response when unset on a gateway.                                                                                                 |
+| Widget / metric ID      | Source                                                             | Notes                                                                                                                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provisioned-gateways`  | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)       | Display-status breakdown (`healthy`, `provisioning`, `degraded`, `failed`) using the same phase/status presentation rules as the gateway list. Total count. Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
+| `gateway-status`        | Same as `provisioned-gateways`                                     | Uses the `status` field on the provisioned-gateways metric.                                                                                                                                                                         |
+| `provisioned-sandboxes` | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)       | Sum of `active_sandbox_count` across all gateways. Advisory control-plane field; omitted from the response when unset on a gateway.                                                                                                 |
+| `registered-users`      | HyperShell API `GET /api/hypershell/v1/users` (`page=1`, `size=1`) | Total registered users from the List `total` field. Requires dashboard-operator authorization (`platform:admin` or `hypershell-admins`). Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`).                    |
 
 ## Not connected (widgets remain, data unavailable)
 
 | Widget / metric ID               | Reason                                                                                                                    |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `active-users`                   | No authenticated-user or session-count metric is exposed to the web console today.                                        |
 | `nodes`                          | Cluster node inventory is not scraped into the deployed Prometheus stack (only `hypershell_gateways_total` is collected). |
 | `cpu`                            | No cluster CPU capacity or utilization series is available through the BFF metrics routes.                                |
 | `memory`                         | No cluster memory capacity or utilization series is available through the BFF metrics routes.                             |

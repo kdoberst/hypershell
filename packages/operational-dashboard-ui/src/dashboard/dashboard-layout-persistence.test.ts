@@ -16,7 +16,7 @@ describe("dashboard layout persistence", () => {
       "provisioned-sandboxes",
       "memory",
       "system-summary",
-      "active-users",
+      "registered-users",
       "cpu",
       "pods",
     ]);

@@ -65,7 +65,7 @@ import { useGetMetricsData } from "./get-metrics-data";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v13";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v14";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -173,14 +173,19 @@ function createWidgetMapping(
       },
       renderWidget: () => <SystemSummaryCard metrics={metrics.metrics} />,
     },
-    "active-users": {
+    "registered-users": {
       defaults: METRIC_WIDGET_DEFAULTS,
       config: {
         icon: <UsersIcon />,
-        title: intl.formatMessage(messages.activeUsers),
+        title: intl.formatMessage(messages.registeredUsers),
       },
       renderWidget: () =>
-        renderMetric("active-users", "", messages.activeUsers, "metric"),
+        renderMetric(
+          "registered-users",
+          "",
+          messages.registeredUsers,
+          "metric",
+        ),
     },
     "gateway-status": {
       defaults: {

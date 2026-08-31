@@ -4,18 +4,7 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
   Object.freeze({
     metrics: Object.freeze([
       Object.freeze({
-        id: "active-users",
-        trend: Object.freeze({
-          points: Object.freeze([
-            Object.freeze({ label: "Day 1", value: 521 }),
-            Object.freeze({ label: "Day 2", value: 544 }),
-            Object.freeze({ label: "Day 3", value: 553 }),
-            Object.freeze({ label: "Day 4", value: 578 }),
-            Object.freeze({ label: "Day 5", value: 590 }),
-            Object.freeze({ label: "Day 6", value: 601 }),
-            Object.freeze({ label: "Day 7", value: 450 }),
-          ]),
-        }),
+        id: "registered-users",
         value: "450",
       }),
       Object.freeze({

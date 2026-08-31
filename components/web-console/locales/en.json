@@ -155,9 +155,9 @@
     "defaultMessage": "Usage metrics",
     "description": "Accessible label for the usage metrics list in the summary widget."
   },
-  "app.dashboard.summary.users": {
-    "defaultMessage": "Users",
-    "description": "Summary label for active users."
+  "app.dashboard.summary.registeredUsers": {
+    "defaultMessage": "Registered users",
+    "description": "Summary label for registered users."
   },
   "app.dashboard.title": {
     "defaultMessage": "HyperShell operational dashboard",
@@ -195,9 +195,9 @@
     "defaultMessage": "{percent}% capacity{separator}{value} of {total} {unit}",
     "description": "Tooltip for utilization status in the system summary widget."
   },
-  "app.dashboard.widget.activeUsers": {
-    "defaultMessage": "Active users",
-    "description": "Title for the active users dashboard widget."
+  "app.dashboard.widget.registeredUsers": {
+    "defaultMessage": "Registered users",
+    "description": "Title for the registered users dashboard widget."
   },
   "app.dashboard.widget.cpu": {
     "defaultMessage": "CPU",
