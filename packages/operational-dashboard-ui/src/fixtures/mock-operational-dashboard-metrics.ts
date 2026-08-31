@@ -23,8 +23,8 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
         status: Object.freeze({
           degraded: 6,
           failed: 2,
+          healthy: 80,
           provisioning: 9,
-          running: 80,
         }),
         trend: Object.freeze({
           points: Object.freeze([

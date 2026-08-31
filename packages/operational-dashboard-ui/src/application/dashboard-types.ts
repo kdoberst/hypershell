@@ -10,8 +10,8 @@ export interface OperationalMetricTrend {
 export interface OperationalMetricStatus {
   degraded?: number;
   failed?: number;
+  healthy?: number;
   provisioning?: number;
-  running?: number;
 }
 
 export interface OperationalMetric {

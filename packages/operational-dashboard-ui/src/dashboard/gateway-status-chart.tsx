@@ -13,7 +13,7 @@ import "../pages/dashboard-widget.css";
  * Gateway status colors aligned with PatternFly Alert and Label status semantics.
  * Solid donut segments use the vivid fills/icons from those components; alert
  * success green (#3d7317) is intended for icons on tinted backgrounds and reads
- * too dark as a large chart slice, so running uses chart green-100 instead.
+ * too dark as a large chart slice, so healthy uses chart green-100 instead.
  *
  * @see https://www.patternfly.org/components/alert
  * @see https://www.patternfly.org/components/label
@@ -21,12 +21,12 @@ import "../pages/dashboard-widget.css";
 const GATEWAY_STATUS_COLORS = {
   degraded: "#ffcc17", // Label status warning background
   failed: "#b1380b", // Alert/Label status danger
+  healthy: "#63993d", // Chart green-100 (success)
   provisioning: "#0066cc", // Chart blue-100 (in-progress)
-  running: "#63993d", // Chart green-100 (success)
 } as const;
 
 const GATEWAY_STATUS_ORDER = [
-  "running",
+  "healthy",
   "provisioning",
   "degraded",
   "failed",
@@ -68,8 +68,8 @@ export function isGatewayStatusMetric(
 
 function gatewayStatusLabel(intl: IntlShape, status: GatewayStatusKey): string {
   switch (status) {
-    case "running":
-      return intl.formatMessage(messages.gatewayStatusRunning);
+    case "healthy":
+      return intl.formatMessage(messages.gatewayStatusHealthy);
     case "provisioning":
       return intl.formatMessage(messages.gatewayStatusProvisioning);
     case "degraded":

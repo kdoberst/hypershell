@@ -63,9 +63,9 @@
     "defaultMessage": "Provisioning",
     "description": "Legend label for provisioning gateways."
   },
-  "app.dashboard.gatewayStatus.running": {
-    "defaultMessage": "Running",
-    "description": "Legend label for running gateways."
+  "app.dashboard.gatewayStatus.healthy": {
+    "defaultMessage": "Healthy",
+    "description": "Legend label for healthy gateways."
   },
   "app.dashboard.loadError.body": {
     "defaultMessage": "An unexpected error occurred while loading dashboard metrics.",

@@ -12,7 +12,7 @@ Data is loaded through `useGetMetricsData` → `dashboard.getOperationalMetrics`
 
 | Widget / metric ID      | Source                                                                     | Notes                                                                                                                               |
 | ----------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `provisioned-gateways`  | `GET /api/metrics/gateways` (BFF → Prometheus `hypershell_gateways_total`) | Phase breakdown (`running`, `provisioning`, `degraded`, `failed`) and total count. Refreshes every 30s.                             |
+| `provisioned-gateways`  | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)               | Display-status breakdown (`healthy`, `provisioning`, `degraded`, `failed`) using the same phase/status presentation rules as the gateway list. Total count. Refreshes every 30s. |
 | `gateway-status`        | Same as `provisioned-gateways`                                             | Uses the `status` field on the provisioned-gateways metric.                                                                         |
 | `provisioned-sandboxes` | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)               | Sum of `active_sandbox_count` across all gateways. Advisory control-plane field; omitted from the response when unset on a gateway. |
 
