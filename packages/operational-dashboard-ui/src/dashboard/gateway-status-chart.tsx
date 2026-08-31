@@ -1,13 +1,16 @@
 import { ChartDonut } from "@patternfly/react-charts/victory";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useIntl, type IntlShape } from "react-intl";
+import { useIntl } from "react-intl";
 
-import type {
-  OperationalMetric,
-  OperationalMetricStatus,
-} from "../application/dashboard-types";
+import type { OperationalMetric } from "../application/dashboard-types";
 import { messages } from "../messages";
 import "../pages/dashboard-widget.css";
+import {
+  buildGatewayStatusData,
+  GATEWAY_STATUS_ORDER,
+  type GatewayStatusDatum,
+  type GatewayStatusKey,
+} from "./gateway-status-data";
 
 const GATEWAY_STATUS_COLOR_VARS = {
   degraded: "--hypershell-gateway-status-degraded-color",
@@ -15,15 +18,6 @@ const GATEWAY_STATUS_COLOR_VARS = {
   healthy: "--hypershell-gateway-status-healthy-color",
   provisioning: "--hypershell-gateway-status-provisioning-color",
 } as const;
-
-const GATEWAY_STATUS_ORDER = [
-  "healthy",
-  "provisioning",
-  "degraded",
-  "failed",
-] as const satisfies readonly (keyof OperationalMetricStatus)[];
-
-type GatewayStatusKey = (typeof GATEWAY_STATUS_ORDER)[number];
 
 function readGatewayStatusColors(
   element: HTMLElement | null,
@@ -49,21 +43,6 @@ function readGatewayStatusColors(
     : undefined;
 }
 
-interface GatewayStatusDatum {
-  x: string;
-  y: number;
-}
-
-interface GatewayStatusLegendDatum {
-  name: string;
-}
-
-interface GatewayStatusMetric {
-  id: string;
-  status: OperationalMetricStatus;
-  value: string;
-}
-
 /** Rendered pixel size; must match the donut wrapper and ChartDonut height. */
 const GATEWAY_STATUS_CHART_HEIGHT = 165;
 
@@ -75,61 +54,16 @@ const GATEWAY_STATUS_CHART_PADDING = {
   top: 20,
 } as const;
 
+interface GatewayStatusMetric {
+  id: string;
+  status: NonNullable<OperationalMetric["status"]>;
+  value: string;
+}
+
 export function isGatewayStatusMetric(
   metric: OperationalMetric,
 ): metric is GatewayStatusMetric {
   return metric.status !== undefined;
-}
-
-function gatewayStatusLabel(intl: IntlShape, status: GatewayStatusKey): string {
-  switch (status) {
-    case "healthy":
-      return intl.formatMessage(messages.gatewayStatusHealthy);
-    case "provisioning":
-      return intl.formatMessage(messages.gatewayStatusProvisioning);
-    case "degraded":
-      return intl.formatMessage(messages.gatewayStatusDegraded);
-    case "failed":
-      return intl.formatMessage(messages.gatewayStatusFailed);
-  }
-}
-
-function buildGatewayStatusData(
-  intl: IntlShape,
-  status: OperationalMetricStatus,
-  colors: Record<GatewayStatusKey, string>,
-): {
-  colorScale: string[];
-  data: GatewayStatusDatum[];
-  legendData: GatewayStatusLegendDatum[];
-} {
-  const entries = GATEWAY_STATUS_ORDER.flatMap((key) => {
-    const count = status[key];
-    if (count === undefined || count <= 0) {
-      return [];
-    }
-
-    const label = gatewayStatusLabel(intl, key);
-
-    return [
-      {
-        color: colors[key],
-        datum: { x: label, y: count },
-        legend: {
-          name: intl.formatMessage(messages.gatewayStatusLegend, {
-            count,
-            status: label,
-          }),
-        },
-      },
-    ];
-  });
-
-  return {
-    colorScale: entries.map((entry) => entry.color),
-    data: entries.map((entry) => entry.datum),
-    legendData: entries.map((entry) => entry.legend),
-  };
 }
 
 export function GatewayStatusChart({

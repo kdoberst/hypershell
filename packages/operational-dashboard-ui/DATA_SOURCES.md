@@ -10,11 +10,11 @@ Data is loaded through `useGetMetricsData` → `dashboard.getOperationalMetrics`
 
 ## Connected metrics
 
-| Widget / metric ID      | Source                                                                     | Notes                                                                                                                               |
-| ----------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `provisioned-gateways`  | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)               | Display-status breakdown (`healthy`, `provisioning`, `degraded`, `failed`) using the same phase/status presentation rules as the gateway list. Total count. Refreshes every 30s. |
-| `gateway-status`        | Same as `provisioned-gateways`                                             | Uses the `status` field on the provisioned-gateways metric.                                                                         |
-| `provisioned-sandboxes` | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)               | Sum of `active_sandbox_count` across all gateways. Advisory control-plane field; omitted from the response when unset on a gateway. |
+| Widget / metric ID      | Source                                                       | Notes                                                                                                                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provisioned-gateways`  | HyperShell API `GET /api/hypershell/v1/gateways` (paginated) | Display-status breakdown (`healthy`, `provisioning`, `degraded`, `failed`) using the same phase/status presentation rules as the gateway list. Total count. Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
+| `gateway-status`        | Same as `provisioned-gateways`                               | Uses the `status` field on the provisioned-gateways metric.                                                                                                                                                                         |
+| `provisioned-sandboxes` | HyperShell API `GET /api/hypershell/v1/gateways` (paginated) | Sum of `active_sandbox_count` across all gateways. Advisory control-plane field; omitted from the response when unset on a gateway.                                                                                                 |
 
 ## Not connected (widgets remain, data unavailable)
 

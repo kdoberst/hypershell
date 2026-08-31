@@ -45,6 +45,11 @@ import {
   SYSTEM_SUMMARY_WIDGET_HEIGHT,
   USAGE_SUMMARY_WIDGET_HEIGHT,
 } from "../dashboard/dashboard-layout-template";
+import {
+  getActiveWidgetTypes,
+  isValidSavedTemplate,
+  sanitizeDashboardTemplate,
+} from "../dashboard/dashboard-layout-persistence";
 import { UtilizationChart } from "../dashboard/utilization-chart";
 import { useDashboardUi } from "../dashboard-ui-provider";
 import { messages } from "../messages";
@@ -68,24 +73,6 @@ const CUSTOM_COLUMNS: Record<Variants, number> = {
   sm: 1,
 };
 
-function isValidSavedTemplate(savedTemplate: ExtendedTemplateConfig): boolean {
-  return (Object.keys(baseTemplate) as Variants[]).every((variant) =>
-    Array.isArray(savedTemplate[variant]),
-  );
-}
-
-function getActiveWidgetTypes(template: ExtendedTemplateConfig): string[] {
-  const types = new Set<string>();
-
-  for (const variant of Object.keys(template) as Variants[]) {
-    for (const item of template[variant]) {
-      types.add(item.widgetType);
-    }
-  }
-
-  return [...types];
-}
-
 function getAddedWidgetTypes(
   currentTemplate: ExtendedTemplateConfig,
   nextTemplate: ExtendedTemplateConfig,
@@ -95,22 +82,6 @@ function getAddedWidgetTypes(
   return getActiveWidgetTypes(nextTemplate).filter(
     (type) => !currentTypes.has(type),
   );
-}
-
-function sanitizeDashboardTemplate(
-  template: ExtendedTemplateConfig,
-): ExtendedTemplateConfig {
-  return (Object.keys(template) as Variants[]).reduce((acc, variant) => {
-    const seen = new Set<string>();
-    acc[variant] = template[variant].filter((item) => {
-      if (seen.has(item.widgetType)) {
-        return false;
-      }
-      seen.add(item.widgetType);
-      return true;
-    });
-    return acc;
-  }, {} as ExtendedTemplateConfig);
 }
 
 function readSavedTemplate(
@@ -128,7 +99,7 @@ function readSavedTemplate(
     }
 
     const parsed = JSON.parse(rawTemplate) as ExtendedTemplateConfig;
-    if (!isValidSavedTemplate(parsed)) {
+    if (!isValidSavedTemplate(parsed, localizedBaseTemplate)) {
       return { invalid: true, template: localizedBaseTemplate };
     }
 
