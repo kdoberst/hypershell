@@ -4,3 +4,5 @@ resources:
   - rbac.yaml
   - prometheus.yaml
   - servicemonitor.yaml
+  - node-exporter.yaml
+  - node-exporter-servicemonitor.yaml

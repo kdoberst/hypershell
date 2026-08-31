@@ -16,14 +16,14 @@ Data is loaded through `useGetMetricsData` → `dashboard.getOperationalMetrics`
 | `gateway-status`        | Same as `provisioned-gateways`                                     | Uses the `status` field on the provisioned-gateways metric.                                                                                                                                                                         |
 | `provisioned-sandboxes` | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)       | Sum of `active_sandbox_count` across all gateways. Advisory control-plane field; omitted from the response when unset on a gateway.                                                                                                 |
 | `registered-users`      | HyperShell API `GET /api/hypershell/v1/users` (`page=1`, `size=1`) | Total registered users from the List `total` field. Requires dashboard-operator authorization (`platform:admin` or `hypershell-admins`). Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`).                    |
+| `memory`                | BFF `GET /api/metrics/cluster-memory` (Prometheus)                 | Hub-cluster node memory from Prometheus node-exporter via `sum(node_memory_MemTotal_bytes)` (capacity) and `sum(node_memory_MemAvailable_bytes)` (available). Adapter maps used/capacity bytes to whole GiB for the utilization donut. Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
 
 ## Not connected (widgets remain, data unavailable)
 
 | Widget / metric ID               | Reason                                                                                                                    |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `nodes`                          | Cluster node inventory is not scraped into the deployed Prometheus stack (only `hypershell_gateways_total` is collected). |
+| `nodes`                          | Cluster node inventory is not scraped into the deployed Prometheus stack beyond node-exporter memory series.                |
 | `cpu`                            | No cluster CPU capacity or utilization series is available through the BFF metrics routes.                                |
-| `memory`                         | No cluster memory capacity or utilization series is available through the BFF metrics routes.                             |
 | `pods`                           | No pod count or capacity series is available through the BFF metrics routes.                                              |
 | `provision-time`                 | Gateway provisioning duration is not published as a Prometheus metric or REST aggregate.                                  |
 | Sparkline trends on metric cards | Historical series are not queried; only instantaneous values are loaded.                                                  |

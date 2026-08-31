@@ -48,9 +48,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; registered-users dry-run; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
-**Spec corpus**: 43 spec files; the coverage table tracks 34 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, Operational Dashboard, and Registered Users
-**Codebase commit**: working tree (CP-OBS-GPD-W1 + registered-users spec + operational-dashboard OP-W1 + Keycloak event-storm KC-ES-W1 + OpenShift local-dev OS-W2; e2e performance + OpenShift driver)
+**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; cluster-memory CM-W1–W3 executed; registered-users complete; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
+**Spec corpus**: 44 spec files; the coverage table tracks 35 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, Operational Dashboard, Registered Users, and Cluster Memory
+**Codebase commit**: working tree (CP-OBS-GPD-W1 + cluster memory Prometheus scrape, BFF, dashboard + registered users API + OpenShift local-dev OS-W2 + Keycloak event-storm KC-ES-W1; e2e performance + OpenShift driver)
 
 ### Coverage Summary
 
@@ -74,12 +74,13 @@ skills/
 | Platform - OpenShift Development | 1 | 13 | 7 | 2 | 4 | 0 | 54% |
 | Platform - OIDC Integration | 1 | 7 | 6 | 1 | 0 | 0 | 93% |
 | Platform - Gateway Metrics Dashboard | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
-| Platform - Registered Users | 1 | 8 | 1 | 2 | 5 | 0 | 19% |
+| Platform - Registered Users | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Cluster Memory | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **34** | **256** | **200** | **20** | **31** | **5** | **78%** |
+| **TOTAL** | **35** | **264** | **215** | **18** | **26** | **5** | **81%** |
 
 ### Spec Dependency Order
 
@@ -358,7 +359,7 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 |---|-------------|--------|-----|---------------|------|
 | DASH-01 | Gateway phase Prometheus collector (`hypershell_gateways_total`) | Present | - | `plugins/gateways/metrics.go`, `dao.go:CountByPhase` | - |
 | DASH-02 | Metrics server bind `0.0.0.0:4433` | Present | - | `deploy/base/api-server.yaml` | - |
-| DASH-03 | Prometheus Operator and instance | Present | - | `deploy/kind/infrastructure/prometheus-operator-bundle.yaml`, `deploy/base/prometheus/` | - |
+| DASH-03 | Prometheus Operator and instance | Present | - | `deploy/kind/prometheus-operator/prometheus-operator-bundle.yaml`, `deploy/base/prometheus/` | - |
 | DASH-04 | ServiceMonitor scrape configuration | Present | - | `deploy/base/prometheus/servicemonitor.yaml` | - |
 | DASH-05 | BFF metrics proxy `GET /api/metrics/gateways` | Present | - | `bff/src/metrics-gateways.ts`, `bff/src/app.ts`, `bff/test/metrics-gateways.test.ts` | - |
 | DASH-06 | `GatewayMetricsDashboard` shared component | Present | - | `packages/gateway-management-ui/src/metrics/` | - |
@@ -400,21 +401,38 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 
 | # | Requirement | Status | Gap | Code Location | Wave |
 |---|-------------|--------|-----|---------------|------|
-| RU-01 | Read-only User inventory API (List + Get) | Missing | No HTTP handlers, routes, or `openapi.users.yaml`; plugin registers presenters/migration only | `plugins/users/plugin.go` | RU-W1 |
-| RU-02 | User resource schema (OpenAPI) | Partial | Go model + DB migration + auto-provision exist; no public OpenAPI schema or presenter | `plugins/users/model.go`, `pkg/rbac/user_provisioning.go` | RU-W1 |
-| RU-03 | User inventory authorization | Missing | `isAuthorized` has no `users` branch (falls through to `gateway:creator`); `hypershell-admins` not in `JWTSyncedRoles` | `pkg/rbac/authorization.go`, `plugins/roles/model.go` | RU-W1 |
-| RU-04 | Paginated List contract | Missing | Depends on RU-01 List handler + generic list wiring | - | RU-W1 |
-| RU-05 | Operational dashboard `registered-users` metric | Missing | Adapter returns only gateway/sandbox metrics; widget still `active-users` placeholder; no SDK `users` client | `dashboard-control-plane.ts`, `operational-dashboard-ui/` | RU-W2 |
-| RU-06 | UI presentation (Registered users) | Partial | `MetricCard` + usage summary pattern exists for `active-users`; wrong metric ID and copy | `operational-dashboard-page.tsx`, `messages.ts` | RU-W2 |
-| RU-07 | Refresh and error semantics | Present | Inherits `useGetMetricsData` / OP-DASH-09; failed adapter call blocks grid (no silent zero) | `get-metrics-data.ts`, `operational-dashboard-page.tsx` | - |
-| RU-08 | Verification (API + adapter tests) | Missing | No users plugin integration tests; adapter tests cover gateways only | `dashboard-control-plane.test.ts` | RU-W1, RU-W2 |
+| RU-01 | Read-only User inventory API (List + Get) | Present | - | `openapi.users.yaml`, `plugins/users/handler.go`, `plugins/users/plugin.go` | RU-W1 ✅ |
+| RU-02 | User resource schema (OpenAPI) | Present | - | `openapi.users.yaml`, `plugins/users/presenter.go`, `plugins/users/model.go` | RU-W1 ✅ |
+| RU-03 | User inventory authorization | Present | - | `pkg/rbac/authorization.go`, `pkg/rbac/user_provisioning.go` | RU-W1 ✅ |
+| RU-04 | Paginated List contract | Present | - | `plugins/users/handler.go`, generic list wiring | RU-W1 ✅ |
+| RU-05 | Operational dashboard `registered-users` metric | Present | - | `dashboard-control-plane.ts`, `sdk-typescript` users client | RU-W2 ✅ |
+| RU-06 | UI presentation (Registered users) | Present | - | `operational-dashboard-page.tsx`, `messages.ts`, layout key v14 | RU-W2 ✅ |
+| RU-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, `operational-dashboard-page.tsx` | - |
+| RU-08 | Verification (API + adapter tests) | Present | - | `plugins/users/integration_test.go`, `dashboard-control-plane.test.ts` | RU-W1 ✅, RU-W2 ✅ |
 
 **Scoped analysis notes:**
 
-- **Foundation present:** `users` plugin has model, DAO, service, migration, and presenter path registration. `UserProvisioningMiddleware` auto-creates users from JWT claims on authenticated requests.
-- **Authorization gap:** Today a `gateway:creator` caller would incorrectly pass RBAC for `GET /users` if routes existed, because `isAuthorized` defaults to `hasGatewayCreator(bindings)` for unknown resources.
-- **`hypershell-admins` gap:** Dashboard BFF allows `hypershell-admins` without `platform:admin`, but API JWT sync only maps `platform:admin` and `gateway:creator` (`JWTSyncedRoles`). RU-W1 must add explicit `hypershell-admins` JWT check or extend sync policy.
-- **Spec file** `specs/platform/registered-users.spec.md` is authored but not yet committed (working tree).
+- Delivered in `eb99f6b`: OpenAPI + List/Get handlers, `platform:admin` binding or `hypershell-admins` JWT authorization, integration tests, and dashboard adapter emitting `registered-users` from `users.list({ page: 1, size: 1 }).total`.
+- `DATA_SOURCES.md` and OP-DASH-08 `registered-users` row updated to connected.
+
+### cluster-memory.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| CM-01 | Hub cluster scope (schedulable nodes) | Present | - | `deploy/base/prometheus/node-exporter.yaml`, PromQL `sum(node_memory_*)` | CM-W1 ✅ |
+| CM-02 | Memory measurement contract (`capacity_bytes`, `available_bytes`, `used_bytes`) | Present | - | `bff/src/metrics-cluster-memory.ts` | CM-W2 ✅ |
+| CM-03 | Prometheus data source | Present | - | `bff/src/metrics-cluster-memory.ts`, `DATA_SOURCES.md` | CM-W1 ✅ |
+| CM-04 | BFF `GET /api/metrics/cluster-memory` | Present | - | `bff/src/app.ts`, `bff/src/metrics-cluster-memory.ts` | CM-W2 ✅ |
+| CM-05 | Operational dashboard `memory` metric mapping | Present | - | `dashboard-control-plane.ts` | CM-W3 ✅ |
+| CM-06 | Prometheus scrape prerequisites | Present | - | `deploy/base/prometheus/node-exporter.yaml`, `node-exporter-servicemonitor.yaml` | CM-W1 ✅ |
+| CM-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails on BFF error | - |
+| CM-08 | Verification (BFF + adapter tests) | Present | - | `bff/test/metrics-cluster-memory*.test.ts`, `dashboard-control-plane.test.ts` | CM-W2 ✅, CM-W3 ✅ |
+
+**Scoped analysis notes:**
+
+- **Delivered:** node-exporter DaemonSet + ServiceMonitor; BFF instant queries `sum(node_memory_MemTotal_bytes)` and `sum(node_memory_MemAvailable_bytes)`; dashboard adapter maps bytes → GiB `memory` metric; OP-DASH-08 `memory` row connected.
+- **Scrape target:** `quay.io/prometheus/node-exporter:v1.9.0` on port 9100 with host `/proc`, `/sys`, `/root` mounts.
+- **Prometheus selector:** `hypershell.redhat.io/prometheus-scrape: "true"` on api-server and node-exporter ServiceMonitors.
 
 ### e2e-testing.spec.md
 
@@ -813,11 +831,11 @@ label-selected pod informer.
 3. Add Vitest unit tests in `operational-dashboard-ui` for `getMetricTrendChange`, `buildGatewayStatusData`, and layout sanitization helpers
 4. Verify: `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
 
-### Wave RU-W1: Registered Users API and Authorization
+### Wave RU-W1: Registered Users API and Authorization ✅
 
 **Scope:** RU-01, RU-02, RU-03, RU-04, RU-08 (API)
 **Dependency:** `registered-users.spec.md` authored
-**Status:** Planned (dry-run only)
+**Status:** Complete (`eb99f6b`)
 
 1. Add `openapi.users.yaml`; embed in composite OpenAPI; run `make generate`
 2. Add `handler.go`, `presenter.go`, List/Get routes in `plugins/users/plugin.go` (read-only; no POST/PATCH/DELETE)
@@ -825,17 +843,51 @@ label-selected pod informer.
 4. Add users plugin integration tests (allow, forbid, opaque Get, `total` with `size=1`)
 5. Verify: `cd components/api-server && make test` (integration), `make generate`, `go vet ./...`
 
-### Wave RU-W2: Registered Users Dashboard Integration
+### Wave RU-W2: Registered Users Dashboard Integration ✅
 
 **Scope:** RU-05, RU-06, RU-08 (UI), OP-DASH-08 `registered-users` row
 **Dependency:** RU-W1 (SDK `users.list` available)
-**Status:** Planned (dry-run only)
+**Status:** Complete (`eb99f6b`)
 
 1. Extend `createDashboardControlPlaneAdapter` to fetch `users.list({ page: 1, size: 1 })` and emit `registered-users` metric from `total`
 2. Rename widget type `active-users` → `registered-users` in layout template, widget mapping, usage summary, fixtures, `DATA_SOURCES.md`, and i18n (`Registered users`)
 3. Bump layout storage key if widget type rename invalidates saved layouts (or accept one-time reset)
 4. Add adapter unit tests for registered-users mapping; update Storybook fixtures
 5. Verify: `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
+
+### Wave CM-W1: Prometheus Node Memory Scrape ✅
+
+**Scope:** CM-01 (query target), CM-03, CM-06
+**Dependency:** `cluster-memory.spec.md` authored
+**Status:** Complete (working tree)
+
+1. Add hub-cluster node memory scrape targets to `deploy/base/prometheus/` (node-exporter DaemonSet, kubelet/cAdvisor `ServiceMonitor`, or equivalent for Kind and production)
+2. Confirm `hypershell-prometheus` `ClusterRole` covers the chosen scrape path (RBAC already grants `nodes`/`nodes/metrics`)
+3. Validate positive capacity samples on Kind (`make kind-up` + ad-hoc PromQL)
+4. Document canonical PromQL expressions in `packages/operational-dashboard-ui/DATA_SOURCES.md`
+
+### Wave CM-W2: BFF Cluster Memory Route ✅
+
+**Scope:** CM-02, CM-04, CM-08 (BFF)
+**Dependency:** CM-W1 (memory series available in Prometheus)
+**Status:** Complete (working tree)
+
+1. Add `bff/src/metrics-cluster-memory.ts` following `metrics-gateways.ts` instant-query pattern
+2. Register `GET /api/metrics/cluster-memory` in `bff/src/app.ts` with OIDC session gate
+3. Return CM-04 JSON; compute `used_bytes = capacity_bytes - available_bytes`; HTTP `502` on Prometheus failure (no zero fallback)
+4. Add BFF unit tests: success mapping, Prometheus `502`, session requirement when OIDC enabled
+
+### Wave CM-W3: Dashboard Memory Adapter Integration ✅
+
+**Scope:** CM-05, CM-08 (adapter), OP-DASH-08 `memory` row
+**Dependency:** CM-W2 (BFF route available)
+**Status:** Complete (working tree)
+
+1. Extend `createDashboardControlPlaneAdapter` to fetch `/api/metrics/cluster-memory` with same-origin credentials
+2. Map `used_bytes`/`capacity_bytes` → `memory` metric (`value`, `total`, `unit: "GiB"`, rounded whole GiB)
+3. Failed memory fetch SHALL fail entire `getOperationalMetrics` (CM-07)
+4. Update `DATA_SOURCES.md` and OP-DASH-08 `memory` row to connected
+5. Add adapter unit tests; verify `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
 
 ### Future (Deferred)
 
@@ -913,6 +965,9 @@ label-selected pod informer.
 | 2026-08-31 | b93b1f0 | Dry-run: operational-dashboard + gateway-metrics-dashboard | 78% | Authored `web-console/operational-dashboard.spec.md` (15 reqs: 12 present, 3 partial). Amended `gateway-metrics-dashboard.spec.md` relationship and DASH-07. Gateway metrics pipeline 8/8 present on `ui-and-data`. Planned OP-W1 for docs drift, adapter tests, and package Vitest. |
 | 2026-08-31 | working tree | Executed OP-W1: operational dashboard verification | 79% | Fixed `DATA_SOURCES.md` refresh interval; added `dashboard-control-plane.test.ts` (pagination, status mapping, consistency guard, abort signal); added Vitest to `operational-dashboard-ui` with tests for layout persistence, gateway status data, and trend change; extracted `gateway-status-data.ts` and `dashboard-layout-persistence.ts`. Operational dashboard 15/15 present. |
 | 2026-08-31 | 5572127+spec | Dry-run: registered-users | 78% | Authored `platform/registered-users.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Users plugin has persistence + auto-provision but no HTTP/OpenAPI/RBAC/SDK/dashboard wiring. Planned RU-W1 (API+auth+tests) and RU-W2 (dashboard rename+adapter). |
-| 2026-08-31 | working tree | OpenShift Keycloak NetworkPolicy for JWKS | 77% | `keycloak-allow-platform` lets platform pods reach Keycloak TCP/8080 across the default-deny project policies so API server JWKS load and Admin API calls succeed. |
-| 2026-08-31 | working tree | OpenShift console redirect URI + Route seeding | 77% | Host `curl` against Keycloak/API Routes registers the web-console `/auth/callback` (realm import only had Kind localhost URIs) and seeds the API. The API server image has no curl, so `oc exec curl` never obtained tokens. |
-| 2026-09-01 | feecbcb, da771fb | Reconciled commit-driven stale doc gaps | 80% (unchanged) | Two recent commits removed hardcoded image defaults (`GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` now required env vars, no fallback) and unified deploy paths (deleted `components/api-server/deploy/*`, using repo-root `deploy/` as single source of truth). Updated 7 docs: `skills/deploy/ibm-cluster/SKILL.md` (image refs, path, namespace, image-var explanation), `skills/deploy/gcp-cluster/SKILL.md` (path fix, RBAC ref), `skills/deploy/deploy-cluster/SKILL.md` (full rewrite: Keycloak bootstrap, `hypershell-api-config` Secret creation, CNPG database, OIDC/JWT security, troubleshooting for missing Secret), `skills/tooling/update-openshell/SKILL.md` (grep patterns for new image names, search path fixes), `skills/RECONCILE.md` (skill directory tree, this log entry), `README.md` (env var rows, namespace refs), `specs/platform/openshift-development.spec.md` (deploy/ directory layout, overlay limitations note). Overlay gaps surfaced: `deploy/openshift/` requires manually-created `hypershell-api-config` Secret (missing from repo; documented in deploy-cluster), hardcoded domain placeholder, missing Keycloak Route on OpenShift. Marked as known limitations in specs. |
+| 2026-08-31 | eb99f6b | Executed RU-W1 + RU-W2: registered users | 78% | OpenAPI List/Get, `platform:admin`/`hypershell-admins` auth, integration tests, SDK, dashboard `registered-users` metric (layout v14). Registered users 8/8 present. |
+| 2026-08-31 | 217452a | Dry-run: cluster-memory | 78% | Authored `platform/cluster-memory.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Prometheus scrape + BFF route + dashboard adapter not implemented. Planned CM-W1 (scrape), CM-W2 (BFF), CM-W3 (adapter). |
+| 2026-08-31 | working tree | Executed CM-W1–W3: cluster memory | 81% | node-exporter DaemonSet + ServiceMonitor; BFF `GET /api/metrics/cluster-memory`; dashboard `memory` GiB metric; BFF + adapter tests. Cluster memory 8/8 present. |
+| 2026-08-31 | working tree | OpenShift Keycloak NetworkPolicy for JWKS | 81% | `keycloak-allow-platform` lets platform pods reach Keycloak TCP/8080 across the default-deny project policies so API server JWKS load and Admin API calls succeed. |
+| 2026-08-31 | working tree | OpenShift console redirect URI + Route seeding | 81% | Host `curl` against Keycloak/API Routes registers the web-console `/auth/callback` (realm import only had Kind localhost URIs) and seeds the API. The API server image has no curl, so `oc exec curl` never obtained tokens. |
+| 2026-09-01 | feecbcb, da771fb | Reconciled commit-driven stale doc gaps | 81% (unchanged) | Two recent commits removed hardcoded image defaults (`GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` now required env vars, no fallback) and unified deploy paths (deleted `components/api-server/deploy/*`, using repo-root `deploy/` as single source of truth). Updated 7 docs: `skills/deploy/ibm-cluster/SKILL.md` (image refs, path, namespace, image-var explanation), `skills/deploy/gcp-cluster/SKILL.md` (path fix, RBAC ref), `skills/deploy/deploy-cluster/SKILL.md` (full rewrite: Keycloak bootstrap, `hypershell-api-config` Secret creation, CNPG database, OIDC/JWT security, troubleshooting for missing Secret), `skills/tooling/update-openshell/SKILL.md` (grep patterns for new image names, search path fixes), `skills/RECONCILE.md` (skill directory tree, this log entry), `README.md` (env var rows, namespace refs), `specs/platform/openshift-development.spec.md` (deploy/ directory layout, overlay limitations note). Overlay gaps surfaced: `deploy/openshift/` requires manually-created `hypershell-api-config` Secret (missing from repo; documented in deploy-cluster), hardcoded domain placeholder, missing Keycloak Route on OpenShift. Marked as known limitations in specs. |

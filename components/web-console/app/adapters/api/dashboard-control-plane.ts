@@ -13,6 +13,40 @@ import type { SDKClient } from "@openshift-online/hypershell-sdk";
 type DashboardApiFactory = (correlationId: string) => SDKClient;
 
 const gatewayListPageSize = 100;
+const gibibyteDivisor = 1024 ** 3;
+
+interface ClusterMemoryResponse {
+  available_bytes: number;
+  capacity_bytes: number;
+  used_bytes: number;
+}
+
+function bytesToRoundedGib(bytes: number): string {
+  return String(Math.round(bytes / gibibyteDivisor));
+}
+
+async function fetchClusterMemoryMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const response = await fetch("/api/metrics/cluster-memory", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch cluster memory metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as ClusterMemoryResponse;
+
+  return {
+    id: "memory",
+    total: bytesToRoundedGib(body.capacity_bytes),
+    unit: "GiB",
+    value: bytesToRoundedGib(body.used_bytes),
+  };
+}
 
 function gatewayDisplayCountsToMetric(
   total: number,
@@ -101,10 +135,13 @@ export function createDashboardControlPlaneAdapter(
 
       const aggregate = await aggregateGatewayList(context, apiFactory);
       const client = apiFactory(context.correlationId);
-      const userList = await client.users.list(
-        { orderBy: "username asc", page: 1, size: 1 },
-        { signal: context.signal },
-      );
+      const [userList, memoryMetric] = await Promise.all([
+        client.users.list(
+          { orderBy: "username asc", page: 1, size: 1 },
+          { signal: context.signal },
+        ),
+        fetchClusterMemoryMetric(context.signal),
+      ]);
 
       const metrics: OperationalMetric[] = [
         gatewayDisplayCountsToMetric(
@@ -122,6 +159,8 @@ export function createDashboardControlPlaneAdapter(
         id: "registered-users",
         value: String(userList.total),
       });
+
+      metrics.push(memoryMetric);
 
       return {
         lastSuccessfulRefresh: new Date(),

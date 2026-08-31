@@ -1,10 +1,11 @@
 import type { Gateway, GatewayList } from "@openshift-online/hypershell-sdk";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDashboardControlPlaneAdapter } from "./dashboard-control-plane";
 
 const gatewayListApi = vi.fn();
 const usersListApi = vi.fn();
+const fetchMock = vi.fn();
 const apiFactory = vi.fn(() => ({
   gateways: {
     list: gatewayListApi,
@@ -18,6 +19,31 @@ const adapter = createDashboardControlPlaneAdapter(apiFactory);
 const context = {
   correlationId: "11111111-1111-4111-8111-111111111111",
 };
+
+function mockClusterMemoryResponse(
+  capacityBytes: number,
+  usedBytes: number,
+): void {
+  fetchMock.mockResolvedValueOnce({
+    json: async () => ({
+      available_bytes: capacityBytes - usedBytes,
+      capacity_bytes: capacityBytes,
+      used_bytes: usedBytes,
+    }),
+    ok: true,
+  });
+}
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+  fetchMock.mockReset();
+  gatewayListApi.mockReset();
+  usersListApi.mockReset();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function gateway(overrides: Partial<Gateway> = {}): Gateway {
   return {
@@ -67,6 +93,8 @@ function gatewayList(
 
 describe("createDashboardControlPlaneAdapter", () => {
   it("aggregates paginated gateway lists into operational metrics", async () => {
+    mockClusterMemoryResponse(254468212736, 236223201280);
+
     usersListApi.mockResolvedValueOnce({
       items: [],
       kind: "UserList",
@@ -119,6 +147,7 @@ describe("createDashboardControlPlaneAdapter", () => {
     const registeredUsersMetric = metrics.metrics.find(
       (metric) => metric.id === "registered-users",
     );
+    const memoryMetric = metrics.metrics.find((metric) => metric.id === "memory");
 
     expect(gatewaysMetric?.value).toBe("150");
     expect(gatewaysMetric?.status).toEqual({
@@ -129,6 +158,16 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
     expect(sandboxesMetric?.value).toBe("200");
     expect(registeredUsersMetric?.value).toBe("42");
+    expect(memoryMetric).toEqual({
+      id: "memory",
+      total: "237",
+      unit: "GiB",
+      value: "220",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-memory", {
+      credentials: "same-origin",
+      signal: undefined,
+    });
     expect(usersListApi).toHaveBeenCalledWith(
       { orderBy: "username asc", page: 1, size: 1 },
       { signal: undefined },
@@ -136,6 +175,8 @@ describe("createDashboardControlPlaneAdapter", () => {
   });
 
   it("maps gateway lifecycle fields into display-status buckets", async () => {
+    mockClusterMemoryResponse(1024 ** 3, 512 * 1024 ** 2);
+
     usersListApi.mockResolvedValueOnce({
       items: [],
       kind: "UserList",
@@ -170,6 +211,8 @@ describe("createDashboardControlPlaneAdapter", () => {
   });
 
   it("rejects inconsistent pagination responses", async () => {
+    mockClusterMemoryResponse(1024 ** 3, 512 * 1024 ** 2);
+
     usersListApi.mockResolvedValueOnce({
       items: [],
       kind: "UserList",
@@ -186,6 +229,8 @@ describe("createDashboardControlPlaneAdapter", () => {
 
   it("forwards abort signals to the gateway list client", async () => {
     const controller = new AbortController();
+    mockClusterMemoryResponse(1024 ** 3, 512 * 1024 ** 2);
+
     usersListApi.mockResolvedValueOnce({
       items: [],
       kind: "UserList",
@@ -207,6 +252,29 @@ describe("createDashboardControlPlaneAdapter", () => {
     expect(usersListApi).toHaveBeenCalledWith(
       { orderBy: "username asc", page: 1, size: 1 },
       { signal: controller.signal },
+    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-memory", {
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
+  });
+
+  it("fails when cluster memory metrics are unavailable", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+    });
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+    gatewayListApi.mockResolvedValueOnce(gatewayList([gateway()], 1, 1));
+
+    await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
+      "Failed to fetch cluster memory metrics: 502",
     );
   });
 });
