@@ -50,6 +50,7 @@ Machine-readable index for autonomous reconciliation (`/reconcile` skill).
 | `platform/cluster-memory.spec.md` | platform | Hub cluster memory utilization for operational dashboard | WEB, deploy | web-console/operational-dashboard, gateway-metrics-dashboard, local-development |
 | `platform/cluster-cpu.spec.md` | platform | Hub cluster CPU utilization for operational dashboard | WEB, deploy | web-console/operational-dashboard, cluster-memory, gateway-metrics-dashboard, local-development |
 | `platform/cluster-pods.spec.md` | platform | Hub cluster pod utilization for operational dashboard | WEB, deploy | web-console/operational-dashboard, cluster-memory, cluster-cpu, gateway-metrics-dashboard, local-development |
+| `platform/cluster-nodes.spec.md` | platform | Hub cluster node inventory for operational dashboard | WEB, deploy | web-console/operational-dashboard, cluster-pods, gateway-metrics-dashboard, local-development |
 | `standards/platform/cross-cutting.spec.md` | standards | - | ALL | - |
 | `standards/platform/naming-multitenancy.spec.md` | standards | - | ALL | cross-cutting, global-architecture |
 | `standards/control-plane/conventions.spec.md` | standards | - | CP | - |

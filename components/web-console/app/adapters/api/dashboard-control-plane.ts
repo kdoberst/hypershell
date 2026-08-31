@@ -33,6 +33,12 @@ interface ClusterPodsResponse {
   used_pods: number;
 }
 
+interface ClusterNodesResponse {
+  not_ready_nodes: number;
+  ready_nodes: number;
+  total_nodes: number;
+}
+
 function bytesToRoundedGib(bytes: number): string {
   return String(Math.round(bytes / gibibyteDivisor));
 }
@@ -107,6 +113,31 @@ async function fetchClusterPodsMetric(
     total: String(body.capacity_pods),
     unit: "pods",
     value: String(body.used_pods),
+  };
+}
+
+async function fetchClusterNodesMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const response = await fetch("/api/metrics/cluster-nodes", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch cluster nodes metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as ClusterNodesResponse;
+
+  return {
+    id: "nodes",
+    status: {
+      failed: body.not_ready_nodes,
+      healthy: body.ready_nodes,
+    },
+    value: String(body.total_nodes),
   };
 }
 
@@ -197,7 +228,8 @@ export function createDashboardControlPlaneAdapter(
 
       const aggregate = await aggregateGatewayList(context, apiFactory);
       const client = apiFactory(context.correlationId);
-      const [userList, memoryMetric, cpuMetric, podsMetric] = await Promise.all([
+      const [userList, memoryMetric, cpuMetric, podsMetric, nodesMetric] =
+        await Promise.all([
         client.users.list(
           { orderBy: "username asc", page: 1, size: 1 },
           { signal: context.signal },
@@ -205,6 +237,7 @@ export function createDashboardControlPlaneAdapter(
         fetchClusterMemoryMetric(context.signal),
         fetchClusterCpuMetric(context.signal),
         fetchClusterPodsMetric(context.signal),
+        fetchClusterNodesMetric(context.signal),
       ]);
 
       const metrics: OperationalMetric[] = [
@@ -227,6 +260,7 @@ export function createDashboardControlPlaneAdapter(
       metrics.push(memoryMetric);
       metrics.push(cpuMetric);
       metrics.push(podsMetric);
+      metrics.push(nodesMetric);
 
       return {
         lastSuccessfulRefresh: new Date(),

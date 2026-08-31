@@ -220,7 +220,7 @@ The operational dashboard package SHALL update `mockOperationalDashboardMetrics`
 
 ## Non-Goals
 
-- Memory, CPU, node count, and provision-time metrics (covered by or deferred to other specs)
+- Memory, CPU, and node inventory metrics (see `platform/cluster-nodes.spec.md`)
 - Gateway sandbox pod counts (`provisioned-sandboxes` on the operational dashboard)
 - Historical trend series or sparklines for pods in version 1
 - Per-node, per-namespace, or per-workload pod breakdown in the UI
