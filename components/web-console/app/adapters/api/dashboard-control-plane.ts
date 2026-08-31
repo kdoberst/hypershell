@@ -27,6 +27,12 @@ interface ClusterCpuResponse {
   used_cores: number;
 }
 
+interface ClusterPodsResponse {
+  available_pods: number;
+  capacity_pods: number;
+  used_pods: number;
+}
+
 function bytesToRoundedGib(bytes: number): string {
   return String(Math.round(bytes / gibibyteDivisor));
 }
@@ -78,6 +84,29 @@ async function fetchClusterCpuMetric(
     total: coresToRoundedString(body.capacity_cores),
     unit: "cores",
     value: coresToRoundedString(body.used_cores),
+  };
+}
+
+async function fetchClusterPodsMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const response = await fetch("/api/metrics/cluster-pods", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch cluster pods metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as ClusterPodsResponse;
+
+  return {
+    id: "pods",
+    total: String(body.capacity_pods),
+    unit: "pods",
+    value: String(body.used_pods),
   };
 }
 
@@ -168,13 +197,14 @@ export function createDashboardControlPlaneAdapter(
 
       const aggregate = await aggregateGatewayList(context, apiFactory);
       const client = apiFactory(context.correlationId);
-      const [userList, memoryMetric, cpuMetric] = await Promise.all([
+      const [userList, memoryMetric, cpuMetric, podsMetric] = await Promise.all([
         client.users.list(
           { orderBy: "username asc", page: 1, size: 1 },
           { signal: context.signal },
         ),
         fetchClusterMemoryMetric(context.signal),
         fetchClusterCpuMetric(context.signal),
+        fetchClusterPodsMetric(context.signal),
       ]);
 
       const metrics: OperationalMetric[] = [
@@ -196,6 +226,7 @@ export function createDashboardControlPlaneAdapter(
 
       metrics.push(memoryMetric);
       metrics.push(cpuMetric);
+      metrics.push(podsMetric);
 
       return {
         lastSuccessfulRefresh: new Date(),

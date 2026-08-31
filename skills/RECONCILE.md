@@ -45,9 +45,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-08-31 (cluster-cpu CC-W1–W3 executed)
-**Spec corpus**: 45 spec files; the coverage table tracks 36 feature/spec groups
-**Codebase commit**: working tree (feat: cluster CPU BFF, dashboard adapter, i18n reorder)
+**Last analyzed**: 2026-08-31 (cluster-pods CLP-W1–W3 executed)
+**Spec corpus**: 46 spec files; the coverage table tracks 37 feature/spec groups
+**Codebase commit**: working tree (CLP-W1–W3 cluster pods implementation)
 
 ### Coverage Summary
 
@@ -72,11 +72,12 @@ skills/
 | Platform - Registered Users | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Memory | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster CPU | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Cluster Pods | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **36** | **262** | **213** | **18** | **26** | **5** | **81%** |
+| **TOTAL** | **37** | **270** | **228** | **17** | **20** | **5** | **84%** |
 
 ### Spec Dependency Order
 
@@ -385,6 +386,25 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 
 - **Delivered:** Reuses CM-W1 node-exporter; BFF instant queries for capacity/used cores; dashboard adapter maps to `cpu` metric (whole cores); OP-DASH-08 `cpu` row connected.
 - **BFF JSON** preserves fractional `used_cores`; adapter rounds for display.
+
+### cluster-pods.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| CLP-01 | Hub cluster scope (all namespaces, schedulable nodes) | Present | - | `bff/src/metrics-cluster-pods.ts` | CLP-W2 ✅ |
+| CLP-02 | Pod measurement contract (`capacity_pods`, `used_pods`, `available_pods`) | Present | - | `bff/src/metrics-cluster-pods.ts` | CLP-W2 ✅ |
+| CLP-03 | Prometheus data source | Present | - | `bff/src/metrics-cluster-pods.ts`, `DATA_SOURCES.md` | CLP-W1 ✅ |
+| CLP-04 | BFF `GET /api/metrics/cluster-pods` | Present | - | `bff/src/app.ts` | CLP-W2 ✅ |
+| CLP-05 | Operational dashboard `pods` metric mapping | Present | - | `dashboard-control-plane.ts` | CLP-W3 ✅ |
+| CLP-06 | Prometheus scrape prerequisites (kube-state-metrics) | Present | - | `deploy/base/prometheus/kube-state-metrics.yaml`, `kube-state-metrics-servicemonitor.yaml` | CLP-W1 ✅ |
+| CLP-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails on BFF error | - |
+| CLP-08 | Verification (BFF + adapter tests) | Present | - | `bff/test/metrics-cluster-pods*.test.ts`, `dashboard-control-plane.test.ts` | CLP-W2 ✅, CLP-W3 ✅ |
+
+**Scoped analysis notes:**
+
+- **Delivered:** kube-state-metrics Deployment/ServiceMonitor; BFF instant queries for capacity/used pods; dashboard adapter maps to `pods` metric; OP-DASH-08 `pods` row connected.
+- **Used pods:** `count(kube_pod_info)` — all phases including Failed/Succeeded while objects exist; utilization donut only (no phase breakdown in v1).
+- **Scrape target:** `registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0`.
 
 ### e2e-testing.spec.md
 
@@ -735,7 +755,7 @@ label-selected pod informer.
 
 **Scope:** CM-01 (query target), CM-03, CM-06
 **Dependency:** `cluster-memory.spec.md` authored
-**Status:** Complete (working tree)
+**Status:** Complete (`ac65674`)
 
 1. Add hub-cluster node memory scrape targets to `deploy/base/prometheus/` (node-exporter DaemonSet, kubelet/cAdvisor `ServiceMonitor`, or equivalent for Kind and production)
 2. Confirm `hypershell-prometheus` `ClusterRole` covers the chosen scrape path (RBAC already grants `nodes`/`nodes/metrics`)
@@ -746,7 +766,7 @@ label-selected pod informer.
 
 **Scope:** CM-02, CM-04, CM-08 (BFF)
 **Dependency:** CM-W1 (memory series available in Prometheus)
-**Status:** Complete (working tree)
+**Status:** Complete (`ac65674`)
 
 1. Add `bff/src/metrics-cluster-memory.ts` following `metrics-gateways.ts` instant-query pattern
 2. Register `GET /api/metrics/cluster-memory` in `bff/src/app.ts` with OIDC session gate
@@ -757,7 +777,7 @@ label-selected pod informer.
 
 **Scope:** CM-05, CM-08 (adapter), OP-DASH-08 `memory` row
 **Dependency:** CM-W2 (BFF route available)
-**Status:** Complete (working tree)
+**Status:** Complete (`ac65674`)
 
 1. Extend `createDashboardControlPlaneAdapter` to fetch `/api/metrics/cluster-memory` with same-origin credentials
 2. Map `used_bytes`/`capacity_bytes` → `memory` metric (`value`, `total`, `unit: "GiB"`, rounded whole GiB)
@@ -769,7 +789,7 @@ label-selected pod informer.
 
 **Scope:** CC-03 (documented PromQL), CC-06
 **Dependency:** `cluster-cpu.spec.md` authored (`9f9b0da`); CM-W1 node-exporter scrape (complete)
-**Status:** Complete (working tree)
+**Status:** Complete (`b364373`)
 
 1. Document canonical CPU PromQL in `packages/operational-dashboard-ui/DATA_SOURCES.md`
 2. Note that CPU and memory share the same node-exporter DaemonSet (no new scrape targets)
@@ -778,7 +798,7 @@ label-selected pod informer.
 
 **Scope:** CC-01 (query target), CC-02, CC-04, CC-08 (BFF)
 **Dependency:** CC-W1 (PromQL documented); node-exporter CPU series available
-**Status:** Complete (working tree)
+**Status:** Complete (`b364373`)
 
 1. Add `bff/src/metrics-cluster-cpu.ts` following `metrics-cluster-memory.ts` pattern
 2. Register `GET /api/metrics/cluster-cpu` in `bff/src/app.ts` with OIDC session gate
@@ -789,13 +809,48 @@ label-selected pod informer.
 
 **Scope:** CC-05, CC-08 (adapter), OP-DASH-08 `cpu` row
 **Dependency:** CC-W2 (BFF route available)
-**Status:** Complete (working tree)
+**Status:** Complete (`b364373`)
 
 1. Extend `createDashboardControlPlaneAdapter` to fetch `/api/metrics/cluster-cpu` in parallel with memory
 2. Map `used_cores`/`capacity_cores` → `cpu` metric (`value`, `total`, `unit: "cores"`, rounded whole cores)
 3. Failed CPU fetch SHALL fail entire `getOperationalMetrics` (CC-07)
 4. Update `DATA_SOURCES.md` and OP-DASH-08 `cpu` row to connected
 5. Add adapter unit tests; re-sync `locales/en.json` via `pnpm run i18n:extract`
+
+### Wave CLP-W1: kube-state-metrics Scrape + PromQL Documentation ✅
+
+**Scope:** CLP-03 (documented PromQL), CLP-06
+**Dependency:** `cluster-pods.spec.md` authored (`3466e55`); hub Prometheus operator overlay (CM-W1)
+**Status:** Complete (working tree)
+
+1. Deploy kube-state-metrics to `deploy/base/prometheus/` (Deployment/Service + `ServiceMonitor` with `hypershell.redhat.io/prometheus-scrape: "true"`)
+2. Wire into `deploy/base/prometheus/kustomization.yaml` and Kind overlay (validate `make kind-up` exposes `kube_pod_info` and `kube_node_status_allocatable`)
+3. Document canonical PromQL in `packages/operational-dashboard-ui/DATA_SOURCES.md`:
+   - Capacity: `sum(kube_node_status_allocatable{resource="pods"})`
+   - Used: `count(kube_pod_info)` (all phases while objects exist)
+
+### Wave CLP-W2: BFF Cluster Pods Route ✅
+
+**Scope:** CLP-01 (query target), CLP-02, CLP-04, CLP-08 (BFF)
+**Dependency:** CLP-W1 (kube-state-metrics series available)
+**Status:** Complete (working tree)
+
+1. Add `bff/src/metrics-cluster-pods.ts` following `metrics-cluster-cpu.ts` pattern (capacity + used instant queries; compute `available_pods`; reject `used_pods > capacity_pods`)
+2. Register `GET /api/metrics/cluster-pods` in `bff/src/app.ts` with OIDC session gate
+3. Return CLP-04 JSON with integral `used_pods`; HTTP `502` on Prometheus failure (no zero fallback)
+4. Add BFF unit tests: success mapping, inconsistent samples, Prometheus `502`, session requirement when OIDC enabled
+
+### Wave CLP-W3: Dashboard Pods Adapter Integration ✅
+
+**Scope:** CLP-05, CLP-08 (adapter), OP-DASH-08 `pods` row
+**Dependency:** CLP-W2 (BFF route available)
+**Status:** Complete (working tree)
+
+1. Extend `createDashboardControlPlaneAdapter` to fetch `/api/metrics/cluster-pods` with same-origin credentials (parallel with memory/cpu/users/gateways)
+2. Map `used_pods`/`capacity_pods` → `pods` metric (`value`, `total`, `unit: "pods"`)
+3. Failed pods fetch SHALL fail entire `getOperationalMetrics` (CLP-07)
+4. Update `DATA_SOURCES.md` and OP-DASH-08 `pods` row to connected
+5. Add adapter unit tests; verify `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
 
 ### Future (Deferred)
 
@@ -869,4 +924,6 @@ label-selected pod informer.
 | 2026-08-31 | 217452a | Dry-run: cluster-memory | 78% | Authored `platform/cluster-memory.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Prometheus scrape + BFF route + dashboard adapter not implemented. Planned CM-W1 (scrape), CM-W2 (BFF), CM-W3 (adapter). |
 | 2026-08-31 | ac65674 | Executed CM-W1–W3: cluster memory | 81% | node-exporter DaemonSet + ServiceMonitor; BFF `GET /api/metrics/cluster-memory`; dashboard `memory` GiB metric; BFF + adapter tests. Cluster memory 8/8 present. |
 | 2026-08-31 | 9f9b0da | Dry-run: cluster-cpu | 79% | Authored `platform/cluster-cpu.spec.md` (8 reqs). Planned CC-W1 (PromQL docs), CC-W2 (BFF), CC-W3 (adapter). |
-| 2026-08-31 | working tree | Executed CC-W1–W3: cluster CPU | 81% | BFF `GET /api/metrics/cluster-cpu`; dashboard `cpu` cores metric; BFF + adapter tests; `i18n:extract` reorder for `26a62eb`/`dc696eb` drift. Cluster CPU 8/8 present. |
+| 2026-08-31 | b364373 | Executed CC-W1–W3: cluster CPU | 81% | BFF `GET /api/metrics/cluster-cpu`; dashboard `cpu` cores metric; BFF + adapter tests; `i18n:extract` reorder for `26a62eb`/`dc696eb` drift. Cluster CPU 8/8 present. |
+| 2026-08-31 | 3466e55 | Dry-run: cluster-pods | 79% | Authored `platform/cluster-pods.spec.md` (8 reqs: 1 present, 1 partial, 6 missing). Requires kube-state-metrics deploy (not node-exporter); BFF route + adapter not implemented. Planned CLP-W1 (ksm scrape + PromQL), CLP-W2 (BFF), CLP-W3 (adapter). Used count includes all phases. |
+| 2026-08-31 | working tree | Executed CLP-W1–W3: cluster pods | 84% | kube-state-metrics Deployment/ServiceMonitor; BFF `GET /api/metrics/cluster-pods`; dashboard `pods` metric; BFF + adapter tests; `DATA_SOURCES.md` + OP-DASH-08 connected. Cluster pods 8/8 present. |
