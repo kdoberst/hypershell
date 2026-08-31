@@ -45,9 +45,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-08-31 (cluster-nodes CLN-W1–W3 executed)
-**Spec corpus**: 47 spec files; the coverage table tracks 38 feature/spec groups
-**Codebase commit**: working tree (CLN-W1–W3 cluster nodes implementation)
+**Last analyzed**: 2026-08-31 (gateway-provision-time GPT-W1–W3 executed)
+**Spec corpus**: 48 spec files; the coverage table tracks 39 feature/spec groups
+**Codebase commit**: working tree (GPT-W1–W3 gateway provision time)
 
 ### Coverage Summary
 
@@ -74,11 +74,12 @@ skills/
 | Platform - Cluster CPU | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Pods | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Nodes | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Gateway Provision Time | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **38** | **278** | **236** | **17** | **20** | **5** | **85%** |
+| **TOTAL** | **39** | **286** | **243** | **17** | **13** | **5** | **85%** |
 
 ### Spec Dependency Order
 
@@ -424,6 +425,24 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 
 - **Delivered:** Reuses CLP-W1 kube-state-metrics; BFF instant queries for total/ready nodes; adapter maps to `nodes` metric with gateway-style `value` + `status` (`healthy`/`failed`); `system-summary` row uses `SummaryGatewayValue`.
 - **UI:** Total count with failed-node exception icon when `status.failed > 0`; no `provisioning`/`degraded` buckets in v1.
+
+### gateway-provision-time.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| GPT-01 | Dashboard operator scope (paginated gateway list) | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-02 | Provision duration measurement contract (`average_minutes`) | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-03 | Timestamp proxy semantics (`updated_at - created_at`) | Present | - | `dashboard-control-plane.ts`, `DATA_SOURCES.md` | GPT-W1 ✅ |
+| GPT-04 | No dedicated BFF or Prometheus route | Present | - | Reuses gateway list aggregate | GPT-W1 ✅ |
+| GPT-05 | Operational dashboard `provision-time` metric mapping | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-06 | List consistency guard | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails when no samples | - |
+| GPT-08 | Verification (adapter tests) | Present | - | `dashboard-control-plane.test.ts` | GPT-W1 ✅ |
+
+**Scoped analysis notes:**
+
+- **Delivered:** Mean provision minutes for `Running` gateways computed from the existing paginated gateway list; `value` + `unit: "minutes"` on `provision-time` metric; no extra API or BFF route.
+- **Proxy:** v1 uses `updated_at - created_at`; per-gateway breakdown and percentiles deferred.
 
 ### e2e-testing.spec.md
 
@@ -906,6 +925,18 @@ label-selected pod informer.
 5. Update `DATA_SOURCES.md` and OP-DASH-08 `nodes` row to connected
 6. Add adapter unit tests; update `mockOperationalDashboardMetrics` `status` fixture
 
+### Wave GPT-W1: Gateway Provision Time Adapter Integration ✅
+
+**Scope:** GPT-01 through GPT-06, GPT-08 (adapter), OP-DASH-08 `provision-time` row
+**Dependency:** `gateway-provision-time.spec.md` authored; OP-DASH-06 gateway list aggregate
+**Status:** Complete (working tree)
+
+1. Extend `aggregateGatewayList` to collect `Running` gateway timestamp samples from the existing paginated list
+2. Compute mean `updated_at - created_at` duration in minutes; format `value` to two decimal places
+3. Emit `provision-time` metric with `unit: "minutes"`; fail when no qualifying samples
+4. Document proxy semantics in `DATA_SOURCES.md`; connect OP-DASH-08 `provision-time` row
+5. Add adapter unit tests for averaging, exclusions, and empty-sample failure
+
 ### Future (Deferred)
 
 | # | Item | Domain | Reason |
@@ -983,3 +1014,5 @@ label-selected pod informer.
 | 2026-08-31 | working tree | Executed CLP-W1–W3: cluster pods | 84% | kube-state-metrics Deployment/ServiceMonitor; BFF `GET /api/metrics/cluster-pods`; dashboard `pods` metric; BFF + adapter tests; `DATA_SOURCES.md` + OP-DASH-08 connected. Cluster pods 8/8 present. |
 | 2026-08-31 | working tree | Dry-run: cluster-nodes | 82% | Authored `platform/cluster-nodes.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Gateway-style `value` + `status` for system-summary; reuses kube-state-metrics from CLP-W1. Planned CLN-W1 (PromQL docs), CLN-W2 (BFF), CLN-W3 (adapter). |
 | 2026-08-31 | working tree | Executed CLN-W1–W3: cluster nodes | 85% | BFF `GET /api/metrics/cluster-nodes`; dashboard `nodes` metric with `healthy`/`failed` status; `SummaryGatewayValue` in system-summary; BFF + adapter tests. Cluster nodes 8/8 present. |
+| 2026-08-31 | working tree | Dry-run: gateway-provision-time | 85% | Authored `platform/gateway-provision-time.spec.md` (8 reqs: 1 present, 7 missing). Mean duration from gateway list timestamps; no BFF route. Planned GPT-W1 (adapter). |
+| 2026-08-31 | working tree | Executed GPT-W1: gateway provision time | 85% | Adapter computes mean `Running` gateway provision minutes from paginated list; `provision-time` metric connected; adapter tests; `DATA_SOURCES.md` + OP-DASH-08 updated. Gateway provision time 8/8 present. OP-DASH-08 all metrics connected. |

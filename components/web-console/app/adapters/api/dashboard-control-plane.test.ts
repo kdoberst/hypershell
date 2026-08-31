@@ -89,11 +89,22 @@ afterEach(() => {
 });
 
 function gateway(overrides: Partial<Gateway> = {}): Gateway {
+  const phase = overrides.phase ?? "Running";
+  const runningTimestamps =
+    phase === "Running"
+      ? {
+          created_at: "2026-08-01T10:00:00.000Z",
+          updated_at: "2026-08-01T10:05:15.000Z",
+        }
+      : {
+          created_at: null,
+          updated_at: null,
+        };
+
   return {
     active_sandbox_count: 2,
     cluster_id: "",
     console_address: "",
-    created_at: null,
     created_by: "",
     credential_driver: "",
     database_id: "database-1",
@@ -115,7 +126,7 @@ function gateway(overrides: Partial<Gateway> = {}): Gateway {
     status: "Healthy",
     supervisor_image: "",
     tls_mode: "",
-    updated_at: null,
+    ...runningTimestamps,
     ...overrides,
   };
 }
@@ -194,6 +205,9 @@ describe("createDashboardControlPlaneAdapter", () => {
     const cpuMetric = metrics.metrics.find((metric) => metric.id === "cpu");
     const podsMetric = metrics.metrics.find((metric) => metric.id === "pods");
     const nodesMetric = metrics.metrics.find((metric) => metric.id === "nodes");
+    const provisionTimeMetric = metrics.metrics.find(
+      (metric) => metric.id === "provision-time",
+    );
 
     expect(gatewaysMetric?.value).toBe("150");
     expect(gatewaysMetric?.status).toEqual({
@@ -229,6 +243,11 @@ describe("createDashboardControlPlaneAdapter", () => {
         healthy: 8,
       },
       value: "8",
+    });
+    expect(provisionTimeMetric).toEqual({
+      id: "provision-time",
+      unit: "minutes",
+      value: "5.25",
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-memory", {
       credentials: "same-origin",
@@ -286,6 +305,76 @@ describe("createDashboardControlPlaneAdapter", () => {
       healthy: 1,
       provisioning: 0,
     });
+  });
+
+  it("averages provision duration across Running gateways only", async () => {
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
+
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+
+    gatewayListApi.mockResolvedValueOnce(
+      gatewayList(
+        [
+          gateway({
+            created_at: "2026-08-01T10:00:00.000Z",
+            phase: "Running",
+            updated_at: "2026-08-01T10:04:00.000Z",
+          }),
+          gateway({
+            created_at: "2026-08-01T10:00:00.000Z",
+            phase: "Running",
+            updated_at: "2026-08-01T10:06:30.000Z",
+          }),
+          gateway({ phase: "Provisioning", status: "route pending" }),
+        ],
+        3,
+        1,
+      ),
+    );
+
+    const metrics = await adapter.getOperationalMetrics(context);
+    const provisionTimeMetric = metrics.metrics.find(
+      (metric) => metric.id === "provision-time",
+    );
+
+    expect(provisionTimeMetric).toEqual({
+      id: "provision-time",
+      unit: "minutes",
+      value: "5.25",
+    });
+  });
+
+  it("fails when no Running gateways provide provision duration samples", async () => {
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
+
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+
+    gatewayListApi.mockResolvedValueOnce(
+      gatewayList(
+        [
+          gateway({ phase: "Provisioning", status: "route pending" }),
+          gateway({ phase: "Failed", status: "apply error" }),
+        ],
+        2,
+        1,
+      ),
+    );
+
+    await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
+      "No gateway provision duration samples",
+    );
   });
 
   it("rejects inconsistent pagination responses", async () => {
