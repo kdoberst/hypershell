@@ -187,7 +187,7 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | --- | --- | --- |
 | `provisioned-gateways` | Yes | Gateway list aggregate (OP-DASH-06, OP-DASH-07) |
 | `provisioned-sandboxes` | Yes | Sum of `active_sandbox_count` from gateway list |
-| `active-users` | No | — |
+| `registered-users` | No | See `platform/registered-users.spec.md` |
 | `nodes` | No | — |
 | `cpu` | No | — |
 | `memory` | No | — |
@@ -249,6 +249,8 @@ The default layout template (`defaultDashboardLayoutTemplate`) SHALL place these
 | `provisioned-sandboxes` | Column 2, top |
 | `memory` | Column 3, top |
 | `active-users` | Column 2, second row |
+
+**Note:** Widget type `active-users` is superseded by `registered-users` per `platform/registered-users.spec.md` RU-05. New implementations SHALL use `registered-users` only.
 | `cpu` | Column 3, second row |
 | `pods` | Column 3, third row |
 

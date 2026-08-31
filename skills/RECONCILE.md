@@ -48,9 +48,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-09-03 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
-**Spec corpus**: 42 spec files; the coverage table tracks 34 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, and Operational Dashboard
-**Codebase commit**: working tree (CP-OBS-GPD-W1 + operational-dashboard OP-W1 + Keycloak event-storm KC-ES-W1 + OpenShift local-dev OS-W2)
+**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; registered-users dry-run; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
+**Spec corpus**: 43 spec files; the coverage table tracks 34 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, Operational Dashboard, and Registered Users
+**Codebase commit**: working tree (CP-OBS-GPD-W1 + registered-users spec + operational-dashboard OP-W1 + Keycloak event-storm KC-ES-W1 + OpenShift local-dev OS-W2; e2e performance + OpenShift driver)
 
 ### Coverage Summary
 
@@ -74,11 +74,12 @@ skills/
 | Platform - OpenShift Development | 1 | 13 | 7 | 2 | 4 | 0 | 54% |
 | Platform - OIDC Integration | 1 | 7 | 6 | 1 | 0 | 0 | 93% |
 | Platform - Gateway Metrics Dashboard | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Registered Users | 1 | 8 | 1 | 2 | 5 | 0 | 19% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **34** | **248** | **199** | **18** | **26** | **5** | **80%** |
+| **TOTAL** | **34** | **256** | **200** | **20** | **31** | **5** | **78%** |
 
 ### Spec Dependency Order
 
@@ -394,6 +395,26 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 - Live gateway and sandbox metrics load via RBAC-scoped REST list pagination, not the Prometheus BFF route. This matches the spec's relationship table vs `gateway-metrics-dashboard.spec.md`.
 - `dashboard.layout.template.invalid` probe name is declared but never published; invalid saved templates silently fall back to default (acceptable for v1; no gap recorded).
 - CI registers `packages/operational-dashboard-ui` with `pnpm check` in `.github/workflows/lint.yml`.
+
+### registered-users.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| RU-01 | Read-only User inventory API (List + Get) | Missing | No HTTP handlers, routes, or `openapi.users.yaml`; plugin registers presenters/migration only | `plugins/users/plugin.go` | RU-W1 |
+| RU-02 | User resource schema (OpenAPI) | Partial | Go model + DB migration + auto-provision exist; no public OpenAPI schema or presenter | `plugins/users/model.go`, `pkg/rbac/user_provisioning.go` | RU-W1 |
+| RU-03 | User inventory authorization | Missing | `isAuthorized` has no `users` branch (falls through to `gateway:creator`); `hypershell-admins` not in `JWTSyncedRoles` | `pkg/rbac/authorization.go`, `plugins/roles/model.go` | RU-W1 |
+| RU-04 | Paginated List contract | Missing | Depends on RU-01 List handler + generic list wiring | - | RU-W1 |
+| RU-05 | Operational dashboard `registered-users` metric | Missing | Adapter returns only gateway/sandbox metrics; widget still `active-users` placeholder; no SDK `users` client | `dashboard-control-plane.ts`, `operational-dashboard-ui/` | RU-W2 |
+| RU-06 | UI presentation (Registered users) | Partial | `MetricCard` + usage summary pattern exists for `active-users`; wrong metric ID and copy | `operational-dashboard-page.tsx`, `messages.ts` | RU-W2 |
+| RU-07 | Refresh and error semantics | Present | Inherits `useGetMetricsData` / OP-DASH-09; failed adapter call blocks grid (no silent zero) | `get-metrics-data.ts`, `operational-dashboard-page.tsx` | - |
+| RU-08 | Verification (API + adapter tests) | Missing | No users plugin integration tests; adapter tests cover gateways only | `dashboard-control-plane.test.ts` | RU-W1, RU-W2 |
+
+**Scoped analysis notes:**
+
+- **Foundation present:** `users` plugin has model, DAO, service, migration, and presenter path registration. `UserProvisioningMiddleware` auto-creates users from JWT claims on authenticated requests.
+- **Authorization gap:** Today a `gateway:creator` caller would incorrectly pass RBAC for `GET /users` if routes existed, because `isAuthorized` defaults to `hasGatewayCreator(bindings)` for unknown resources.
+- **`hypershell-admins` gap:** Dashboard BFF allows `hypershell-admins` without `platform:admin`, but API JWT sync only maps `platform:admin` and `gateway:creator` (`JWTSyncedRoles`). RU-W1 must add explicit `hypershell-admins` JWT check or extend sync policy.
+- **Spec file** `specs/platform/registered-users.spec.md` is authored but not yet committed (working tree).
 
 ### e2e-testing.spec.md
 
@@ -792,6 +813,30 @@ label-selected pod informer.
 3. Add Vitest unit tests in `operational-dashboard-ui` for `getMetricTrendChange`, `buildGatewayStatusData`, and layout sanitization helpers
 4. Verify: `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
 
+### Wave RU-W1: Registered Users API and Authorization
+
+**Scope:** RU-01, RU-02, RU-03, RU-04, RU-08 (API)
+**Dependency:** `registered-users.spec.md` authored
+**Status:** Planned (dry-run only)
+
+1. Add `openapi.users.yaml`; embed in composite OpenAPI; run `make generate`
+2. Add `handler.go`, `presenter.go`, List/Get routes in `plugins/users/plugin.go` (read-only; no POST/PATCH/DELETE)
+3. Extend `isAuthorized` for resource `users`: require `platform:admin` binding OR `hypershell-admins` JWT realm role; singleton deny → 404
+4. Add users plugin integration tests (allow, forbid, opaque Get, `total` with `size=1`)
+5. Verify: `cd components/api-server && make test` (integration), `make generate`, `go vet ./...`
+
+### Wave RU-W2: Registered Users Dashboard Integration
+
+**Scope:** RU-05, RU-06, RU-08 (UI), OP-DASH-08 `registered-users` row
+**Dependency:** RU-W1 (SDK `users.list` available)
+**Status:** Planned (dry-run only)
+
+1. Extend `createDashboardControlPlaneAdapter` to fetch `users.list({ page: 1, size: 1 })` and emit `registered-users` metric from `total`
+2. Rename widget type `active-users` → `registered-users` in layout template, widget mapping, usage summary, fixtures, `DATA_SOURCES.md`, and i18n (`Registered users`)
+3. Bump layout storage key if widget type rename invalidates saved layouts (or accept one-time reset)
+4. Add adapter unit tests for registered-users mapping; update Storybook fixtures
+5. Verify: `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
+
 ### Future (Deferred)
 
 | # | Item | Domain | Reason |
@@ -867,6 +912,7 @@ label-selected pod informer.
 | 2026-08-27 | working tree | Executed OS-W2 (OpenShift local-dev up/down/swap) | 77% | Lifecycle driver model, `make openshift-up`/`down`/`status`, namespace isolation, Keycloak namespace, component swaps via internal registry, overlay namespace parameterization. E2E/CI left deferred. |
 | 2026-08-31 | b93b1f0 | Dry-run: operational-dashboard + gateway-metrics-dashboard | 78% | Authored `web-console/operational-dashboard.spec.md` (15 reqs: 12 present, 3 partial). Amended `gateway-metrics-dashboard.spec.md` relationship and DASH-07. Gateway metrics pipeline 8/8 present on `ui-and-data`. Planned OP-W1 for docs drift, adapter tests, and package Vitest. |
 | 2026-08-31 | working tree | Executed OP-W1: operational dashboard verification | 79% | Fixed `DATA_SOURCES.md` refresh interval; added `dashboard-control-plane.test.ts` (pagination, status mapping, consistency guard, abort signal); added Vitest to `operational-dashboard-ui` with tests for layout persistence, gateway status data, and trend change; extracted `gateway-status-data.ts` and `dashboard-layout-persistence.ts`. Operational dashboard 15/15 present. |
+| 2026-08-31 | 5572127+spec | Dry-run: registered-users | 78% | Authored `platform/registered-users.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Users plugin has persistence + auto-provision but no HTTP/OpenAPI/RBAC/SDK/dashboard wiring. Planned RU-W1 (API+auth+tests) and RU-W2 (dashboard rename+adapter). |
 | 2026-08-31 | working tree | OpenShift Keycloak NetworkPolicy for JWKS | 77% | `keycloak-allow-platform` lets platform pods reach Keycloak TCP/8080 across the default-deny project policies so API server JWKS load and Admin API calls succeed. |
 | 2026-08-31 | working tree | OpenShift console redirect URI + Route seeding | 77% | Host `curl` against Keycloak/API Routes registers the web-console `/auth/callback` (realm import only had Kind localhost URIs) and seeds the API. The API server image has no curl, so `oc exec curl` never obtained tokens. |
 | 2026-09-01 | feecbcb, da771fb | Reconciled commit-driven stale doc gaps | 80% (unchanged) | Two recent commits removed hardcoded image defaults (`GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` now required env vars, no fallback) and unified deploy paths (deleted `components/api-server/deploy/*`, using repo-root `deploy/` as single source of truth). Updated 7 docs: `skills/deploy/ibm-cluster/SKILL.md` (image refs, path, namespace, image-var explanation), `skills/deploy/gcp-cluster/SKILL.md` (path fix, RBAC ref), `skills/deploy/deploy-cluster/SKILL.md` (full rewrite: Keycloak bootstrap, `hypershell-api-config` Secret creation, CNPG database, OIDC/JWT security, troubleshooting for missing Secret), `skills/tooling/update-openshell/SKILL.md` (grep patterns for new image names, search path fixes), `skills/RECONCILE.md` (skill directory tree, this log entry), `README.md` (env var rows, namespace refs), `specs/platform/openshift-development.spec.md` (deploy/ directory layout, overlay limitations note). Overlay gaps surfaced: `deploy/openshift/` requires manually-created `hypershell-api-config` Secret (missing from repo; documented in deploy-cluster), hardcoded domain placeholder, missing Keycloak Route on OpenShift. Marked as known limitations in specs. |
