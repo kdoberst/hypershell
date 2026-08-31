@@ -45,9 +45,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-08-21 (HYPERSHELL-49 spec delta only)
-**Spec corpus**: 40 spec files; the coverage table tracks 31 previously analyzed feature/spec groups after adding OpenShellGatewayServiceAccounts
-**Codebase commit**: 2b5eaf4 (spec/machine-account-client-secret)
+**Last analyzed**: 2026-08-31 (operational-dashboard + gateway-metrics-dashboard dry-run)
+**Spec corpus**: 42 spec files; the coverage table tracks 33 feature/spec groups
+**Codebase commit**: b93b1f0 (Make gateway status match list)
 
 ### Coverage Summary
 
@@ -68,10 +68,12 @@ skills/
 | Platform - Local Development | 1 | 25 | 23 | 0 | 1 | 1 | 96% |
 | Platform - E2E Testing | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - OIDC Integration | 1 | 6 | 5 | 1 | 0 | 0 | 92% |
+| Platform - Gateway Metrics Dashboard | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
+| Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **31** | **215** | **166** | **18** | **26** | **5** | **81%** |
+| **TOTAL** | **33** | **238** | **189** | **18** | **26** | **5** | **79%** |
 
 ### Spec Dependency Order
 
@@ -281,6 +283,50 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 | WEB-DEPLOY-02 | Assets + runtime config | Present | - | `vite.config.ts`, `bff/src/config.ts` | - |
 | WEB-SEC-01 | Browser security headers | Present | - | `bff/src/app.ts` (helmet) | - |
 | WEB-OBS-01 | Web performance signals | Partial | `web-vitals` declared; wiring TBD | `domain-probes/` | - |
+
+### gateway-metrics-dashboard.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| DASH-01 | Gateway phase Prometheus collector (`hypershell_gateways_total`) | Present | - | `plugins/gateways/metrics.go`, `dao.go:CountByPhase` | - |
+| DASH-02 | Metrics server bind `0.0.0.0:4433` | Present | - | `deploy/base/api-server.yaml` | - |
+| DASH-03 | Prometheus Operator and instance | Present | - | `deploy/kind/infrastructure/prometheus-operator-bundle.yaml`, `deploy/base/prometheus/` | - |
+| DASH-04 | ServiceMonitor scrape configuration | Present | - | `deploy/base/prometheus/servicemonitor.yaml` | - |
+| DASH-05 | BFF metrics proxy `GET /api/metrics/gateways` | Present | - | `bff/src/metrics-gateways.ts`, `bff/src/app.ts`, `bff/test/metrics-gateways.test.ts` | - |
+| DASH-06 | `GatewayMetricsDashboard` shared component | Present | - | `packages/gateway-management-ui/src/metrics/` | - |
+| DASH-07 | BFF SPA route registration for `/dashboard` | Present | - | `route-contract.json`, `bff/src/app.ts:isApplicationRoute` | - |
+| DASH-08 | Kind `PROMETHEUS_URL` patch | Present | - | `deploy/kind/kustomization.yaml` | - |
+
+**Scoped analysis notes:**
+
+- Prometheus pipeline and `GatewayMetricsDashboard` are implemented on branch `ui-and-data`. `/dashboard` renders `OperationalDashboardPage` per `web-console/operational-dashboard.spec.md`; the metrics component is embeddable but not mounted on that route by design.
+- DASH-07 was narrowed in the spec amendment: sidebar navigation and `GatewayMetricsDashboard` at `/dashboard` are no longer required.
+
+### web-console/operational-dashboard.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| OP-DASH-01 | Reusable `operational-dashboard-ui` package | Present | - | `packages/operational-dashboard-ui/` | - |
+| OP-DASH-02 | Hexagonal ports, workflow probes | Present | - | `application/dashboard-types.ts`, `dashboard-operations.ts`, `dashboard-probes.ts` | - |
+| OP-DASH-03 | Host composition wiring | Present | - | `app/composition/dashboard-composition.ts`, `application-shell.tsx` | - |
+| OP-DASH-04 | Administrator access control (SPA + BFF) | Present | - | `require-dashboard-admin.tsx`, `bff/src/app.ts`, `bff/test/auth.test.ts` | - |
+| OP-DASH-05 | SPA and BFF route surfaces | Present | - | `routes/dashboard.tsx`, `routes/home.tsx`, `route-contract.json` | - |
+| OP-DASH-06 | Gateway list metrics adapter (paginated REST) | Present | - | `app/adapters/api/dashboard-control-plane.ts`, `dashboard-control-plane.test.ts` | OP-W1 ✅ |
+| OP-DASH-07 | Gateway display status aggregation | Present | - | `dashboard-control-plane.ts`, `gateway-management-ui/gateway-data.ts:aggregateGatewayDisplayStatusCounts` | - |
+| OP-DASH-08 | Connected vs placeholder metrics | Present | - | `DATA_SOURCES.md`, `dashboard/dashboard-data.ts` | OP-W1 ✅ |
+| OP-DASH-09 | Metrics refresh policy (15 min + manual refresh) | Present | - | `get-metrics-data.ts`, `operational-dashboard-page.tsx` | - |
+| OP-DASH-10 | Widgetized grid layout | Present | - | `operational-dashboard-page.tsx`, `dashboard-layout-template.ts` | - |
+| OP-DASH-11 | Layout persistence (`localStorage` v13) | Present | - | `operational-dashboard-page.tsx` | - |
+| OP-DASH-12 | Gateway status donut widget | Present | - | `dashboard/gateway-status-chart.tsx`, `dashboard-widget.tsx` | - |
+| OP-DASH-13 | Metric, utilization, and summary widgets | Present | - | `dashboard-widget.tsx`, `dashboard/utilization-chart.tsx` | - |
+| OP-DASH-14 | Localization and accessibility | Present | - | `messages.ts`, `web-console/locales/en.json` | - |
+| OP-DASH-15 | Verification fixtures and Storybook | Present | - | `fixtures/`, `operational-dashboard.stories.tsx`, `src/dashboard/*.test.ts`, `dashboard-control-plane.test.ts` | OP-W1 ✅ |
+
+**Scoped analysis notes:**
+
+- Live gateway and sandbox metrics load via RBAC-scoped REST list pagination, not the Prometheus BFF route. This matches the spec's relationship table vs `gateway-metrics-dashboard.spec.md`.
+- `dashboard.layout.template.invalid` probe name is declared but never published; invalid saved templates silently fall back to default (acceptable for v1; no gap recorded).
+- CI registers `packages/operational-dashboard-ui` with `pnpm check` in `.github/workflows/lint.yml`.
 
 ### e2e-testing.spec.md
 
@@ -592,6 +638,17 @@ label-selected pod informer.
   web-console `check` green. (api-server unit tests run on CI; the local
   Apple-Silicon go-m1cpu cgo crash at package init is environmental.)
 
+### Wave OP-W1: Operational Dashboard Verification Hardening
+
+**Scope:** OP-DASH-06, OP-DASH-08, OP-DASH-15
+**Dependency:** operational-dashboard spec authored (2026-08-31)
+**Status:** Complete ✅
+
+1. Correct `DATA_SOURCES.md` refresh interval to 15 minutes (match `operationalDashboardRefreshMilliseconds`)
+2. Add Vitest unit tests for `createDashboardControlPlaneAdapter`: multi-page aggregation, pagination consistency failure, display-status mapping
+3. Add Vitest unit tests in `operational-dashboard-ui` for `getMetricTrendChange`, `buildGatewayStatusData`, and layout sanitization helpers
+4. Verify: `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
+
 ### Future (Deferred)
 
 | # | Item | Domain | Reason |
@@ -657,3 +714,5 @@ label-selected pod informer.
 | 2026-08-21 | 361305e | HYPERSHELL-49 scoped gap analysis | 69% | Added 15 OpenShellGatewayServiceAccount requirements, all initially missing. Planned strict API -> SDK -> service/Keycloak -> CLI -> UI -> integration waves. Recorded the post-delivery token-verification contradiction without changing specs. |
 | 2026-08-21 | working tree | Executed HYPERSHELL-49 SA-W1..W3 | pending final recount | Added nested REST/OpenAPI, generated SDKs, durable persistence/audit, exact gateway-scoped Keycloak clients, one-time verified secret delivery, role-capped authorization, expiration/revoke/delete reconciliation, and gateway cleanup barriers. |
 | 2026-08-21 | working tree | Executed HYPERSHELL-49 SA-W4 | pending final recount | Extended the CLI generator for the nested gateway collection; added create/list/get/revoke/delete commands, explicit mode-0600 one-time credential output, expiration handling, workspace guidance, and secret-redaction tests. |
+| 2026-08-31 | b93b1f0 | Dry-run: operational-dashboard + gateway-metrics-dashboard | 78% | Authored `web-console/operational-dashboard.spec.md` (15 reqs: 12 present, 3 partial). Amended `gateway-metrics-dashboard.spec.md` relationship and DASH-07. Gateway metrics pipeline 8/8 present on `ui-and-data`. Planned OP-W1 for docs drift, adapter tests, and package Vitest. |
+| 2026-08-31 | working tree | Executed OP-W1: operational dashboard verification | 79% | Fixed `DATA_SOURCES.md` refresh interval; added `dashboard-control-plane.test.ts` (pagination, status mapping, consistency guard, abort signal); added Vitest to `operational-dashboard-ui` with tests for layout persistence, gateway status data, and trend change; extracted `gateway-status-data.ts` and `dashboard-layout-persistence.ts`. Operational dashboard 15/15 present. |
