@@ -26,7 +26,7 @@ The operational dashboard `cpu` widget and `system-summary` row already exist as
 - **Registered users** (`platform/registered-users.spec.md`) sources HyperShell REST APIs instead of Prometheus.
 - **Gateway metrics dashboard** (`platform/gateway-metrics-dashboard.spec.md`) uses a different BFF route (`GET /api/metrics/gateways`) for gateway phase counts and is unrelated to hub-cluster CPU.
 
-Pod capacity, node inventory, and provision-time metrics are out of scope for this spec (see Non-Goals).
+Pod capacity and provision-time metrics are out of scope for this spec (see Non-Goals).
 
 ## Requirements
 

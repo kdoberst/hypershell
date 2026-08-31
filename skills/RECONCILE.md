@@ -45,9 +45,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-08-31 (cluster-pods CLP-W1–W3 executed)
-**Spec corpus**: 46 spec files; the coverage table tracks 37 feature/spec groups
-**Codebase commit**: working tree (CLP-W1–W3 cluster pods implementation)
+**Last analyzed**: 2026-08-31 (cluster-nodes CLN-W1–W3 executed)
+**Spec corpus**: 47 spec files; the coverage table tracks 38 feature/spec groups
+**Codebase commit**: working tree (CLN-W1–W3 cluster nodes implementation)
 
 ### Coverage Summary
 
@@ -73,11 +73,12 @@ skills/
 | Platform - Cluster Memory | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster CPU | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Pods | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Cluster Nodes | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **37** | **270** | **228** | **17** | **20** | **5** | **84%** |
+| **TOTAL** | **38** | **278** | **236** | **17** | **20** | **5** | **85%** |
 
 ### Spec Dependency Order
 
@@ -405,6 +406,24 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 - **Delivered:** kube-state-metrics Deployment/ServiceMonitor; BFF instant queries for capacity/used pods; dashboard adapter maps to `pods` metric; OP-DASH-08 `pods` row connected.
 - **Used pods:** `count(kube_pod_info)` — all phases including Failed/Succeeded while objects exist; utilization donut only (no phase breakdown in v1).
 - **Scrape target:** `registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0`.
+
+### cluster-nodes.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| CLN-01 | Hub cluster scope (all Node objects) | Present | - | `bff/src/metrics-cluster-nodes.ts` | CLN-W2 ✅ |
+| CLN-02 | Node measurement contract (`total_nodes`, `ready_nodes`, `not_ready_nodes`) | Present | - | `bff/src/metrics-cluster-nodes.ts` | CLN-W2 ✅ |
+| CLN-03 | Prometheus data source | Present | - | `bff/src/metrics-cluster-nodes.ts`, `DATA_SOURCES.md` | CLN-W1 ✅ |
+| CLN-04 | BFF `GET /api/metrics/cluster-nodes` | Present | - | `bff/src/app.ts` | CLN-W2 ✅ |
+| CLN-05 | Operational dashboard `nodes` metric mapping | Present | - | `dashboard-control-plane.ts`, `dashboard-widget.tsx` | CLN-W3 ✅ |
+| CLN-06 | Prometheus scrape prerequisites (reuse kube-state-metrics) | Present | - | `deploy/base/prometheus/kube-state-metrics.yaml`, `DATA_SOURCES.md` | CLN-W1 ✅ |
+| CLN-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails on BFF error | - |
+| CLN-08 | Verification (BFF + adapter tests) | Present | - | `bff/test/metrics-cluster-nodes*.test.ts`, `dashboard-control-plane.test.ts` | CLN-W2 ✅, CLN-W3 ✅ |
+
+**Scoped analysis notes:**
+
+- **Delivered:** Reuses CLP-W1 kube-state-metrics; BFF instant queries for total/ready nodes; adapter maps to `nodes` metric with gateway-style `value` + `status` (`healthy`/`failed`); `system-summary` row uses `SummaryGatewayValue`.
+- **UI:** Total count with failed-node exception icon when `status.failed > 0`; no `provisioning`/`degraded` buckets in v1.
 
 ### e2e-testing.spec.md
 
@@ -852,6 +871,41 @@ label-selected pod informer.
 4. Update `DATA_SOURCES.md` and OP-DASH-08 `pods` row to connected
 5. Add adapter unit tests; verify `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
 
+### Wave CLN-W1: Node PromQL Documentation ✅
+
+**Scope:** CLN-03 (documented PromQL), CLN-06
+**Dependency:** `cluster-nodes.spec.md` authored; kube-state-metrics from CLP-W1
+**Status:** Complete (working tree)
+
+1. Document canonical PromQL in `packages/operational-dashboard-ui/DATA_SOURCES.md`:
+   - Total: `count(kube_node_info)`
+   - Ready: `sum(kube_node_status_condition{condition="Ready",status="true"})`
+2. Note reuse of existing kube-state-metrics scrape (no new Deployment)
+
+### Wave CLN-W2: BFF Cluster Nodes Route ✅
+
+**Scope:** CLN-01 (query target), CLN-02, CLN-04, CLN-08 (BFF)
+**Dependency:** CLN-W1 (PromQL documented); kube-state-metrics node series available
+**Status:** Complete (working tree)
+
+1. Add `bff/src/metrics-cluster-nodes.ts` following `metrics-cluster-pods.ts` pattern (total + ready instant queries; compute `not_ready_nodes`; reject `ready_nodes > total_nodes` or `total_nodes === 0`)
+2. Register `GET /api/metrics/cluster-nodes` in `bff/src/app.ts` with OIDC session gate
+3. Return CLN-04 JSON with integral counts; HTTP `502` on Prometheus failure (no zero fallback)
+4. Add BFF unit tests: success mapping, inconsistent samples, Prometheus `502`, session requirement when OIDC enabled
+
+### Wave CLN-W3: Dashboard Nodes Adapter Integration ✅
+
+**Scope:** CLN-05, CLN-08 (adapter), OP-DASH-08 `nodes` row
+**Dependency:** CLN-W2 (BFF route available)
+**Status:** Complete (working tree)
+
+1. Extend `createDashboardControlPlaneAdapter` to fetch `/api/metrics/cluster-nodes` with same-origin credentials (parallel with memory/cpu/pods/users/gateways)
+2. Map `total_nodes` → `nodes` metric `value`; map `ready_nodes` → `status.healthy` and `not_ready_nodes` → `status.failed` (gateway-style, OP-DASH-07)
+3. Update `system-summary` nodes row to use the same total + exception-status presentation as gateways (`SummaryGatewayValue` pattern)
+4. Failed nodes fetch SHALL fail entire `getOperationalMetrics` (CLN-07)
+5. Update `DATA_SOURCES.md` and OP-DASH-08 `nodes` row to connected
+6. Add adapter unit tests; update `mockOperationalDashboardMetrics` `status` fixture
+
 ### Future (Deferred)
 
 | # | Item | Domain | Reason |
@@ -927,3 +981,5 @@ label-selected pod informer.
 | 2026-08-31 | b364373 | Executed CC-W1–W3: cluster CPU | 81% | BFF `GET /api/metrics/cluster-cpu`; dashboard `cpu` cores metric; BFF + adapter tests; `i18n:extract` reorder for `26a62eb`/`dc696eb` drift. Cluster CPU 8/8 present. |
 | 2026-08-31 | 3466e55 | Dry-run: cluster-pods | 79% | Authored `platform/cluster-pods.spec.md` (8 reqs: 1 present, 1 partial, 6 missing). Requires kube-state-metrics deploy (not node-exporter); BFF route + adapter not implemented. Planned CLP-W1 (ksm scrape + PromQL), CLP-W2 (BFF), CLP-W3 (adapter). Used count includes all phases. |
 | 2026-08-31 | working tree | Executed CLP-W1–W3: cluster pods | 84% | kube-state-metrics Deployment/ServiceMonitor; BFF `GET /api/metrics/cluster-pods`; dashboard `pods` metric; BFF + adapter tests; `DATA_SOURCES.md` + OP-DASH-08 connected. Cluster pods 8/8 present. |
+| 2026-08-31 | working tree | Dry-run: cluster-nodes | 82% | Authored `platform/cluster-nodes.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Gateway-style `value` + `status` for system-summary; reuses kube-state-metrics from CLP-W1. Planned CLN-W1 (PromQL docs), CLN-W2 (BFF), CLN-W3 (adapter). |
+| 2026-08-31 | working tree | Executed CLN-W1–W3: cluster nodes | 85% | BFF `GET /api/metrics/cluster-nodes`; dashboard `nodes` metric with `healthy`/`failed` status; `SummaryGatewayValue` in system-summary; BFF + adapter tests. Cluster nodes 8/8 present. |

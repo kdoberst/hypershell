@@ -189,7 +189,7 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | `provisioned-sandboxes` | Yes | Sum of `active_sandbox_count` from gateway list |
 | `registered-users` | Yes | See `platform/registered-users.spec.md` |
 | `memory` | Yes | BFF `GET /api/metrics/cluster-memory` (Prometheus node-exporter); see `platform/cluster-memory.spec.md` |
-| `nodes` | No | — |
+| `nodes` | Yes | BFF `GET /api/metrics/cluster-nodes` (Prometheus kube-state-metrics); see `platform/cluster-nodes.spec.md` |
 | `cpu` | Yes | BFF `GET /api/metrics/cluster-cpu` (Prometheus node-exporter); see `platform/cluster-cpu.spec.md` |
 | `pods` | Yes | BFF `GET /api/metrics/cluster-pods` (Prometheus kube-state-metrics); see `platform/cluster-pods.spec.md` |
 | `provision-time` | No | — |
@@ -319,7 +319,7 @@ If the metric includes `trend` data, a `TrendSparklineChart` SHALL render below 
 **Summary widgets:**
 
 - `usage-summary` — horizontal `DescriptionList` for active users, gateways (with exception status counts), and sandboxes
-- `system-summary` — horizontal `DescriptionList` for memory, CPU, pods, nodes, and provision time
+- `system-summary` — horizontal `DescriptionList` for memory, CPU, pods, nodes (with exception status counts when `status.failed` is non-zero), and provision time
 
 Trend direction indicators in summary rows SHALL appear only when `getMetricTrendChange` detects at least a 5% change between the first and last trend point.
 
