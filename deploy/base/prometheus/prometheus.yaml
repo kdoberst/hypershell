@@ -11,7 +11,7 @@ spec:
     fsGroup: 65534
   serviceMonitorSelector:
     matchLabels:
-      app: hypershell-api-server
+      hypershell.redhat.io/prometheus-scrape: "true"
   serviceMonitorNamespaceSelector:
     matchLabels:
       kubernetes.io/metadata.name: hypershell-system

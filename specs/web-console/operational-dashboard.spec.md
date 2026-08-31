@@ -188,7 +188,7 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | `provisioned-gateways` | Yes | Gateway list aggregate (OP-DASH-06, OP-DASH-07) |
 | `provisioned-sandboxes` | Yes | Sum of `active_sandbox_count` from gateway list |
 | `registered-users` | Yes | See `platform/registered-users.spec.md` |
-| `memory` | No | See `platform/cluster-memory.spec.md` |
+| `memory` | Yes | BFF `GET /api/metrics/cluster-memory` (Prometheus node-exporter); see `platform/cluster-memory.spec.md` |
 | `nodes` | No | — |
 | `cpu` | No | — |
 | `pods` | No | — |
