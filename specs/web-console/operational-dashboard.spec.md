@@ -190,7 +190,7 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | `registered-users` | Yes | See `platform/registered-users.spec.md` |
 | `memory` | Yes | BFF `GET /api/metrics/cluster-memory` (Prometheus node-exporter); see `platform/cluster-memory.spec.md` |
 | `nodes` | No | — |
-| `cpu` | No | — |
+| `cpu` | No | See `platform/cluster-cpu.spec.md` |
 | `pods` | No | — |
 | `provision-time` | No | — |
 
