@@ -45,9 +45,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-08-31 (cluster-memory CM-W1–W3 executed)
-**Spec corpus**: 44 spec files; the coverage table tracks 35 feature/spec groups
-**Codebase commit**: working tree (feat: cluster memory Prometheus scrape, BFF, dashboard)
+**Last analyzed**: 2026-08-31 (cluster-cpu CC-W1–W3 executed)
+**Spec corpus**: 45 spec files; the coverage table tracks 36 feature/spec groups
+**Codebase commit**: working tree (feat: cluster CPU BFF, dashboard adapter, i18n reorder)
 
 ### Coverage Summary
 
@@ -71,11 +71,12 @@ skills/
 | Platform - Gateway Metrics Dashboard | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Registered Users | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Memory | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Cluster CPU | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **35** | **254** | **205** | **18** | **26** | **5** | **81%** |
+| **TOTAL** | **36** | **262** | **213** | **18** | **26** | **5** | **81%** |
 
 ### Spec Dependency Order
 
@@ -366,6 +367,24 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 - **Delivered:** node-exporter DaemonSet + ServiceMonitor; BFF instant queries `sum(node_memory_MemTotal_bytes)` and `sum(node_memory_MemAvailable_bytes)`; dashboard adapter maps bytes → GiB `memory` metric; OP-DASH-08 `memory` row connected.
 - **Scrape target:** `quay.io/prometheus/node-exporter:v1.9.0` on port 9100 with host `/proc`, `/sys`, `/root` mounts.
 - **Prometheus selector:** `hypershell.redhat.io/prometheus-scrape: "true"` on api-server and node-exporter ServiceMonitors.
+
+### cluster-cpu.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| CC-01 | Hub cluster scope (schedulable nodes) | Present | - | `bff/src/metrics-cluster-cpu.ts` | CC-W2 ✅ |
+| CC-02 | CPU measurement contract (`capacity_cores`, `available_cores`, `used_cores`) | Present | - | `bff/src/metrics-cluster-cpu.ts` | CC-W2 ✅ |
+| CC-03 | Prometheus data source | Present | - | `bff/src/metrics-cluster-cpu.ts`, `DATA_SOURCES.md` | CC-W1 ✅ |
+| CC-04 | BFF `GET /api/metrics/cluster-cpu` | Present | - | `bff/src/app.ts` | CC-W2 ✅ |
+| CC-05 | Operational dashboard `cpu` metric mapping | Present | - | `dashboard-control-plane.ts` | CC-W3 ✅ |
+| CC-06 | Prometheus scrape prerequisites (reuse node-exporter) | Present | - | `deploy/base/prometheus/node-exporter.yaml`, `DATA_SOURCES.md` | CC-W1 ✅ |
+| CC-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails on BFF error | - |
+| CC-08 | Verification (BFF + adapter tests) | Present | - | `bff/test/metrics-cluster-cpu*.test.ts`, `dashboard-control-plane.test.ts` | CC-W2 ✅, CC-W3 ✅ |
+
+**Scoped analysis notes:**
+
+- **Delivered:** Reuses CM-W1 node-exporter; BFF instant queries for capacity/used cores; dashboard adapter maps to `cpu` metric (whole cores); OP-DASH-08 `cpu` row connected.
+- **BFF JSON** preserves fractional `used_cores`; adapter rounds for display.
 
 ### e2e-testing.spec.md
 
@@ -746,6 +765,38 @@ label-selected pod informer.
 4. Update `DATA_SOURCES.md` and OP-DASH-08 `memory` row to connected
 5. Add adapter unit tests; verify `pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check`, web-console `check`
 
+### Wave CC-W1: CPU PromQL Documentation ✅
+
+**Scope:** CC-03 (documented PromQL), CC-06
+**Dependency:** `cluster-cpu.spec.md` authored (`9f9b0da`); CM-W1 node-exporter scrape (complete)
+**Status:** Complete (working tree)
+
+1. Document canonical CPU PromQL in `packages/operational-dashboard-ui/DATA_SOURCES.md`
+2. Note that CPU and memory share the same node-exporter DaemonSet (no new scrape targets)
+
+### Wave CC-W2: BFF Cluster CPU Route ✅
+
+**Scope:** CC-01 (query target), CC-02, CC-04, CC-08 (BFF)
+**Dependency:** CC-W1 (PromQL documented); node-exporter CPU series available
+**Status:** Complete (working tree)
+
+1. Add `bff/src/metrics-cluster-cpu.ts` following `metrics-cluster-memory.ts` pattern
+2. Register `GET /api/metrics/cluster-cpu` in `bff/src/app.ts` with OIDC session gate
+3. Return CC-04 JSON with fractional `used_cores`; HTTP `502` on Prometheus failure
+4. Add BFF unit tests: success mapping, Prometheus `502`, session requirement when OIDC enabled
+
+### Wave CC-W3: Dashboard CPU Adapter Integration ✅
+
+**Scope:** CC-05, CC-08 (adapter), OP-DASH-08 `cpu` row
+**Dependency:** CC-W2 (BFF route available)
+**Status:** Complete (working tree)
+
+1. Extend `createDashboardControlPlaneAdapter` to fetch `/api/metrics/cluster-cpu` in parallel with memory
+2. Map `used_cores`/`capacity_cores` → `cpu` metric (`value`, `total`, `unit: "cores"`, rounded whole cores)
+3. Failed CPU fetch SHALL fail entire `getOperationalMetrics` (CC-07)
+4. Update `DATA_SOURCES.md` and OP-DASH-08 `cpu` row to connected
+5. Add adapter unit tests; re-sync `locales/en.json` via `pnpm run i18n:extract`
+
 ### Future (Deferred)
 
 | # | Item | Domain | Reason |
@@ -816,4 +867,6 @@ label-selected pod informer.
 | 2026-08-31 | 5572127+spec | Dry-run: registered-users | 77% | Authored `platform/registered-users.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Users plugin has persistence + auto-provision but no HTTP/OpenAPI/RBAC/SDK/dashboard wiring. Planned RU-W1 (API+auth+tests) and RU-W2 (dashboard rename+adapter). |
 | 2026-08-31 | eb99f6b | Executed RU-W1 + RU-W2: registered users | 78% | OpenAPI List/Get, `platform:admin`/`hypershell-admins` auth, integration tests, SDK, dashboard `registered-users` metric (layout v14). Registered users 8/8 present. |
 | 2026-08-31 | 217452a | Dry-run: cluster-memory | 78% | Authored `platform/cluster-memory.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Prometheus scrape + BFF route + dashboard adapter not implemented. Planned CM-W1 (scrape), CM-W2 (BFF), CM-W3 (adapter). |
-| 2026-08-31 | working tree | Executed CM-W1–W3: cluster memory | 81% | node-exporter DaemonSet + ServiceMonitor; BFF `GET /api/metrics/cluster-memory`; dashboard `memory` GiB metric; BFF + adapter tests. Cluster memory 8/8 present. |
+| 2026-08-31 | ac65674 | Executed CM-W1–W3: cluster memory | 81% | node-exporter DaemonSet + ServiceMonitor; BFF `GET /api/metrics/cluster-memory`; dashboard `memory` GiB metric; BFF + adapter tests. Cluster memory 8/8 present. |
+| 2026-08-31 | 9f9b0da | Dry-run: cluster-cpu | 79% | Authored `platform/cluster-cpu.spec.md` (8 reqs). Planned CC-W1 (PromQL docs), CC-W2 (BFF), CC-W3 (adapter). |
+| 2026-08-31 | working tree | Executed CC-W1–W3: cluster CPU | 81% | BFF `GET /api/metrics/cluster-cpu`; dashboard `cpu` cores metric; BFF + adapter tests; `i18n:extract` reorder for `26a62eb`/`dc696eb` drift. Cluster CPU 8/8 present. |

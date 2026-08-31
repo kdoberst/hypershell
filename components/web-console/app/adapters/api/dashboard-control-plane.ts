@@ -21,8 +21,18 @@ interface ClusterMemoryResponse {
   used_bytes: number;
 }
 
+interface ClusterCpuResponse {
+  available_cores: number;
+  capacity_cores: number;
+  used_cores: number;
+}
+
 function bytesToRoundedGib(bytes: number): string {
   return String(Math.round(bytes / gibibyteDivisor));
+}
+
+function coresToRoundedString(cores: number): string {
+  return String(Math.round(cores));
 }
 
 async function fetchClusterMemoryMetric(
@@ -45,6 +55,29 @@ async function fetchClusterMemoryMetric(
     total: bytesToRoundedGib(body.capacity_bytes),
     unit: "GiB",
     value: bytesToRoundedGib(body.used_bytes),
+  };
+}
+
+async function fetchClusterCpuMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const response = await fetch("/api/metrics/cluster-cpu", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch cluster CPU metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as ClusterCpuResponse;
+
+  return {
+    id: "cpu",
+    total: coresToRoundedString(body.capacity_cores),
+    unit: "cores",
+    value: coresToRoundedString(body.used_cores),
   };
 }
 
@@ -78,7 +111,7 @@ async function aggregateGatewayList(
   let page = 1;
   let total = 0;
   let activeSandboxCount = 0;
-  const lifecycleRecords: Array<{ phase?: string; status?: string }> = [];
+  const lifecycleRecords: { phase?: string; status?: string }[] = [];
 
   do {
     const result = await client.gateways.list(
@@ -135,12 +168,13 @@ export function createDashboardControlPlaneAdapter(
 
       const aggregate = await aggregateGatewayList(context, apiFactory);
       const client = apiFactory(context.correlationId);
-      const [userList, memoryMetric] = await Promise.all([
+      const [userList, memoryMetric, cpuMetric] = await Promise.all([
         client.users.list(
           { orderBy: "username asc", page: 1, size: 1 },
           { signal: context.signal },
         ),
         fetchClusterMemoryMetric(context.signal),
+        fetchClusterCpuMetric(context.signal),
       ]);
 
       const metrics: OperationalMetric[] = [
@@ -161,6 +195,7 @@ export function createDashboardControlPlaneAdapter(
       });
 
       metrics.push(memoryMetric);
+      metrics.push(cpuMetric);
 
       return {
         lastSuccessfulRefresh: new Date(),

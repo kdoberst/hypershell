@@ -1,4 +1,5 @@
 import type { Gateway, GatewayList } from "@openshift-online/hypershell-sdk";
+import type { SDKClient } from "@openshift-online/hypershell-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDashboardControlPlaneAdapter } from "./dashboard-control-plane";
@@ -6,31 +7,51 @@ import { createDashboardControlPlaneAdapter } from "./dashboard-control-plane";
 const gatewayListApi = vi.fn();
 const usersListApi = vi.fn();
 const fetchMock = vi.fn();
-const apiFactory = vi.fn(() => ({
-  gateways: {
-    list: gatewayListApi,
-  },
-  users: {
-    list: usersListApi,
-  },
-}));
+const apiFactory = vi.fn(
+  () =>
+    ({
+      gateways: {
+        list: gatewayListApi,
+      },
+      users: {
+        list: usersListApi,
+      },
+    }) as unknown as SDKClient,
+);
 
 const adapter = createDashboardControlPlaneAdapter(apiFactory);
 const context = {
   correlationId: "11111111-1111-4111-8111-111111111111",
 };
 
-function mockClusterMemoryResponse(
+function mockClusterMetricsResponses(
   capacityBytes: number,
   usedBytes: number,
 ): void {
-  fetchMock.mockResolvedValueOnce({
-    json: async () => ({
-      available_bytes: capacityBytes - usedBytes,
-      capacity_bytes: capacityBytes,
-      used_bytes: usedBytes,
-    }),
-    ok: true,
+  fetchMock.mockImplementation((url: string) => {
+    if (url === "/api/metrics/cluster-memory") {
+      return Promise.resolve({
+        json: () =>
+          Promise.resolve({
+            available_bytes: capacityBytes - usedBytes,
+            capacity_bytes: capacityBytes,
+            used_bytes: usedBytes,
+          }),
+        ok: true,
+      });
+    }
+    if (url === "/api/metrics/cluster-cpu") {
+      return Promise.resolve({
+        json: () =>
+          Promise.resolve({
+            available_cores: 11.8,
+            capacity_cores: 60,
+            used_cores: 48.2,
+          }),
+        ok: true,
+      });
+    }
+    return Promise.reject(new Error(`unexpected fetch url: ${url}`));
   });
 }
 
@@ -93,7 +114,7 @@ function gatewayList(
 
 describe("createDashboardControlPlaneAdapter", () => {
   it("aggregates paginated gateway lists into operational metrics", async () => {
-    mockClusterMemoryResponse(254468212736, 236223201280);
+    mockClusterMetricsResponses(254468212736, 236223201280);
 
     usersListApi.mockResolvedValueOnce({
       items: [],
@@ -148,6 +169,7 @@ describe("createDashboardControlPlaneAdapter", () => {
       (metric) => metric.id === "registered-users",
     );
     const memoryMetric = metrics.metrics.find((metric) => metric.id === "memory");
+    const cpuMetric = metrics.metrics.find((metric) => metric.id === "cpu");
 
     expect(gatewaysMetric?.value).toBe("150");
     expect(gatewaysMetric?.status).toEqual({
@@ -164,7 +186,17 @@ describe("createDashboardControlPlaneAdapter", () => {
       unit: "GiB",
       value: "220",
     });
+    expect(cpuMetric).toEqual({
+      id: "cpu",
+      total: "60",
+      unit: "cores",
+      value: "48",
+    });
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-memory", {
+      credentials: "same-origin",
+      signal: undefined,
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-cpu", {
       credentials: "same-origin",
       signal: undefined,
     });
@@ -175,7 +207,7 @@ describe("createDashboardControlPlaneAdapter", () => {
   });
 
   it("maps gateway lifecycle fields into display-status buckets", async () => {
-    mockClusterMemoryResponse(1024 ** 3, 512 * 1024 ** 2);
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
 
     usersListApi.mockResolvedValueOnce({
       items: [],
@@ -211,7 +243,7 @@ describe("createDashboardControlPlaneAdapter", () => {
   });
 
   it("rejects inconsistent pagination responses", async () => {
-    mockClusterMemoryResponse(1024 ** 3, 512 * 1024 ** 2);
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
 
     usersListApi.mockResolvedValueOnce({
       items: [],
@@ -229,7 +261,7 @@ describe("createDashboardControlPlaneAdapter", () => {
 
   it("forwards abort signals to the gateway list client", async () => {
     const controller = new AbortController();
-    mockClusterMemoryResponse(1024 ** 3, 512 * 1024 ** 2);
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
 
     usersListApi.mockResolvedValueOnce({
       items: [],
@@ -257,12 +289,32 @@ describe("createDashboardControlPlaneAdapter", () => {
       credentials: "same-origin",
       signal: controller.signal,
     });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/cluster-cpu", {
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
   });
 
   it("fails when cluster memory metrics are unavailable", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 502,
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/metrics/cluster-memory") {
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+        });
+      }
+      if (url === "/api/metrics/cluster-cpu") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_cores: 11.8,
+              capacity_cores: 60,
+              used_cores: 48.2,
+            }),
+          ok: true,
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch url: ${url}`));
     });
     usersListApi.mockResolvedValueOnce({
       items: [],
@@ -275,6 +327,41 @@ describe("createDashboardControlPlaneAdapter", () => {
 
     await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
       "Failed to fetch cluster memory metrics: 502",
+    );
+  });
+
+  it("fails when cluster CPU metrics are unavailable", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/metrics/cluster-memory") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_bytes: 512 * 1024 ** 2,
+              capacity_bytes: 1024 ** 3,
+              used_bytes: 512 * 1024 ** 2,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-cpu") {
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch url: ${url}`));
+    });
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+    gatewayListApi.mockResolvedValueOnce(gatewayList([gateway()], 1, 1));
+
+    await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
+      "Failed to fetch cluster CPU metrics: 502",
     );
   });
 });

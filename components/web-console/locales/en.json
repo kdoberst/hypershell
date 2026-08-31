@@ -55,6 +55,10 @@
     "defaultMessage": "Failed",
     "description": "Legend label for failed gateways."
   },
+  "app.dashboard.gatewayStatus.healthy": {
+    "defaultMessage": "Healthy",
+    "description": "Legend label for healthy gateways."
+  },
   "app.dashboard.gatewayStatus.legend": {
     "defaultMessage": "{status}: {count}",
     "description": "Legend entry for a gateway status donut chart segment."
@@ -62,10 +66,6 @@
   "app.dashboard.gatewayStatus.provisioning": {
     "defaultMessage": "Provisioning",
     "description": "Legend label for provisioning gateways."
-  },
-  "app.dashboard.gatewayStatus.healthy": {
-    "defaultMessage": "Healthy",
-    "description": "Legend label for healthy gateways."
   },
   "app.dashboard.loadError.body": {
     "defaultMessage": "An unexpected error occurred while loading dashboard metrics.",
@@ -127,6 +127,10 @@
     "defaultMessage": "Provision time",
     "description": "Summary label for provision time."
   },
+  "app.dashboard.summary.registeredUsers": {
+    "defaultMessage": "Registered users",
+    "description": "Summary label for registered users."
+  },
   "app.dashboard.summary.sandboxes": {
     "defaultMessage": "Sandboxes",
     "description": "Label for provisioned sandboxes on the operational dashboard."
@@ -154,10 +158,6 @@
   "app.dashboard.summary.usageAriaLabel": {
     "defaultMessage": "Usage metrics",
     "description": "Accessible label for the usage metrics list in the summary widget."
-  },
-  "app.dashboard.summary.registeredUsers": {
-    "defaultMessage": "Registered users",
-    "description": "Summary label for registered users."
   },
   "app.dashboard.title": {
     "defaultMessage": "HyperShell operational dashboard",
@@ -195,10 +195,6 @@
     "defaultMessage": "{percent}% capacity{separator}{value} of {total} {unit}",
     "description": "Tooltip for utilization status in the system summary widget."
   },
-  "app.dashboard.widget.registeredUsers": {
-    "defaultMessage": "Registered users",
-    "description": "Title for the registered users dashboard widget."
-  },
   "app.dashboard.widget.cpu": {
     "defaultMessage": "CPU",
     "description": "Title for the CPU utilization dashboard widget."
@@ -222,6 +218,10 @@
   "app.dashboard.widget.provisionedGateways": {
     "defaultMessage": "Provisioned gateways",
     "description": "Title for the provisioned gateways dashboard widget."
+  },
+  "app.dashboard.widget.registeredUsers": {
+    "defaultMessage": "Registered users",
+    "description": "Title for the registered users dashboard widget."
   },
   "app.dashboard.widget.summary": {
     "defaultMessage": "Summary",
