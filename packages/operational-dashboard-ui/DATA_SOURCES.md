@@ -20,12 +20,12 @@ Data is loaded through `useGetMetricsData` → `dashboard.getOperationalMetrics`
 | `cpu`                   | BFF `GET /api/metrics/cluster-cpu` (Prometheus)                  | Hub-cluster node CPU from the same node-exporter DaemonSet as memory. Capacity: `sum(count by (instance) (node_cpu_seconds_total{mode="idle"}))`. Used: `sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))`. Adapter maps fractional used/capacity cores to whole cores for the utilization donut. Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
 | `pods`                  | BFF `GET /api/metrics/cluster-pods` (Prometheus)                 | Hub-cluster pod utilization from kube-state-metrics. Capacity: `sum(kube_node_status_allocatable{resource="pods"})`. Used: `count(kube_pod_info)` (all phases while pod objects exist, including Failed/Succeeded). Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
 | `nodes`                 | BFF `GET /api/metrics/cluster-nodes` (Prometheus)              | Hub-cluster node inventory from kube-state-metrics. Total: `count(kube_node_info)`. Ready: `sum(kube_node_status_condition{condition="Ready",status="true"})`. Adapter maps `ready_nodes` → `status.healthy` and `not_ready_nodes` → `status.failed` (gateway-style summary row). Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
+| `provision-time`        | HyperShell API `GET /api/hypershell/v1/gateways` (paginated)   | Mean minutes for `Running` gateways using `updated_at - created_at` as a v1 completion proxy. Computed in the dashboard adapter from the same gateway list as `provisioned-gateways` (no extra request). Refreshes every 15 minutes (`operationalDashboardRefreshMilliseconds`). |
 
 ## Not connected (widgets remain, data unavailable)
 
 | Widget / metric ID               | Reason                                                                                                                    |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `provision-time`                 | Gateway provisioning duration is not published as a Prometheus metric or REST aggregate.                                  |
 | Sparkline trends on metric cards | Historical series are not queried; only instantaneous values are loaded.                                                  |
 
 ## Adding a new source

@@ -48,9 +48,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; cluster-memory CM-W1–W3, cluster-cpu CC-W1–W3, cluster-pods CLP-W1–W3, cluster-nodes CLN-W1–W3 executed; registered-users complete; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
-**Spec corpus**: 47 spec files; the coverage table tracks 38 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, Operational Dashboard, Registered Users, Cluster Memory, Cluster CPU, Cluster Pods, and Cluster Nodes
-**Codebase commit**: working tree (CP-OBS-GPD-W1 + cluster memory + cluster CPU + cluster pods + cluster nodes Prometheus/kube-state-metrics scrape, BFF routes, dashboard adapters + registered users API + OpenShift local-dev OS-W2 + Keycloak event-storm KC-ES-W1; e2e performance + OpenShift driver)
+**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; cluster-memory CM-W1–W3, cluster-cpu CC-W1–W3, cluster-pods CLP-W1–W3, cluster-nodes CLN-W1–W3, gateway-provision-time GPT-W1 executed; registered-users complete; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
+**Spec corpus**: 48 spec files; the coverage table tracks 39 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, Operational Dashboard, Registered Users, Cluster Memory, Cluster CPU, Cluster Pods, Cluster Nodes, and Gateway Provision Time
+**Codebase commit**: working tree (CP-OBS-GPD-W1 + cluster memory + cluster CPU + cluster pods + cluster nodes Prometheus/kube-state-metrics scrape, BFF routes, dashboard adapters + gateway provision time + registered users API + OpenShift local-dev OS-W2 + Keycloak event-storm KC-ES-W1; e2e performance + OpenShift driver)
 
 ### Coverage Summary
 
@@ -79,11 +79,12 @@ skills/
 | Platform - Cluster CPU | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Pods | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Cluster Nodes | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
+| Platform - Gateway Provision Time | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
 | Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **38** | **278** | **236** | **17** | **20** | **5** | **85%** |
+| **TOTAL** | **39** | **286** | **243** | **17** | **13** | **5** | **85%** |
 
 ### Spec Dependency Order
 
@@ -491,6 +492,24 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 
 - **Delivered:** Reuses CLP-W1 kube-state-metrics; BFF instant queries for total/ready nodes; adapter maps to `nodes` metric with gateway-style `value` + `status` (`healthy`/`failed`); `system-summary` row uses `SummaryGatewayValue`.
 - **UI:** Total count with failed-node exception icon when `status.failed > 0`; no `provisioning`/`degraded` buckets in v1.
+
+### gateway-provision-time.spec.md
+
+| # | Requirement | Status | Gap | Code Location | Wave |
+|---|-------------|--------|-----|---------------|------|
+| GPT-01 | Dashboard operator scope (paginated gateway list) | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-02 | Provision duration measurement contract (`average_minutes`) | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-03 | Timestamp proxy semantics (`updated_at - created_at`) | Present | - | `dashboard-control-plane.ts`, `DATA_SOURCES.md` | GPT-W1 ✅ |
+| GPT-04 | No dedicated BFF or Prometheus route | Present | - | Reuses gateway list aggregate | GPT-W1 ✅ |
+| GPT-05 | Operational dashboard `provision-time` metric mapping | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-06 | List consistency guard | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
+| GPT-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails when no samples | - |
+| GPT-08 | Verification (adapter tests) | Present | - | `dashboard-control-plane.test.ts` | GPT-W1 ✅ |
+
+**Scoped analysis notes:**
+
+- **Delivered:** Mean provision minutes for `Running` gateways computed from the existing paginated gateway list; `value` + `unit: "minutes"` on `provision-time` metric; no extra API or BFF route.
+- **Proxy:** v1 uses `updated_at - created_at`; per-gateway breakdown and percentiles deferred.
 
 ### e2e-testing.spec.md
 
@@ -1049,6 +1068,18 @@ label-selected pod informer.
 5. Update `DATA_SOURCES.md` and OP-DASH-08 `nodes` row to connected
 6. Add adapter unit tests; update `mockOperationalDashboardMetrics` `status` fixture
 
+### Wave GPT-W1: Gateway Provision Time Adapter Integration ✅
+
+**Scope:** GPT-01 through GPT-06, GPT-08 (adapter), OP-DASH-08 `provision-time` row
+**Dependency:** `gateway-provision-time.spec.md` authored; OP-DASH-06 gateway list aggregate
+**Status:** Complete (working tree)
+
+1. Extend `aggregateGatewayList` to collect `Running` gateway timestamp samples from the existing paginated list
+2. Compute mean `updated_at - created_at` duration in minutes; format `value` to two decimal places
+3. Emit `provision-time` metric with `unit: "minutes"`; fail when no qualifying samples
+4. Document proxy semantics in `DATA_SOURCES.md`; connect OP-DASH-08 `provision-time` row
+5. Add adapter unit tests for averaging, exclusions, and empty-sample failure
+
 ### Future (Deferred)
 
 | # | Item | Domain | Reason |
@@ -1136,4 +1167,6 @@ label-selected pod informer.
 | 2026-08-31 | working tree | OpenShift console redirect URI + Route seeding | 84% | Host `curl` against Keycloak/API Routes registers the web-console `/auth/callback` (realm import only had Kind localhost URIs) and seeds the API. The API server image has no curl, so `oc exec curl` never obtained tokens. |
 | 2026-08-31 | working tree | Dry-run: cluster-nodes | 82% | Authored `platform/cluster-nodes.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Gateway-style `value` + `status` for system-summary; reuses kube-state-metrics from CLP-W1. Planned CLN-W1 (PromQL docs), CLN-W2 (BFF), CLN-W3 (adapter). |
 | 2026-08-31 | working tree | Executed CLN-W1–W3: cluster nodes | 85% | BFF `GET /api/metrics/cluster-nodes`; dashboard `nodes` metric with `healthy`/`failed` status; `SummaryGatewayValue` in system-summary; BFF + adapter tests. Cluster nodes 8/8 present. |
+| 2026-08-31 | working tree | Dry-run: gateway-provision-time | 85% | Authored `platform/gateway-provision-time.spec.md` (8 reqs: 1 present, 7 missing). Mean duration from gateway list timestamps; no BFF route. Planned GPT-W1 (adapter). |
+| 2026-08-31 | working tree | Executed GPT-W1: gateway provision time | 85% | Adapter computes mean `Running` gateway provision minutes from paginated list; `provision-time` metric connected; adapter tests; `DATA_SOURCES.md` + OP-DASH-08 updated. Gateway provision time 8/8 present. OP-DASH-08 all metrics connected. |
 | 2026-09-01 | feecbcb, da771fb | Reconciled commit-driven stale doc gaps | 84% (unchanged) | Two recent commits removed hardcoded image defaults (`GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` now required env vars, no fallback) and unified deploy paths (deleted `components/api-server/deploy/*`, using repo-root `deploy/` as single source of truth). Updated 7 docs: `skills/deploy/ibm-cluster/SKILL.md` (image refs, path, namespace, image-var explanation), `skills/deploy/gcp-cluster/SKILL.md` (path fix, RBAC ref), `skills/deploy/deploy-cluster/SKILL.md` (full rewrite: Keycloak bootstrap, `hypershell-api-config` Secret creation, CNPG database, OIDC/JWT security, troubleshooting for missing Secret), `skills/tooling/update-openshell/SKILL.md` (grep patterns for new image names, search path fixes), `skills/RECONCILE.md` (skill directory tree, this log entry), `README.md` (env var rows, namespace refs), `specs/platform/openshift-development.spec.md` (deploy/ directory layout, overlay limitations note). Overlay gaps surfaced: `deploy/openshift/` requires manually-created `hypershell-api-config` Secret (missing from repo; documented in deploy-cluster), hardcoded domain placeholder, missing Keycloak Route on OpenShift. Marked as known limitations in specs. |
