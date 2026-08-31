@@ -4,9 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { createDashboardControlPlaneAdapter } from "./dashboard-control-plane";
 
 const gatewayListApi = vi.fn();
+const usersListApi = vi.fn();
 const apiFactory = vi.fn(() => ({
   gateways: {
     list: gatewayListApi,
+  },
+  users: {
+    list: usersListApi,
   },
 }));
 
@@ -63,6 +67,14 @@ function gatewayList(
 
 describe("createDashboardControlPlaneAdapter", () => {
   it("aggregates paginated gateway lists into operational metrics", async () => {
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 42,
+    });
+
     const firstPage = Array.from({ length: 100 }, (_, index) =>
       gateway({
         active_sandbox_count: 1,
@@ -104,6 +116,9 @@ describe("createDashboardControlPlaneAdapter", () => {
     const sandboxesMetric = metrics.metrics.find(
       (metric) => metric.id === "provisioned-sandboxes",
     );
+    const registeredUsersMetric = metrics.metrics.find(
+      (metric) => metric.id === "registered-users",
+    );
 
     expect(gatewaysMetric?.value).toBe("150");
     expect(gatewaysMetric?.status).toEqual({
@@ -113,9 +128,22 @@ describe("createDashboardControlPlaneAdapter", () => {
       provisioning: 50,
     });
     expect(sandboxesMetric?.value).toBe("200");
+    expect(registeredUsersMetric?.value).toBe("42");
+    expect(usersListApi).toHaveBeenCalledWith(
+      { orderBy: "username asc", page: 1, size: 1 },
+      { signal: undefined },
+    );
   });
 
   it("maps gateway lifecycle fields into display-status buckets", async () => {
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+
     gatewayListApi.mockResolvedValueOnce(
       gatewayList(
         [
@@ -142,6 +170,13 @@ describe("createDashboardControlPlaneAdapter", () => {
   });
 
   it("rejects inconsistent pagination responses", async () => {
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
     gatewayListApi.mockResolvedValueOnce(gatewayList([gateway()], 1, 2));
 
     await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
@@ -151,6 +186,13 @@ describe("createDashboardControlPlaneAdapter", () => {
 
   it("forwards abort signals to the gateway list client", async () => {
     const controller = new AbortController();
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
     gatewayListApi.mockResolvedValueOnce(gatewayList([gateway()], 1, 1));
 
     await adapter.getOperationalMetrics({
@@ -160,6 +202,10 @@ describe("createDashboardControlPlaneAdapter", () => {
 
     expect(gatewayListApi).toHaveBeenCalledWith(
       { orderBy: "name asc", page: 1, size: 100 },
+      { signal: controller.signal },
+    );
+    expect(usersListApi).toHaveBeenCalledWith(
+      { orderBy: "username asc", page: 1, size: 1 },
       { signal: controller.signal },
     );
   });

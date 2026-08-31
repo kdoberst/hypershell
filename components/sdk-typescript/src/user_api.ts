@@ -4,25 +4,25 @@
 
 import type { SDKClientConfig, ListOptions, RequestOptions } from './base.js';
 import { sdkFetch, buildQueryString } from './base.js';
-import type { Role, RoleList, RoleCreateRequest } from './role.js';
+import type { User, UserList, UserCreateRequest } from './user.js';
 
-export class RoleAPI {
+export class UserAPI {
   constructor(private readonly config: SDKClientConfig) {}
 
-  async create(data: RoleCreateRequest, opts?: RequestOptions): Promise<Role> {
-    return sdkFetch<Role>(this.config, 'POST', '/roles', data, opts);
+  async create(data: UserCreateRequest, opts?: RequestOptions): Promise<User> {
+    return sdkFetch<User>(this.config, 'POST', '/users', data, opts);
   }
 
-  async get(id: string, opts?: RequestOptions): Promise<Role> {
-    return sdkFetch<Role>(this.config, 'GET', `/roles/${id}`, undefined, opts);
+  async get(id: string, opts?: RequestOptions): Promise<User> {
+    return sdkFetch<User>(this.config, 'GET', `/users/${id}`, undefined, opts);
   }
 
-  async list(listOpts?: ListOptions, opts?: RequestOptions): Promise<RoleList> {
+  async list(listOpts?: ListOptions, opts?: RequestOptions): Promise<UserList> {
     const qs = buildQueryString(listOpts);
-    return sdkFetch<RoleList>(this.config, 'GET', `/roles${qs}`, undefined, opts);
+    return sdkFetch<UserList>(this.config, 'GET', `/users${qs}`, undefined, opts);
   }
 
-  async *listAll(size: number = 100, opts?: RequestOptions): AsyncGenerator<Role> {
+  async *listAll(size: number = 100, opts?: RequestOptions): AsyncGenerator<User> {
     let page = 1;
     while (true) {
       const result = await this.list({ page, size }, opts);
