@@ -57,6 +57,7 @@ const configSchema = z.object({
   OIDC_POST_LOGOUT_REDIRECT_URI: httpUrl.optional(),
   OIDC_REDIRECT_URI: httpUrl.optional(),
   PORT: z.coerce.number().int().min(1).max(65_535).default(8080),
+  PROMETHEUS_URL: httpOrigin.default("http://127.0.0.1:9090"),
   SESSION_SECRET: z
     .string()
     .regex(/^[0-9a-f]{64}$/iu, "must be a 64-character hex string (32 bytes)")
@@ -93,6 +94,7 @@ export interface ServerConfig {
   oidcPostLogoutRedirectUri?: string;
   oidcRedirectUri?: string;
   port: number;
+  prometheusUrl: string;
   sessionSecret?: Buffer;
   sessionTtlSeconds: number;
   staticRoot: string;
@@ -169,6 +171,7 @@ export function loadConfig(
     oidcPostLogoutRedirectUri: result.data.OIDC_POST_LOGOUT_REDIRECT_URI,
     oidcRedirectUri: result.data.OIDC_REDIRECT_URI,
     port: result.data.PORT,
+    prometheusUrl: result.data.PROMETHEUS_URL,
     sessionSecret: result.data.SESSION_SECRET
       ? Buffer.from(result.data.SESSION_SECRET, "hex")
       : undefined,

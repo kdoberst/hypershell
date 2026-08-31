@@ -19,7 +19,7 @@ export const messages = defineMessages({
   description: {
     id: "app.dashboard.description",
     defaultMessage:
-      "This dashboard is in development and is currently using mocked data.",
+      "Live gateway and sandbox counts are shown where data is available. Other widgets remain placeholders until their metrics are connected.",
     description: "Supporting text on the operational dashboard page.",
   },
   gateways: {
