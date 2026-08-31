@@ -187,10 +187,10 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | --- | --- | --- |
 | `provisioned-gateways` | Yes | Gateway list aggregate (OP-DASH-06, OP-DASH-07) |
 | `provisioned-sandboxes` | Yes | Sum of `active_sandbox_count` from gateway list |
-| `registered-users` | No | See `platform/registered-users.spec.md` |
+| `registered-users` | Yes | See `platform/registered-users.spec.md` |
+| `memory` | No | See `platform/cluster-memory.spec.md` |
 | `nodes` | No | — |
 | `cpu` | No | — |
-| `memory` | No | — |
 | `pods` | No | — |
 | `provision-time` | No | — |
 
