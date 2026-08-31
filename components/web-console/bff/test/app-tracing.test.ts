@@ -91,6 +91,7 @@ describe("web-console BFF tracing wiring", () => {
       logLevel: "silent",
       nodeEnv: "test",
       port: 8080,
+      prometheusUrl: "http://127.0.0.1:9090",
       sessionTtlSeconds: 28_800,
       staticRoot,
     };

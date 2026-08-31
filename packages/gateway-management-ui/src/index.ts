@@ -58,13 +58,16 @@ export {
   type GatewayCreatePageProps,
 } from "./gateways/gateway-create";
 export {
+  aggregateGatewayDisplayStatusCounts,
   gatewayListQueryKey,
   gatewayListQueryRoot,
   gatewayPlacementBatchQueryKey,
   gatewayPlacementDetailQueryKey,
   gatewayPlacementQueryKey,
   gatewayQueryKey,
+  resolveGatewayDisplayStatus,
   toGatewayConnection,
+  type GatewayDisplayStatusCounts,
 } from "./gateways/gateway-data";
 export type { GatewayConnection } from "./gateways/gateway-connections";
 export {

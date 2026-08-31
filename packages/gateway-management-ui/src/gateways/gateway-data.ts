@@ -4,6 +4,7 @@ import type {
 } from "../application/gateway-types";
 import { normalizeGatewayPlacementClusterIds } from "../application/gateway-placement";
 import type { GatewayConnection } from "./gateway-connections";
+import { gatewayStatusAppearance } from "./gateway-connections";
 
 export const gatewayListQueryRoot = ["gateways", "list"] as const;
 export const gatewayPlacementQueryRoot = ["gateways", "placements"] as const;
@@ -31,6 +32,103 @@ const gatewayPollingStates = new Set([
   "degraded",
 ]);
 const gatewayFailedLifecycleStates = new Set(["error", "failed"]);
+
+export interface GatewayDisplayStatusCounts {
+  degraded: number;
+  failed: number;
+  healthy: number;
+  provisioning: number;
+}
+
+export const gatewayDisplayStatusKeys = [
+  "healthy",
+  "provisioning",
+  "degraded",
+  "failed",
+] as const satisfies readonly (keyof GatewayDisplayStatusCounts)[];
+
+type GatewayDisplayStatusKey = (typeof gatewayDisplayStatusKeys)[number];
+
+type GatewayLifecycleRecord = Pick<GatewayRecord, "phase" | "status">;
+
+/** Status label shown in the gateway list for a phase/status pair. */
+export function resolveGatewayDisplayStatus(
+  phase?: string,
+  status?: string,
+): string {
+  const phaseValue = phase?.trim() ?? "";
+  const normalizedPhase = phaseValue.toLocaleLowerCase();
+  const healthStatus = status?.trim() ?? "";
+
+  if (
+    phaseValue &&
+    (gatewayPollingStates.has(normalizedPhase) ||
+      gatewayFailedLifecycleStates.has(normalizedPhase))
+  ) {
+    return phaseValue;
+  }
+
+  return healthStatus || phaseValue || "Unknown";
+}
+
+function gatewayDisplayStatusBucket(
+  displayStatus: string,
+): GatewayDisplayStatusKey {
+  const normalized = displayStatus.trim().toLocaleLowerCase();
+
+  if (normalized === "healthy") {
+    return "healthy";
+  }
+  if (
+    normalized === "provisioning" ||
+    normalized === "pending" ||
+    normalized === "reconciling" ||
+    normalized === "updating"
+  ) {
+    return "provisioning";
+  }
+  if (normalized === "degraded") {
+    return "degraded";
+  }
+  if (normalized === "failed" || normalized === "error") {
+    return "failed";
+  }
+
+  switch (gatewayStatusAppearance(displayStatus)) {
+    case "success":
+      return "healthy";
+    case "warning":
+      return "degraded";
+    case "danger":
+      return "failed";
+    case "progress":
+    case "pending":
+      return "provisioning";
+    default:
+      return "provisioning";
+  }
+}
+
+/** Aggregates gateway list rows into dashboard status buckets. */
+export function aggregateGatewayDisplayStatusCounts(
+  gateways: readonly GatewayLifecycleRecord[],
+): GatewayDisplayStatusCounts {
+  const counts: GatewayDisplayStatusCounts = {
+    degraded: 0,
+    failed: 0,
+    healthy: 0,
+    provisioning: 0,
+  };
+
+  for (const gateway of gateways) {
+    const bucket = gatewayDisplayStatusBucket(
+      resolveGatewayDisplayStatus(gateway.phase, gateway.status),
+    );
+    counts[bucket] += 1;
+  }
+
+  return counts;
+}
 
 type GatewayConsoleRecord = Pick<
   GatewayRecord,
@@ -214,14 +312,7 @@ export function toGatewayConnection(
 ): GatewayConnection {
   const clusterId = gateway.clusterId.trim();
   const phase = gateway.phase?.trim() ?? "";
-  const healthStatus = gateway.status?.trim() ?? "";
-  const normalizedPhase = phase.toLocaleLowerCase();
-  const status =
-    phase &&
-    (gatewayPollingStates.has(normalizedPhase) ||
-      gatewayFailedLifecycleStates.has(normalizedPhase))
-      ? phase
-      : healthStatus || phase;
+  const status = resolveGatewayDisplayStatus(phase, gateway.status);
 
   return {
     ...(typeof gateway.activeSandboxCount === "number"

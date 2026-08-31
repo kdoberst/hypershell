@@ -18,6 +18,7 @@ import {
   type BrowserRuntimeConfig,
   type ServerConfig,
 } from "./config.js";
+import { queryGatewayPhaseCounts } from "./metrics-gateways.js";
 import { tokenExpired } from "./tokens.js";
 import {
   disabledTracing,
@@ -431,6 +432,25 @@ export async function buildApp(
     // telemetry is best-effort and must never surface a collector outage.
     reply.code(202);
     return { status: "accepted" };
+  });
+
+  app.get("/api/metrics/gateways", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+    if (config.oidcIssuer && !request.session.get("accessToken")) {
+      return respondReauth(reply);
+    }
+
+    try {
+      const counts = await queryGatewayPhaseCounts(
+        config.prometheusUrl,
+        10_000,
+      );
+      return { counts };
+    } catch (error) {
+      request.log.warn({ err: error }, "gateway metrics query failed");
+      reply.code(502);
+      return { error: "Metrics unavailable", statusCode: 502 };
+    }
   });
 
   app.all("/api/*", async (request, reply) => {

@@ -52,9 +52,8 @@
   --hypershell-gateway-status-provisioning-color: var(
     --pf-t--global--icon--color--status--info--default
   );
-  --hypershell-gateway-status-running-color: var(
-    --pf-t--global--icon--color--status--success--default
-  );
+  /* Chart green-100 reads better on large donut slices than success icon green. */
+  --hypershell-gateway-status-healthy-color: #63993d;
   /*
    * ChartDonut title, subtitle, and legend use chart label tokens that fall back
    * to dark gray. Re-map them to global text tokens so dark mode stays readable.

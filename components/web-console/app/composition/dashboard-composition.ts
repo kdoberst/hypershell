@@ -1,7 +1,10 @@
 import { createDashboardOperations } from "@openshift-online/hypershell-operational-dashboard-ui";
 
-import { createMockDashboardControlPlane } from "../adapters/mock/dashboard-control-plane";
+import { createApiClient } from "../adapters/api/api.client";
+import { createDashboardControlPlaneAdapter } from "../adapters/api/dashboard-control-plane";
 
 export const dashboardOperations = createDashboardOperations({
-  controlPlane: createMockDashboardControlPlane(),
+  controlPlane: createDashboardControlPlaneAdapter((correlationId) =>
+    createApiClient(correlationId),
+  ),
 });

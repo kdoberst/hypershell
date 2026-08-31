@@ -32,7 +32,7 @@
     "description": "Label for the button that opens the widget drawer."
   },
   "app.dashboard.description": {
-    "defaultMessage": "Monitor fleet utilization, gateway health, and operational capacity.",
+    "defaultMessage": "Live gateway and sandbox counts are shown where data is available. Other widgets remain placeholders until their metrics are connected.",
     "description": "Supporting text on the operational dashboard page."
   },
   "app.dashboard.gatewayStatus.ariaDesc": {
@@ -63,9 +63,9 @@
     "defaultMessage": "Provisioning",
     "description": "Legend label for provisioning gateways."
   },
-  "app.dashboard.gatewayStatus.running": {
-    "defaultMessage": "Running",
-    "description": "Legend label for running gateways."
+  "app.dashboard.gatewayStatus.healthy": {
+    "defaultMessage": "Healthy",
+    "description": "Legend label for healthy gateways."
   },
   "app.dashboard.loadError.body": {
     "defaultMessage": "An unexpected error occurred while loading dashboard metrics.",

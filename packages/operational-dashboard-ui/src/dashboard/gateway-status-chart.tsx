@@ -12,12 +12,12 @@ import "../pages/dashboard-widget.css";
 const GATEWAY_STATUS_COLOR_VARS = {
   degraded: "--hypershell-gateway-status-degraded-color",
   failed: "--hypershell-gateway-status-failed-color",
+  healthy: "--hypershell-gateway-status-healthy-color",
   provisioning: "--hypershell-gateway-status-provisioning-color",
-  running: "--hypershell-gateway-status-running-color",
 } as const;
 
 const GATEWAY_STATUS_ORDER = [
-  "running",
+  "healthy",
   "provisioning",
   "degraded",
   "failed",
@@ -83,8 +83,8 @@ export function isGatewayStatusMetric(
 
 function gatewayStatusLabel(intl: IntlShape, status: GatewayStatusKey): string {
   switch (status) {
-    case "running":
-      return intl.formatMessage(messages.gatewayStatusRunning);
+    case "healthy":
+      return intl.formatMessage(messages.gatewayStatusHealthy);
     case "provisioning":
       return intl.formatMessage(messages.gatewayStatusProvisioning);
     case "degraded":
@@ -171,42 +171,47 @@ export function GatewayStatusChart({
     return buildGatewayStatusData(intl, metric.status, statusColors);
   }, [intl, metric, statusColors]);
 
-  if (!isGatewayStatusMetric(metric) || data.length === 0) {
+  if (!isGatewayStatusMetric(metric)) {
     return null;
   }
 
   const subTitle = intl.formatMessage(messages.gateways);
 
+  // Always mount the color-variable host so readGatewayStatusColors can resolve
+  // tokens on first paint. Returning null before this div existed left
+  // statusColors undefined forever when counts were present.
   return (
     <div
       ref={containerRef}
       className="hypershell-dashboard-gateway-status-chart"
       style={{ height: GATEWAY_STATUS_CHART_HEIGHT, width: "100%" }}
     >
-      <ChartDonut
-        ariaDesc={intl.formatMessage(messages.gatewayStatusAriaDesc)}
-        ariaTitle={intl.formatMessage(messages.gatewayStatusChartTitle)}
-        colorScale={colorScale}
-        constrainToVisibleArea
-        data={data}
-        height={GATEWAY_STATUS_CHART_HEIGHT}
-        labels={({ datum }: { datum: GatewayStatusDatum }) =>
-          datum.x
-            ? intl.formatMessage(messages.gatewayStatusDataLabel, {
-                count: datum.y,
-                status: datum.x,
-              })
-            : null
-        }
-        legendData={legendData}
-        legendOrientation="vertical"
-        legendPosition="right"
-        padding={GATEWAY_STATUS_CHART_PADDING}
-        subTitle={subTitle}
-        subTitlePosition="bottom"
-        title={metric.value}
-        width={width}
-      />
+      {data.length > 0 ? (
+        <ChartDonut
+          ariaDesc={intl.formatMessage(messages.gatewayStatusAriaDesc)}
+          ariaTitle={intl.formatMessage(messages.gatewayStatusChartTitle)}
+          colorScale={colorScale}
+          constrainToVisibleArea
+          data={data}
+          height={GATEWAY_STATUS_CHART_HEIGHT}
+          labels={({ datum }: { datum: GatewayStatusDatum }) =>
+            datum.x
+              ? intl.formatMessage(messages.gatewayStatusDataLabel, {
+                  count: datum.y,
+                  status: datum.x,
+                })
+              : null
+          }
+          legendData={legendData}
+          legendOrientation="vertical"
+          legendPosition="right"
+          padding={GATEWAY_STATUS_CHART_PADDING}
+          subTitle={subTitle}
+          subTitlePosition="bottom"
+          title={metric.value}
+          width={width}
+        />
+      ) : null}
     </div>
   );
 }
