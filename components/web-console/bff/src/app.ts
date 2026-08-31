@@ -19,6 +19,7 @@ import {
   type ServerConfig,
 } from "./config.js";
 import { queryGatewayPhaseCounts } from "./metrics-gateways.js";
+import { queryClusterMemory } from "./metrics-cluster-memory.js";
 import { tokenExpired } from "./tokens.js";
 import {
   disabledTracing,
@@ -448,6 +449,21 @@ export async function buildApp(
       return { counts };
     } catch (error) {
       request.log.warn({ err: error }, "gateway metrics query failed");
+      reply.code(502);
+      return { error: "Metrics unavailable", statusCode: 502 };
+    }
+  });
+
+  app.get("/api/metrics/cluster-memory", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+    if (config.oidcIssuer && !request.session.get("accessToken")) {
+      return respondReauth(reply);
+    }
+
+    try {
+      return await queryClusterMemory(config.prometheusUrl, 10_000);
+    } catch (error) {
+      request.log.warn({ err: error }, "cluster memory metrics query failed");
       reply.code(502);
       return { error: "Metrics unavailable", statusCode: 502 };
     }
