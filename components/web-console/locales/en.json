@@ -890,6 +890,7 @@
   "app.metrics.phase.running": {
     "defaultMessage": "Running",
     "description": "Label for the Running gateway phase metric card."
+  },
   "app.nav.dashboard": {
     "defaultMessage": "Operational dashboard",
     "description": "Page and navigation label for the HyperShell dashboard."
