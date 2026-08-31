@@ -52,6 +52,11 @@ export const messages = defineMessages({
     defaultMessage: "Failed",
     description: "Legend label for failed gateways.",
   },
+  gatewayStatusHealthy: {
+    id: "app.dashboard.gatewayStatus.healthy",
+    defaultMessage: "Healthy",
+    description: "Legend label for healthy gateways.",
+  },
   gatewayStatusLegend: {
     id: "app.dashboard.gatewayStatus.legend",
     defaultMessage: "{status}: {count}",
@@ -61,11 +66,6 @@ export const messages = defineMessages({
     id: "app.dashboard.gatewayStatus.provisioning",
     defaultMessage: "Provisioning",
     description: "Legend label for provisioning gateways.",
-  },
-  gatewayStatusHealthy: {
-    id: "app.dashboard.gatewayStatus.healthy",
-    defaultMessage: "Healthy",
-    description: "Legend label for healthy gateways.",
   },
   gatewayStatusWidget: {
     id: "app.dashboard.widget.gatewayStatus",

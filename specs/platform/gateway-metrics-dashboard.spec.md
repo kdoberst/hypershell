@@ -5,9 +5,15 @@
 
 ## Purpose
 
-Expose the live count of Gateway instances by phase  -  Running, Provisioning, Degraded, and Failed  -  as a built-in dashboard in the HyperShell web console, so operators can assess fleet health at a glance without leaving the product UI or querying Prometheus directly. The metric is collected by a custom Prometheus Collector in the API server that queries the database on each scrape; it is scraped by a Prometheus instance deployed alongside the platform; and it is surfaced in the web console through a BFF proxy route that shields the browser from direct Prometheus access.
+Expose the live count of Gateway instances by phase — Running, Provisioning, Degraded, and Failed — as a Prometheus metric and a reusable React component, so operators can assess fleet-wide gateway health without querying Prometheus directly. The metric is collected by a custom Prometheus Collector in the API server that queries the database on each scrape; it is scraped by a Prometheus instance deployed alongside the platform; and it is surfaced to browser code through a BFF proxy route that shields the browser from direct Prometheus access.
 
-This specification covers the full vertical slice: the API server metric, the Prometheus deployment and scrape configuration, the BFF metrics route, the shared dashboard component, the SPA route and navigation, and the Kubernetes manifests required to deploy and operate the pipeline on any cluster.
+This specification covers the metrics pipeline end to end: the API server collector, Prometheus deployment and scrape configuration, the BFF metrics route, the `GatewayMetricsDashboard` shared component, the `/metrics` SPA route, and the Kubernetes manifests required to deploy and operate the pipeline on any cluster.
+
+### Relationship to the operational dashboard
+
+The widgetized **operational dashboard** at `/dashboard` is specified separately in `web-console/operational-dashboard.spec.md`. That surface loads RBAC-scoped gateway counts from the HyperShell REST API and uses display-status buckets (`healthy`, `provisioning`, `degraded`, `failed`). It does **not** consume `GET /api/metrics/gateways` or `hypershell_gateways_total`.
+
+`GatewayMetricsDashboard` remains the canonical component for Prometheus-sourced phase counts. Hosts MAY embed it on any route; the `/dashboard` route is owned by the operational dashboard spec and renders `OperationalDashboardPage` instead. The web console exposes Prometheus phase counts at `/metrics`.
 
 ## Requirements
 
@@ -200,36 +206,26 @@ All user-visible strings SHALL be declared with `defineMessages` and rendered th
 
 ---
 
-### Requirement: DASH-07 -- Dashboard SPA Route and Navigation
+### Requirement: DASH-07 -- BFF Metrics Route Registration
 
-The web console SPA SHALL expose the dashboard at the `/dashboard` route. The route SHALL be included in the React Router route tree under the authenticated application layout.
+The BFF SHALL recognise `/dashboard` and `/metrics` as valid SPA shell routes (returning `index.html` for direct navigation and refresh) alongside `/`, `/login`, `/gateways/new`, and `/gateways/:gatewayId`.
 
-The application shell SHALL include a persistent sidebar navigation (`PageSidebar` / `Nav`) with links to both the Gateways list (`/`) and the Dashboard (`/dashboard`). The active link SHALL be highlighted based on the current `pathname`. All navigation labels SHALL be localized via `react-intl`.
+The `route-contract.json` file SHALL declare `"dashboard": "dashboard"` and `"metrics": "metrics"` so the BFF and SPA share a single source of truth for each path.
 
-The BFF SHALL recognise `/dashboard` as a valid application route (returning `index.html` for direct navigation and browser refresh) alongside the existing `/`, `/login`, `/gateways/new`, and `/gateways/:gatewayId` routes.
+Which React component renders at `/dashboard` is defined by `web-console/operational-dashboard.spec.md` (currently `OperationalDashboardPage`). This spec requires `GatewayMetricsDashboard` at `/metrics`.
 
-The `route-contract.json` file SHALL declare `"dashboard": "dashboard"` so the BFF and SPA share a single source of truth for the path.
-
-#### Scenario: Direct navigation to /dashboard
+#### Scenario: Direct navigation to /dashboard serves the SPA shell
 
 - GIVEN a user navigates directly to `https://console.hypershell.localhost/dashboard`
 - WHEN the BFF handles the `GET /dashboard` request
 - THEN it SHALL respond with `index.html` and HTTP `200`
+
+#### Scenario: Direct navigation to /metrics serves GatewayMetricsDashboard
+
+- GIVEN a user navigates directly to `https://console.hypershell.localhost/metrics`
+- WHEN the BFF handles the `GET /metrics` request
+- THEN it SHALL respond with `index.html` and HTTP `200`
 - AND the SPA SHALL render `GatewayMetricsDashboard`
-
-#### Scenario: Dashboard link is active on the dashboard page
-
-- GIVEN the current pathname is `/dashboard`
-- WHEN the application shell renders the sidebar
-- THEN the Dashboard nav item SHALL be marked active
-- AND the Gateways nav item SHALL NOT be marked active
-
-#### Scenario: Gateways link is active on the home page
-
-- GIVEN the current pathname is `/`
-- WHEN the application shell renders the sidebar
-- THEN the Gateways nav item SHALL be marked active
-- AND the Dashboard nav item SHALL NOT be marked active
 
 ---
 
@@ -244,4 +240,4 @@ This patch SHALL live in `deploy/kind/kustomization.yaml` alongside the existing
 - GIVEN the Kind cluster is running with `make kind-up`
 - WHEN the BFF handles `GET /api/metrics/gateways`
 - THEN it SHALL forward the query to `http://prometheus-operated.hypershell-system.svc.cluster.local:9090`
-- AND the dashboard SHALL display live gateway phase counts
+- AND `GET /api/metrics/gateways` SHALL return live phase counts from Prometheus
