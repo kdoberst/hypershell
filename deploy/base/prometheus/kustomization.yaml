@@ -6,3 +6,5 @@ resources:
   - servicemonitor.yaml
   - node-exporter.yaml
   - node-exporter-servicemonitor.yaml
+  - kube-state-metrics.yaml
+  - kube-state-metrics-servicemonitor.yaml
