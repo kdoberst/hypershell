@@ -127,6 +127,8 @@ patches:
                       secretKeyRef:
                         name: hypershell-oidc-session
                         key: session-secret
+                  - name: PROMETHEUS_URL
+                    value: "http://prometheus-operated.hypershell-system.svc.cluster.local:9090"
   # --- API server: enable JWT + JWK cert URL + bypass paths ---
   # Appending --enable-jwt=true is index-independent: --enable-jwt is a pflag
   # BoolVar, and repeated single-value flags are last-value-wins, so the

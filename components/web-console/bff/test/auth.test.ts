@@ -277,6 +277,7 @@ describe("web-console BFF with OIDC enabled", () => {
       oidcIssuer: `http://127.0.0.1:${String(oidcCtx.port)}`,
       oidcRedirectUri: `http://127.0.0.1:8080/auth/callback`,
       port: 8080,
+      prometheusUrl: "http://127.0.0.1:9090",
       sessionSecret: Buffer.from(testSessionSecret, "hex"),
       sessionTtlSeconds: 28_800,
       staticRoot,
