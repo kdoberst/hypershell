@@ -212,7 +212,7 @@ The operational dashboard package SHALL update `mockOperationalDashboardMetrics`
 
 ## Non-Goals
 
-- Memory, pod count, node count, and provision-time metrics (covered by or deferred to other specs)
+- Memory, pod utilization (see `platform/cluster-pods.spec.md`), node count, and provision-time metrics (covered by or deferred to other specs)
 - Historical trend series or sparklines for CPU
 - Per-node or per-namespace CPU breakdown in the UI
 - CPU metrics for registered **managed clusters** or gateway tenant namespaces
