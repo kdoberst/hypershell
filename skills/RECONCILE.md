@@ -45,7 +45,7 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-08-31 (gateway-provision-time GPT-W1–W3 executed)
+**Last analyzed**: 2026-08-31 (OP-DASH-16 status donut + nodes widget alignment)
 **Spec corpus**: 48 spec files; the coverage table tracks 39 feature/spec groups
 **Codebase commit**: working tree (GPT-W1–W3 gateway provision time)
 
@@ -76,10 +76,10 @@ skills/
 | Platform - Cluster Nodes | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Gateway Provision Time | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
-| Web Console - Operational Dashboard | 1 | 15 | 15 | 0 | 0 | 0 | 100% |
+| Web Console - Operational Dashboard | 1 | 16 | 16 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **39** | **286** | **243** | **17** | **13** | **5** | **85%** |
+| **TOTAL** | **39** | **287** | **244** | **17** | **13** | **5** | **85%** |
 
 ### Spec Dependency Order
 
@@ -322,17 +322,19 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 | OP-DASH-08 | Connected vs placeholder metrics | Present | - | `DATA_SOURCES.md`, `dashboard/dashboard-data.ts` | OP-W1 ✅ |
 | OP-DASH-09 | Metrics refresh policy (15 min + manual refresh) | Present | - | `get-metrics-data.ts`, `operational-dashboard-page.tsx` | - |
 | OP-DASH-10 | Widgetized grid layout | Present | - | `operational-dashboard-page.tsx`, `dashboard-layout-template.ts` | - |
-| OP-DASH-11 | Layout persistence (`localStorage` v13) | Present | - | `operational-dashboard-page.tsx` | - |
-| OP-DASH-12 | Gateway status donut widget | Present | - | `dashboard/gateway-status-chart.tsx`, `dashboard-widget.tsx` | - |
+| OP-DASH-11 | Layout persistence (`localStorage` v17) | Present | - | `operational-dashboard-page.tsx` | - |
+| OP-DASH-12 | Gateway status donut widget | Present | - | `dashboard/gateway-status-chart.tsx`, `dashboard/status-donut-chart.tsx`, `dashboard-widget.tsx` | - |
 | OP-DASH-13 | Metric, utilization, and summary widgets | Present | - | `dashboard-widget.tsx`, `dashboard/utilization-chart.tsx` | - |
 | OP-DASH-14 | Localization and accessibility | Present | - | `messages.ts`, `web-console/locales/en.json` | - |
 | OP-DASH-15 | Verification fixtures and Storybook | Present | - | `fixtures/`, `operational-dashboard.stories.tsx`, `src/dashboard/*.test.ts`, `dashboard-control-plane.test.ts` | OP-W1 ✅ |
+| OP-DASH-16 | Shared status donut + nodes widget | Present | - | `dashboard/status-donut-*.ts(x)`, `dashboard/node-status-*.ts(x)`, `dashboard-layout-template.ts` | - |
 
 **Scoped analysis notes:**
 
 - Live gateway and sandbox metrics load via RBAC-scoped REST list pagination, not the Prometheus BFF route. This matches the spec's relationship table vs `gateway-metrics-dashboard.spec.md`.
 - `dashboard.layout.template.invalid` probe name is declared but never published; invalid saved templates silently fall back to default (acceptable for v1; no gap recorded).
 - CI registers `packages/operational-dashboard-ui` with `pnpm check` in `.github/workflows/lint.yml`.
+- OP-DASH-16 (2026-08-31): shared `StatusDonutChart` stack; `nodes` widget at `NODE_STATUS_WIDGET_HEIGHT`; layout persistence key `hypershell.operational-dashboard.layout.v17`.
 
 ### registered-users.spec.md
 
@@ -1015,4 +1017,4 @@ label-selected pod informer.
 | 2026-08-31 | working tree | Dry-run: cluster-nodes | 82% | Authored `platform/cluster-nodes.spec.md` (8 reqs: 1 present, 2 partial, 5 missing). Gateway-style `value` + `status` for system-summary; reuses kube-state-metrics from CLP-W1. Planned CLN-W1 (PromQL docs), CLN-W2 (BFF), CLN-W3 (adapter). |
 | 2026-08-31 | working tree | Executed CLN-W1–W3: cluster nodes | 85% | BFF `GET /api/metrics/cluster-nodes`; dashboard `nodes` metric with `healthy`/`failed` status; `SummaryGatewayValue` in system-summary; BFF + adapter tests. Cluster nodes 8/8 present. |
 | 2026-08-31 | working tree | Dry-run: gateway-provision-time | 85% | Authored `platform/gateway-provision-time.spec.md` (8 reqs: 1 present, 7 missing). Mean duration from gateway list timestamps; no BFF route. Planned GPT-W1 (adapter). |
-| 2026-08-31 | working tree | Executed GPT-W1: gateway provision time | 85% | Adapter computes mean `Running` gateway provision minutes from paginated list; `provision-time` metric connected; adapter tests; `DATA_SOURCES.md` + OP-DASH-08 updated. Gateway provision time 8/8 present. OP-DASH-08 all metrics connected. |
+| 2026-08-31 | 54cf5b0 | OP-DASH-16: status donut + nodes widget alignment | 85% | Shared `StatusDonutChart`; `nodes` widget; layout v17; `i18n:extract` for new dashboard message IDs; OP-DASH-16 scenario aligned with implementation (no chart subtitle). Operational dashboard 16/16 present. |
