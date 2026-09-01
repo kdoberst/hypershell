@@ -11,6 +11,23 @@ export const messages = defineMessages({
     defaultMessage: "Breadcrumb",
     description: "Accessible label for the application breadcrumb navigation.",
   },
+  dashboardNav: {
+    id: "app.nav.dashboard",
+    defaultMessage: "Operational dashboard",
+    description: "Page and navigation label for the HyperShell dashboard.",
+  },
+  dashboardPageDescription: {
+    id: "app.page.dashboard.description",
+    defaultMessage:
+      "Operational metrics dashboard for HyperShell adoption and provisioned resources.",
+    description:
+      "Browser metadata description for the operational dashboard page.",
+  },
+  sessionLoadingLabel: {
+    id: "app.session.loading.ariaLabel",
+    defaultMessage: "Loading session",
+    description: "Accessible label for the session loading spinner.",
+  },
   errorBody: {
     id: "app.error.body",
     defaultMessage: "Refresh the page to try again.",

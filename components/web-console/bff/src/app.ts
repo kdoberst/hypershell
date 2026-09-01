@@ -47,6 +47,7 @@ declare module "fastify" {
 function isApplicationRoute(pathname: string): boolean {
   return (
     pathname === "/" ||
+    pathname === "/dashboard" ||
     pathname === "/login" ||
     pathname === "/gateways/new" ||
     pathname === "/metrics" ||
