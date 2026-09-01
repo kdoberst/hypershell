@@ -1,12 +1,12 @@
 import type { OperationalDashboardMetrics } from "../application/dashboard-types";
 
+/**
+ * Storybook and local-dev fixture shaped like `createDashboardControlPlaneAdapter`
+ * output: instantaneous values only (no trend series in production v1).
+ */
 export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
   Object.freeze({
     metrics: Object.freeze([
-      Object.freeze({
-        id: "registered-users",
-        value: "450",
-      }),
       Object.freeze({
         id: "provisioned-gateways",
         status: Object.freeze({
@@ -15,53 +15,27 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
           healthy: 80,
           provisioning: 9,
         }),
-        trend: Object.freeze({
-          points: Object.freeze([
-            Object.freeze({ label: "Day 1", value: 94 }),
-            Object.freeze({ label: "Day 2", value: 84 }),
-            Object.freeze({ label: "Day 3", value: 85 }),
-            Object.freeze({ label: "Day 4", value: 89 }),
-            Object.freeze({ label: "Day 5", value: 90 }),
-            Object.freeze({ label: "Day 6", value: 93 }),
-            Object.freeze({ label: "Day 7", value: 97 }),
-          ]),
-        }),
         value: "97",
       }),
       Object.freeze({
         id: "provisioned-sandboxes",
-        trend: Object.freeze({
-          points: Object.freeze([
-            Object.freeze({ label: "Day 1", value: 176 }),
-            Object.freeze({ label: "Day 2", value: 182 }),
-            Object.freeze({ label: "Day 3", value: 189 }),
-            Object.freeze({ label: "Day 4", value: 194 }),
-            Object.freeze({ label: "Day 5", value: 201 }),
-            Object.freeze({ label: "Day 6", value: 207 }),
-            Object.freeze({ label: "Day 7", value: 214 }),
-          ]),
-        }),
         value: "214",
       }),
       Object.freeze({
-        id: "nodes",
-        status: Object.freeze({
-          failed: 0,
-          healthy: 8,
-        }),
-        value: "8",
-      }),
-      Object.freeze({
-        id: "cpu",
-        value: "48",
-        unit: "cores",
-        total: "60",
+        id: "registered-users",
+        value: "450",
       }),
       Object.freeze({
         id: "memory",
-        value: "220",
-        unit: "GiB",
         total: "237",
+        unit: "GiB",
+        value: "220",
+      }),
+      Object.freeze({
+        id: "cpu",
+        total: "60",
+        unit: "cores",
+        value: "48",
       }),
       Object.freeze({
         id: "pods",
@@ -77,9 +51,17 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
         value: "548",
       }),
       Object.freeze({
+        id: "nodes",
+        status: Object.freeze({
+          failed: 1,
+          healthy: 7,
+        }),
+        value: "8",
+      }),
+      Object.freeze({
         id: "provision-time",
-        value: "5.25",
         unit: "minutes",
+        value: "5.25",
       }),
     ]),
     lastSuccessfulRefresh: new Date("2026-08-25T10:55:00.000Z"),
