@@ -45,7 +45,7 @@
   },
   "app.dashboard.gatewayStatus.dataLabel": {
     "defaultMessage": "{status}: {count}",
-    "description": "Data label for a gateway status donut chart segment."
+    "description": "Data label for a gateway status donut chart segment. Superseded by statusDonutDataLabel."
   },
   "app.dashboard.gatewayStatus.degraded": {
     "defaultMessage": "Degraded",
@@ -91,6 +91,22 @@
     "defaultMessage": "Metric unavailable",
     "description": "Heading shown when an individual dashboard metric is missing."
   },
+  "app.dashboard.nodeStatus.ariaDesc": {
+    "defaultMessage": "Node count by readiness",
+    "description": "Accessible description for the node status donut chart."
+  },
+  "app.dashboard.nodeStatus.chartTitle": {
+    "defaultMessage": "Node status chart",
+    "description": "Accessible title for the node status donut chart."
+  },
+  "app.dashboard.nodeStatus.notReady": {
+    "defaultMessage": "Not ready",
+    "description": "Legend label for not-ready nodes."
+  },
+  "app.dashboard.nodeStatus.ready": {
+    "defaultMessage": "Ready",
+    "description": "Legend label for ready nodes."
+  },
   "app.dashboard.refresh": {
     "defaultMessage": "Refresh dashboard metrics",
     "description": "Accessible label for refreshing operational dashboard metrics."
@@ -114,6 +130,14 @@
   "app.dashboard.sampleData.bannerTitle": {
     "defaultMessage": "Sample data",
     "description": "Title for the banner shown when the operational dashboard uses mock metrics."
+  },
+  "app.dashboard.statusDonut.dataLabel": {
+    "defaultMessage": "{status}: {count}",
+    "description": "Data label for a status donut chart segment."
+  },
+  "app.dashboard.statusDonut.legend": {
+    "defaultMessage": "{status}: {count}",
+    "description": "Legend entry for a status donut chart segment."
   },
   "app.dashboard.summary.cpus": {
     "defaultMessage": "CPUs",
