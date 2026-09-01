@@ -6,6 +6,8 @@ import { messages } from "../messages";
 const METRIC_WIDGET_HEIGHT = 3;
 const METRIC_ROW_GAP = 1;
 const METRIC_ROW_STEP = METRIC_WIDGET_HEIGHT + METRIC_ROW_GAP;
+/** One row taller than standard metric widgets; fits a compact status donut. */
+export const NODE_STATUS_WIDGET_HEIGHT = METRIC_WIDGET_HEIGHT + 1;
 /** Gateway status spans two metric rows plus the row gap between them. */
 export const GATEWAY_STATUS_WIDGET_HEIGHT =
   METRIC_WIDGET_HEIGHT * 2 + METRIC_ROW_GAP;
@@ -22,6 +24,7 @@ const WIDGET_TITLE_MESSAGES = {
   "registered-users": messages.registeredUsers,
   "gateway-status": messages.gatewayStatusWidget,
   memory: messages.widgetMemory,
+  nodes: messages.nodes,
   "provisioned-sandboxes": messages.widgetSandboxes,
   cpu: messages.widgetCpu,
   pods: messages.widgetPods,
@@ -100,6 +103,15 @@ const fourColumnLayout = [
     w: 1,
     widgetType: "pods",
     x: 3,
+    y: METRIC_ROW_STEP * 2,
+  },
+  {
+    h: NODE_STATUS_WIDGET_HEIGHT,
+    i: "nodes#1",
+    title: "Nodes",
+    w: 1,
+    widgetType: "nodes",
+    x: 2,
     y: METRIC_ROW_STEP * 2,
   },
 ] as const;
@@ -207,6 +219,20 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 4,
+    },
+    {
+      h: NODE_STATUS_WIDGET_HEIGHT,
+      i: "nodes#1",
+      title: "Nodes",
+      w: 1,
+      widgetType: "nodes",
+      x: 0,
+      y:
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT +
+        METRIC_ROW_STEP * 5,
     },
   ],
 };

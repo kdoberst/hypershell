@@ -33,15 +33,24 @@
   flex-shrink: 0;
 }
 
-.hypershell-dashboard-gateway-status-card {
+.hypershell-dashboard-status-donut-card {
   --pf-v6-c-content--MarginBottom: 0;
 }
 
-.hypershell-dashboard-gateway-status-card .pf-v6-c-stack {
+.hypershell-dashboard-status-donut-card .pf-v6-c-stack {
   --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
 }
 
-.hypershell-dashboard-gateway-status-chart {
+.hypershell-dashboard-status-donut-card--compact {
+  --pf-v6-c-card__body--PaddingBlockEnd: var(--pf-t--global--spacer--sm);
+  --pf-v6-c-card__body--PaddingBlockStart: var(--pf-t--global--spacer--sm);
+}
+
+.hypershell-dashboard-status-donut-chart--compact {
+  margin-block-start: calc(-1 * var(--pf-t--global--spacer--xs));
+}
+
+.hypershell-dashboard-status-donut-chart {
   min-width: 0;
   --hypershell-gateway-status-degraded-color: var(
     --pf-t--global--icon--color--status--warning--default
