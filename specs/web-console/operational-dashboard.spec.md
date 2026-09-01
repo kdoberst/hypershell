@@ -252,8 +252,8 @@ The default layout template (`defaultDashboardLayoutTemplate`) SHALL place these
 
 **Note:** Widget type `active-users` is superseded by `registered-users` per `platform/registered-users.spec.md` RU-05. New implementations SHALL use `registered-users` only.
 | `cpu` | Column 3, second row |
-| `pods` | Column 3, third row |
-| `nodes` | Column 2, third row (one grid unit taller than cpu/pods) |
+| `pods` | Column 3, third row (one grid unit taller than `cpu`; same height as `nodes`) |
+| `nodes` | Column 2, third row (one grid unit taller than `cpu`) |
 
 Widget titles in the layout template SHALL be localized via `localizeDashboardLayoutTemplate` using the package `messages` catalog.
 
@@ -270,7 +270,7 @@ Users SHALL be able to add widgets from the drawer, drag to rearrange, and remov
 
 ### Requirement: OP-DASH-11 -- Layout Persistence
 
-The dashboard SHALL persist the sanitized layout template to `localStorage` under the key `hypershell.operational-dashboard.layout.v17`.
+The dashboard SHALL persist the sanitized layout template to `localStorage` under the key `hypershell.operational-dashboard.layout.v19`.
 
 On mount, a saved template SHALL be loaded when it parses as valid JSON and contains an array entry for every responsive variant (`xl`, `lg`, `md`, `sm`). Invalid or corrupt saved state SHALL fall back to the default template without surfacing an error to the user.
 
@@ -342,16 +342,39 @@ When `status` is absent or all bucket counts are zero, status donut charts SHALL
 
 ---
 
+### Requirement: OP-DASH-17 -- Pod Capacity Widget
+
+The `pods` widget SHALL render `PodCapacityChart` when the metric includes `unit`, `total`, and `podPhases`. `PodCapacityCard` SHALL wrap `PodCapacityChart` with the same card shell used by `GatewayStatusCard` and `NodeStatusCard`.
+
+`PodCapacityChart` SHALL use the compact `StatusDonutChart` size. When a donut subtitle is rendered, the chart SHALL use expanded compact height and padding so the subtitle and legend are not clipped. The chart center title SHALL show **used** pods (`value`). The chart subtitle SHALL read "of {total} pods". Segments SHALL include Running, Pending, Failed, Succeeded, Unknown (from `podPhases`), plus an **Unused** segment (gray) for `total - value` (available capacity).
+
+The default layout template SHALL place the `pods` widget at `POD_CAPACITY_WIDGET_HEIGHT` (same height as `nodes`). The `pods` widget SHALL NOT render a trend sparkline.
+
+When `podPhases` is absent, `PodCapacityChart` SHALL render nothing while its widget shell remains.
+
+#### Scenario: Pod capacity donut shows phase and unused segments
+
+- GIVEN the `pods` metric has `value: "548"`, `total: "2000"`, `unit: "pods"`, and `podPhases: { running: 500, pending: 12, succeeded: 20, failed: 16, unknown: 0 }`
+- WHEN `PodCapacityChart` renders
+- THEN the donut SHALL show phase segments matching `podPhases` and an Unused segment of `1452`
+- AND the chart center title SHALL show `548`
+- AND the chart subtitle SHALL read "of 2000 pods"
+- AND the widget title SHALL be localized "Pods"
+
+---
+
 ### Requirement: OP-DASH-13 -- Metric and Utilization Widgets
 
 **Metric cards** (`MetricCard`) SHALL center a large heading with the metric value and an optional subtitle. When `trend.points` is present, a `TrendSparklineChart` SHALL render beneath the heading.
 
-**Utilization widgets** (`cpu`, `memory`, `pods`) SHALL render `UtilizationChart` when the metric includes both `unit` and `total`. Utilization percentage SHALL be `round((value / total) * 100)`. Status icons SHALL use thresholds: warning at `>= 60%`, danger at `>= 90%`.
+**Utilization widgets** (`cpu`, `memory`) SHALL render `UtilizationChart` when the metric includes both `unit` and `total`. Utilization percentage SHALL be `round((value / total) * 100)`. Status icons SHALL use thresholds: warning at `>= 60%`, danger at `>= 90%`.
+
+The `pods` widget SHALL use `PodCapacityChart` (OP-DASH-17), not `UtilizationChart`. The `system-summary` pods row SHALL continue to show utilization percentage from the same `pods` metric and SHALL show a failed pod count when `podPhases.failed` is non-zero.
 
 **Summary widgets:**
 
 - `usage-summary` — horizontal `DescriptionList` for active users, gateways (with exception status counts), and sandboxes
-- `system-summary` — horizontal `DescriptionList` for memory, CPU, pods, nodes (with exception status counts when `status.failed` is non-zero), and provision time
+- `system-summary` — horizontal `DescriptionList` for memory, CPU, pods (with failed pod count when `podPhases.failed` is non-zero), nodes (with exception status counts when `status.failed` is non-zero), and provision time
 
 Trend direction indicators in summary rows SHALL appear only when `getMetricTrendChange` detects at least a 5% change between the first and last trend point.
 
@@ -361,6 +384,12 @@ Trend direction indicators in summary rows SHALL appear only when `getMetricTren
 - WHEN the memory widget renders
 - THEN the utilization donut SHALL NOT render
 - AND the summary row SHALL show the raw value only
+
+#### Scenario: Failed pod count appears in system summary
+
+- GIVEN the `pods` metric has `podPhases.failed: 16`
+- WHEN the system summary pods row renders
+- THEN a failed count of `16` SHALL appear below the utilization value with a danger status icon
 
 ---
 

@@ -61,6 +61,7 @@ import {
   GatewayStatusCard,
   MetricCard,
   NodeStatusCard,
+  PodCapacityCard,
   SystemSummaryCard,
   UsageSummaryCard,
 } from "./dashboard-widget";
@@ -68,7 +69,7 @@ import { useGetMetricsData } from "./get-metrics-data";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v17";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v19";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -118,7 +119,12 @@ function createWidgetMapping(
     metricId: string,
     subtitle: string,
     titleMessage: (typeof messages)[keyof typeof messages],
-    metricType: "metric" | "gateway-status" | "node-status" | "utilization",
+    metricType:
+      | "metric"
+      | "gateway-status"
+      | "node-status"
+      | "pod-capacity"
+      | "utilization",
   ) => {
     const metric = metricById.get(metricId);
     const title = intl.formatMessage(titleMessage);
@@ -148,6 +154,10 @@ function createWidgetMapping(
 
     if (metricType === "node-status") {
       return <NodeStatusCard metric={metric} />;
+    }
+
+    if (metricType === "pod-capacity") {
+      return <PodCapacityCard metric={metric} />;
     }
 
     return <UtilizationChart metric={metric} />;
@@ -246,13 +256,18 @@ function createWidgetMapping(
         renderMetric("memory", "", messages.widgetMemory, "utilization"),
     },
     pods: {
-      defaults: METRIC_WIDGET_DEFAULTS,
+      defaults: {
+        h: NODE_STATUS_WIDGET_HEIGHT,
+        maxH: NODE_STATUS_WIDGET_HEIGHT + 2,
+        minH: METRIC_WIDGET_DEFAULTS.minH,
+        w: 1,
+      },
       config: {
         icon: <CubesIcon />,
         title: intl.formatMessage(messages.widgetPods),
       },
       renderWidget: () =>
-        renderMetric("pods", "", messages.widgetPods, "utilization"),
+        renderMetric("pods", "", messages.widgetPods, "pod-capacity"),
     },
     nodes: {
       defaults: {

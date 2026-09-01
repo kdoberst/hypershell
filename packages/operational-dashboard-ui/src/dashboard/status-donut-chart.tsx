@@ -28,6 +28,16 @@ export const COMPACT_STATUS_DONUT_CHART_PADDING = {
   top: 4,
 } as const;
 
+/** Compact widgets that render a donut subtitle (for example pods capacity). */
+export const COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_HEIGHT = 165;
+
+export const COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_PADDING = {
+  bottom: 24,
+  left: 12,
+  right: 115,
+  top: 4,
+} as const;
+
 export type StatusDonutChartSize = "compact" | "default";
 
 export interface StatusDonutChartProps {
@@ -55,13 +65,18 @@ export function StatusDonutChart({
 }: Readonly<StatusDonutChartProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(275);
+  const compactWithSubtitle = size === "compact" && subTitle !== undefined;
   const chartHeight =
     size === "compact"
-      ? COMPACT_STATUS_DONUT_CHART_HEIGHT
+      ? compactWithSubtitle
+        ? COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_HEIGHT
+        : COMPACT_STATUS_DONUT_CHART_HEIGHT
       : STATUS_DONUT_CHART_HEIGHT;
   const chartPadding =
     size === "compact"
-      ? COMPACT_STATUS_DONUT_CHART_PADDING
+      ? compactWithSubtitle
+        ? COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_PADDING
+        : COMPACT_STATUS_DONUT_CHART_PADDING
       : STATUS_DONUT_CHART_PADDING;
 
   useEffect(() => {
@@ -91,7 +106,7 @@ export function StatusDonutChart({
     <div
       ref={containerRef}
       className={
-        size === "compact"
+        size === "compact" && !compactWithSubtitle
           ? "hypershell-dashboard-status-donut-chart hypershell-dashboard-status-donut-chart--compact"
           : "hypershell-dashboard-status-donut-chart"
       }

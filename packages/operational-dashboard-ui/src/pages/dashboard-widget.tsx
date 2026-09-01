@@ -35,6 +35,8 @@ import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
 import { getGatewayExceptionStatusCounts } from "../dashboard/gateway-exception-status-counts";
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
 import { NodeStatusChart } from "../dashboard/node-status-chart";
+import { PodCapacityChart } from "../dashboard/pod-capacity-chart";
+import { isPodCapacityMetric } from "../dashboard/pod-capacity-metric";
 import {
   getUtilizationPercentage,
   getUtilizationStatusLevel,
@@ -126,6 +128,18 @@ export function NodeStatusCard({
     <WidgetContent bodyClassName="hypershell-dashboard-status-donut-card--compact">
       <Content className="hypershell-dashboard-status-donut-card">
         <NodeStatusChart metric={metric} />
+      </Content>
+    </WidgetContent>
+  );
+}
+
+export function PodCapacityCard({
+  metric,
+}: Readonly<{ metric: OperationalMetric }>) {
+  return (
+    <WidgetContent bodyClassName="hypershell-dashboard-status-donut-card--compact">
+      <Content className="hypershell-dashboard-status-donut-card">
+        <PodCapacityChart metric={metric} />
       </Content>
     </WidgetContent>
   );
@@ -430,6 +444,47 @@ function SummaryGatewayValue({
   );
 }
 
+function SummaryPodFailedCount({
+  metric,
+}: Readonly<{ metric: OperationalMetric }>) {
+  const intl = useIntl();
+
+  if (!isPodCapacityMetric(metric)) {
+    return null;
+  }
+
+  const failedCount = metric.podPhases.failed;
+
+  if (failedCount === 0) {
+    return null;
+  }
+
+  return (
+    <SummaryGatewayStatusCount
+      count={failedCount}
+      statusLabel={intl.formatMessage(messages.podStatusFailed)}
+      variant="danger"
+    />
+  );
+}
+
+function SummaryPodsValue({
+  metric,
+}: Readonly<{ metric: OperationalMetric | undefined }>) {
+  return (
+    <Stack hasGutter className="hypershell-dashboard-summary-gateway-value">
+      <StackItem>
+        <SummaryUtilizationValue metric={metric} />
+      </StackItem>
+      {metric ? (
+        <StackItem>
+          <SummaryPodFailedCount metric={metric} />
+        </StackItem>
+      ) : null}
+    </Stack>
+  );
+}
+
 const USAGE_SUMMARY_METRIC_IDS = [
   "registered-users",
   "provisioned-gateways",
@@ -512,7 +567,7 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.pods} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            <SummaryUtilizationValue
+            <SummaryPodsValue
               metric={metrics.find((metric) => metric.id === "pods")}
             />
           </DescriptionListDescription>

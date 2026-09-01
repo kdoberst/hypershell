@@ -65,20 +65,16 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
       }),
       Object.freeze({
         id: "pods",
-        value: "548",
+        podPhases: Object.freeze({
+          failed: 16,
+          pending: 12,
+          running: 500,
+          succeeded: 20,
+          unknown: 0,
+        }),
         total: "2000",
         unit: "pods",
-        trend: Object.freeze({
-          points: Object.freeze([
-            Object.freeze({ label: "Day 1", value: 124 }),
-            Object.freeze({ label: "Day 2", value: 182 }),
-            Object.freeze({ label: "Day 3", value: 301 }),
-            Object.freeze({ label: "Day 4", value: 361 }),
-            Object.freeze({ label: "Day 5", value: 449 }),
-            Object.freeze({ label: "Day 6", value: 525 }),
-            Object.freeze({ label: "Day 7", value: 538 }),
-          ]),
-        }),
+        value: "548",
       }),
       Object.freeze({
         id: "provision-time",

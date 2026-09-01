@@ -68,6 +68,8 @@ All three values SHALL use the same collection timestamp (Prometheus instant que
 
 `used_pods` SHALL NOT exceed `capacity_pods`. When `capacity_pods` is zero (no scrape data), the collection SHALL be treated as a failure (CLP-06).
 
+The BFF SHALL also collect per-phase pod counts (`phase_pending_pods`, `phase_running_pods`, `phase_succeeded_pods`, `phase_failed_pods`, `phase_unknown_pods`) from kube-state-metrics. The sum of phase counts SHALL equal `used_pods`; otherwise collection SHALL fail.
+
 #### Scenario: Used and available sum to capacity
 
 - GIVEN `capacity_pods` is `2000` and `used_pods` is `548`
@@ -87,6 +89,11 @@ Version 1 SHALL use **kube-state-metrics** pod and node series scraped into the 
 | --- | --- |
 | Capacity pods | `sum(kube_node_status_allocatable{resource="pods"})` |
 | Used pods | `count(kube_pod_info)` |
+| Pending pods | `sum(kube_pod_status_phase{phase="Pending"})` |
+| Running pods | `sum(kube_pod_status_phase{phase="Running"})` |
+| Succeeded pods | `sum(kube_pod_status_phase{phase="Succeeded"})` |
+| Failed pods | `sum(kube_pod_status_phase{phase="Failed"})` |
+| Unknown pods | `sum(kube_pod_status_phase{phase="Unknown"})` |
 
 PromQL queries SHALL aggregate with `sum(...)` or `count(...)` across in-scope nodes and namespaces so a single capacity/used pair is returned per evaluation.
 
@@ -113,7 +120,12 @@ The web-console BFF SHALL expose `GET /api/metrics/cluster-pods` as a same-origi
 {
   "capacity_pods": 2000,
   "available_pods": 1452,
-  "used_pods": 548
+  "used_pods": 548,
+  "phase_pending_pods": 12,
+  "phase_running_pods": 500,
+  "phase_succeeded_pods": 20,
+  "phase_failed_pods": 16,
+  "phase_unknown_pods": 0
 }
 ```
 
@@ -146,25 +158,36 @@ The operational dashboard host adapter (`createDashboardControlPlaneAdapter`) SH
 | `value` | Decimal string of **used** pods (`used_pods`) |
 | `total` | Decimal string of **capacity** pods (`capacity_pods`) |
 | `unit` | `"pods"` |
+| `podPhases.pending` | `phase_pending_pods` |
+| `podPhases.running` | `phase_running_pods` |
+| `podPhases.succeeded` | `phase_succeeded_pods` |
+| `podPhases.failed` | `phase_failed_pods` |
+| `podPhases.unknown` | `phase_unknown_pods` |
 
 The adapter SHALL NOT emit `trend` or `status` for the `pods` metric in version 1.
 
-The `system-summary` card SHALL continue to source its pods row from the same `pods` metric (OP-DASH-13). The utilization donut SHALL render because `unit` and `total` are present.
+The `system-summary` card SHALL continue to source its pods row from the same `pods` metric (OP-DASH-13). The summary row SHALL show utilization percentage because `unit` and `total` are present. When `podPhases.failed` is non-zero, the pods row SHALL show a failed count with a danger status icon below the utilization value (same presentation as gateway and node exception counts).
 
-Available pods are derivable in the UI as `total - value` and SHALL NOT be duplicated as a separate metric ID in version 1.
+The `pods` widget SHALL render `PodCapacityChart` (OP-DASH-17), not `UtilizationChart`.
 
-#### Scenario: Dashboard pods widget shows utilization
+Available pods are derivable in the UI as `total - value` and SHALL be shown as an **Unused** segment in the capacity donut (gray).
+
+#### Scenario: Dashboard pods widget shows capacity and phase breakdown
 
 - GIVEN `used_pods` is `548` and `capacity_pods` is `2000`
+- AND phase counts sum to `548` (`running: 500`, `pending: 12`, `succeeded: 20`, `failed: 16`, `unknown: 0`)
 - WHEN an authorized dashboard operator opens `/dashboard` and metrics load successfully
-- THEN the `pods` metric SHALL have `value: "548"`, `total: "2000"`, and `unit: "pods"`
-- AND the `pods` widget SHALL render a utilization donut at approximately 27%
+- THEN the `pods` metric SHALL have `value: "548"`, `total: "2000"`, `unit: "pods"`, and `podPhases` matching the BFF phase fields
+- AND the `pods` widget SHALL render a capacity donut with phase segments plus an Unused segment of `1452`
+- AND the chart center title SHALL show `548`
+- AND the chart subtitle SHALL read "of 2000 pods"
 
 #### Scenario: Available pods are implied by capacity minus used
 
 - GIVEN the `pods` metric has `value: "548"` and `total: "2000"`
-- WHEN the operator reads the utilization subtitle ("of 2000 pods")
+- WHEN the operator reads the capacity donut subtitle ("of 2000 pods")
 - THEN the implied available pods SHALL be `1452`
+- AND the Unused segment SHALL represent `1452` pods
 
 ---
 
@@ -207,16 +230,17 @@ The web-console BFF SHALL include unit tests for:
 - HTTP `502` when Prometheus fails
 - Session requirement when OIDC is enabled
 - Rejection when `used_pods` exceeds `capacity_pods` or `capacity_pods` is zero
+- Rejection when phase counts do not sum to `used_pods`
 
-The web console SHALL include unit tests for the dashboard adapter mapping `used_pods` and `capacity_pods` into the `pods` `OperationalMetric`.
+The web console SHALL include unit tests for the dashboard adapter mapping `used_pods`, `capacity_pods`, and phase fields into the `pods` `OperationalMetric`.
 
 The operational dashboard package SHALL update `mockOperationalDashboardMetrics` only as needed for Storybook fixtures (values may remain representative).
 
 #### Scenario: CI exercises adapter mapping
 
-- GIVEN a mocked BFF response with `used_pods: 548` and `capacity_pods: 2000`
+- GIVEN a mocked BFF response with `used_pods: 548`, `capacity_pods: 2000`, and phase fields summing to `548`
 - WHEN dashboard adapter unit tests run
-- THEN they SHALL assert the `pods` metric `id`, `value: "548"`, `total: "2000"`, and `unit: "pods"`
+- THEN they SHALL assert the `pods` metric `id`, `value: "548"`, `total: "2000"`, `unit: "pods"`, and `podPhases`
 
 ## Non-Goals
 
@@ -225,7 +249,6 @@ The operational dashboard package SHALL update `mockOperationalDashboardMetrics`
 - Historical trend series or sparklines for pods in version 1
 - Per-node, per-namespace, or per-workload pod breakdown in the UI
 - Pod metrics for registered **managed clusters** or individual gateway tenant namespaces
-- Pod phase breakdown (Running vs Pending vs Failed) in version 1
 - A HyperShell REST `/cluster_pods` OpenAPI resource in version 1
 - Direct browser access to Prometheus
 - Combining pods with CPU or memory into a single BFF route in version 1
