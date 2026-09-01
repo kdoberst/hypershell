@@ -17,7 +17,7 @@ Node semantics for version 1:
 | **Ready** | Nodes whose `Ready` condition is `True` |
 | **Not ready** | Nodes that exist but are not Ready (`total - ready`) |
 
-The operational dashboard `system-summary` row already renders a `nodes` placeholder (OP-DASH-13). Version 1 connects that row to live hub-cluster data using the same **total + status** presentation model as `provisioned-gateways` (OP-DASH-07): `value` is the total count and `status` carries ready/not-ready buckets. There is no standalone `nodes` widget in the default layout.
+The operational dashboard `system-summary` row and `nodes` widget render node inventory using the same total + `status` presentation model as `provisioned-gateways` (OP-DASH-07): `value` is the total count and `status` carries ready/not-ready buckets.
 
 ### Relationship to other specifications
 
@@ -147,6 +147,8 @@ The adapter SHALL NOT emit `status.provisioning`, `status.degraded`, `unit`, `to
 `status.healthy` plus `status.failed` SHALL equal `total_nodes` for every successful response.
 
 The `system-summary` card SHALL source its nodes row from the same `nodes` metric (OP-DASH-13). The row SHALL render the total count and, when `status.failed` is greater than zero, SHALL show the same exception-status icon treatment used for gateways in summary rows.
+
+When the `nodes` metric is rendered as a status donut (`NodeStatusChart`, OP-DASH-16), ready nodes SHALL appear under the localized **Ready** label and not-ready nodes under **Not ready**, while still using `status.healthy` and `status.failed` in the adapter contract.
 
 #### Scenario: Dashboard system-summary shows total node count when all nodes are ready
 

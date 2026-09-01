@@ -22,6 +22,7 @@ import {
   UsersIcon,
   MicrochipIcon,
   MemoryIcon,
+  ServerIcon,
 } from "@patternfly/react-icons";
 import {
   AddWidgetsButton,
@@ -41,6 +42,7 @@ import { noopDashboardProbePublisher } from "../application/dashboard-probes";
 import {
   defaultDashboardLayoutTemplate,
   GATEWAY_STATUS_WIDGET_HEIGHT,
+  NODE_STATUS_WIDGET_HEIGHT,
   localizeDashboardLayoutTemplate,
   SYSTEM_SUMMARY_WIDGET_HEIGHT,
   USAGE_SUMMARY_WIDGET_HEIGHT,
@@ -58,6 +60,7 @@ import "./dashboard-widget.css";
 import {
   GatewayStatusCard,
   MetricCard,
+  NodeStatusCard,
   SystemSummaryCard,
   UsageSummaryCard,
 } from "./dashboard-widget";
@@ -65,7 +68,7 @@ import { useGetMetricsData } from "./get-metrics-data";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v14";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v17";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -115,7 +118,7 @@ function createWidgetMapping(
     metricId: string,
     subtitle: string,
     titleMessage: (typeof messages)[keyof typeof messages],
-    metricType: "metric" | "status" | "utilization",
+    metricType: "metric" | "gateway-status" | "node-status" | "utilization",
   ) => {
     const metric = metricById.get(metricId);
     const title = intl.formatMessage(titleMessage);
@@ -139,8 +142,12 @@ function createWidgetMapping(
       return <MetricCard metric={metric} subtitle={subtitle} title={title} />;
     }
 
-    if (metricType === "status") {
+    if (metricType === "gateway-status") {
       return <GatewayStatusCard metric={metric} />;
+    }
+
+    if (metricType === "node-status") {
+      return <NodeStatusCard metric={metric} />;
     }
 
     return <UtilizationChart metric={metric} />;
@@ -203,7 +210,7 @@ function createWidgetMapping(
           "provisioned-gateways",
           "",
           messages.gatewayStatusWidget,
-          "status",
+          "gateway-status",
         ),
     },
     "provisioned-sandboxes": {
@@ -246,6 +253,20 @@ function createWidgetMapping(
       },
       renderWidget: () =>
         renderMetric("pods", "", messages.widgetPods, "utilization"),
+    },
+    nodes: {
+      defaults: {
+        h: NODE_STATUS_WIDGET_HEIGHT,
+        maxH: NODE_STATUS_WIDGET_HEIGHT + 2,
+        minH: METRIC_WIDGET_DEFAULTS.minH,
+        w: 1,
+      },
+      config: {
+        icon: <ServerIcon />,
+        title: intl.formatMessage(messages.nodes),
+      },
+      renderWidget: () =>
+        renderMetric("nodes", "", messages.nodes, "node-status"),
     },
   };
 }

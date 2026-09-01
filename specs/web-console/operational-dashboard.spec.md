@@ -253,6 +253,7 @@ The default layout template (`defaultDashboardLayoutTemplate`) SHALL place these
 **Note:** Widget type `active-users` is superseded by `registered-users` per `platform/registered-users.spec.md` RU-05. New implementations SHALL use `registered-users` only.
 | `cpu` | Column 3, second row |
 | `pods` | Column 3, third row |
+| `nodes` | Column 2, third row (one grid unit taller than cpu/pods) |
 
 Widget titles in the layout template SHALL be localized via `localizeDashboardLayoutTemplate` using the package `messages` catalog.
 
@@ -269,7 +270,7 @@ Users SHALL be able to add widgets from the drawer, drag to rearrange, and remov
 
 ### Requirement: OP-DASH-11 -- Layout Persistence
 
-The dashboard SHALL persist the sanitized layout template to `localStorage` under the key `hypershell.operational-dashboard.layout.v13`.
+The dashboard SHALL persist the sanitized layout template to `localStorage` under the key `hypershell.operational-dashboard.layout.v17`.
 
 On mount, a saved template SHALL be loaded when it parses as valid JSON and contains an array entry for every responsive variant (`xl`, `lg`, `md`, `sm`). Invalid or corrupt saved state SHALL fall back to the default template without surfacing an error to the user.
 
@@ -287,7 +288,7 @@ When persistence fails (for example, storage quota exceeded), the dashboard SHAL
 
 ### Requirement: OP-DASH-12 -- Gateway Status Widget
 
-The `gateway-status` widget SHALL render a `GatewayStatusChart` donut using `@patternfly/react-charts/victory` `ChartDonut`, driven by the `provisioned-gateways` metric's `status` and `value` fields.
+The `gateway-status` widget SHALL render a `GatewayStatusChart` donut using the shared `StatusDonutChart` primitive (`@patternfly/react-charts/victory` `ChartDonut`), driven by the `provisioned-gateways` metric's `status` and `value` fields.
 
 The chart SHALL:
 
@@ -296,6 +297,7 @@ The chart SHALL:
 - Resize with its container via `ResizeObserver`
 - Expose localized `ariaTitle` and `ariaDesc` attributes
 - Show the total gateway count as the chart title and a localized "Gateways" subtitle
+- Use gateway-specific bucket labels (`Healthy`, `Provisioning`, `Degraded`, `Failed`)
 
 When `status` is absent or all bucket counts are zero, the chart area SHALL render nothing (the widget shell remains).
 
@@ -307,6 +309,35 @@ If the metric includes `trend` data, a `TrendSparklineChart` SHALL render below 
 - WHEN the summary row renders
 - THEN failed and degraded counts SHALL appear with danger and warning status icons respectively
 - AND healthy-only fleets SHALL omit the exception status row
+
+---
+
+### Requirement: OP-DASH-16 -- Status Donut Presentation
+
+Gateway and node inventory metrics that expose `OperationalMetric.value` plus `OperationalMetric.status` SHALL share a common status-donut presentation stack in `packages/operational-dashboard-ui`:
+
+| Layer | Responsibility |
+| --- | --- |
+| `StatusDonutChart` | Shared `ChartDonut` shell: resize handling, padding, legend layout, and dark-mode label tokens |
+| `buildStatusDonutData` | Shared series builder that omits zero-count buckets |
+| `buildGatewayStatusData` / `buildNodeStatusData` | Domain-specific bucket order, colors, and localized labels |
+| `GatewayStatusChart` / `NodeStatusChart` | Thin wrappers that map each metric to the shared chart |
+
+`GatewayStatusChart` SHALL remain the presentation for the `gateway-status` widget (`provisioned-gateways` metric). `NodeStatusChart` SHALL be the presentation for the `nodes` widget and metric.
+
+Node status donuts SHALL reuse the same `status.healthy` and `status.failed` keys as the adapter mapping in `platform/cluster-nodes.spec.md` CLN-05, but SHALL render localized **Ready** and **Not ready** labels instead of gateway vocabulary.
+
+`NodeStatusCard` SHALL wrap `NodeStatusChart` with the same card shell used by `GatewayStatusCard`. The default layout template SHALL include a `nodes` widget (OP-DASH-10) at `NODE_STATUS_WIDGET_HEIGHT` (one grid unit taller than `cpu`/`pods`). The `nodes` widget SHALL NOT render a trend sparkline. `NodeStatusChart` SHALL use the compact `StatusDonutChart` size without a chart subtitle (the widget title already identifies the metric) and reduced card-body padding so the donut is not clipped.
+
+When `status` is absent or all bucket counts are zero, status donut charts SHALL render nothing while their widget shell remains.
+
+#### Scenario: Node status donut shows ready and not-ready segments
+
+- GIVEN the `nodes` metric has `value: "8"` and `status: { healthy: 7, failed: 1 }`
+- WHEN `NodeStatusChart` renders
+- THEN the donut SHALL show a Ready segment of `7` and a Not ready segment of `1`
+- AND the chart center title SHALL show `8`
+- AND the subtitle SHALL be localized "Nodes"
 
 ---
 

@@ -34,6 +34,7 @@ import {
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
 import { getGatewayExceptionStatusCounts } from "../dashboard/gateway-exception-status-counts";
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
+import { NodeStatusChart } from "../dashboard/node-status-chart";
 import {
   getUtilizationPercentage,
   getUtilizationStatusLevel,
@@ -42,10 +43,13 @@ import {
 } from "../dashboard/utilization-chart";
 import { messages } from "../messages";
 
-function WidgetContent({ children }: Readonly<PropsWithChildren>) {
+function WidgetContent({
+  bodyClassName,
+  children,
+}: Readonly<PropsWithChildren<{ bodyClassName?: string }>>) {
   return (
     <Card isPlain isFullHeight>
-      <CardBody>{children}</CardBody>
+      <CardBody className={bodyClassName}>{children}</CardBody>
     </Card>
   );
 }
@@ -99,7 +103,7 @@ export function GatewayStatusCard({
 
   return (
     <WidgetContent>
-      <Content className="hypershell-dashboard-gateway-status-card">
+      <Content className="hypershell-dashboard-status-donut-card">
         <Stack hasGutter>
           <StackItem>
             <GatewayStatusChart metric={metric} />
@@ -110,6 +114,18 @@ export function GatewayStatusCard({
             </StackItem>
           ) : null}
         </Stack>
+      </Content>
+    </WidgetContent>
+  );
+}
+
+export function NodeStatusCard({
+  metric,
+}: Readonly<{ metric: OperationalMetric }>) {
+  return (
+    <WidgetContent bodyClassName="hypershell-dashboard-status-donut-card--compact">
+      <Content className="hypershell-dashboard-status-donut-card">
+        <NodeStatusChart metric={metric} />
       </Content>
     </WidgetContent>
   );
