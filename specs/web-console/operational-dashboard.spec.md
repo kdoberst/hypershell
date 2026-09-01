@@ -401,11 +401,12 @@ The web-console host SHALL extract dashboard message IDs into its `locales/en.js
 
 Loading states SHALL use a `Spinner` with a localized `aria-label`. Empty and error states SHALL use PatternFly `EmptyState` or `Alert` with localized titles and bodies. Interactive trend and status icons SHALL expose localized `aria-label` values via `Tooltip` or button labels.
 
-#### Scenario: Page description explains placeholder widgets
+#### Scenario: Page description introduces live metrics and refresh behavior
 
 - GIVEN the dashboard page loads
 - WHEN the description paragraph renders
-- THEN it SHALL state that live gateway and sandbox counts are shown where available and other widgets remain placeholders until connected
+- THEN it SHALL summarize gateway fleet health, hub cluster capacity, and platform usage
+- AND it SHALL state that metrics refresh every 15 minutes and that Refresh updates them immediately
 
 ---
 

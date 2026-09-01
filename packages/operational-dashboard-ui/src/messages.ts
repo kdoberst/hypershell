@@ -14,7 +14,7 @@ export const messages = defineMessages({
   description: {
     id: "app.dashboard.description",
     defaultMessage:
-      "Live gateway and sandbox counts are shown where data is available. Other widgets remain placeholders until their metrics are connected.",
+      "Live view of gateway fleet health, hub cluster capacity, and platform usage. Metrics refresh every 15 minutes; use Refresh to update now.",
     description: "Supporting text on the operational dashboard page.",
   },
   gateways: {
