@@ -337,7 +337,8 @@ When `status` is absent or all bucket counts are zero, status donut charts SHALL
 - WHEN `NodeStatusChart` renders
 - THEN the donut SHALL show a Ready segment of `7` and a Not ready segment of `1`
 - AND the chart center title SHALL show `8`
-- AND the subtitle SHALL be localized "Nodes"
+- AND the widget title SHALL be localized "Nodes"
+- AND the chart SHALL NOT render a donut subtitle
 
 ---
 
