@@ -1,5 +1,6 @@
 export const clusterMemoryCapacityPromql = "sum(node_memory_MemTotal_bytes)";
-export const clusterMemoryAvailablePromql = "sum(node_memory_MemAvailable_bytes)";
+export const clusterMemoryAvailablePromql =
+  "sum(node_memory_MemAvailable_bytes)";
 
 export interface ClusterMemoryBytes {
   available_bytes: number;
