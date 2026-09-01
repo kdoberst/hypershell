@@ -5,9 +5,14 @@ import path from "node:path";
 import compress from "@fastify/compress";
 import helmet from "@fastify/helmet";
 import fastifyStatic from "@fastify/static";
-import Fastify, { type FastifyInstance, LogController } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyRequest,
+  LogController,
+} from "fastify";
 
 import { clearSession, persistTokenSet, registerAuth } from "./auth.js";
+import { hasDashboardAdminRole } from "./roles.js";
 import {
   browserRuntimeConfig,
   type BrowserRuntimeConfig,
@@ -52,6 +57,41 @@ function isApplicationRoute(pathname: string): boolean {
     pathname === "/gateways/new" ||
     pathname === "/metrics" ||
     /^\/gateways\/[^/]+\/?$/u.test(pathname)
+  );
+}
+
+const DASHBOARD_HOST_PREFIX = "dashboard.";
+
+function isDashboardHost(hostHeader: string | undefined): boolean {
+  if (typeof hostHeader !== "string") {
+    return false;
+  }
+
+  const host = hostHeader.split(":")[0] ?? "";
+  return host.startsWith(DASHBOARD_HOST_PREFIX);
+}
+
+function consoleRedirectForDashboardHost(request: FastifyRequest): string {
+  const hostHeader = request.headers.host ?? "";
+  const [, port] = hostHeader.split(":");
+  const host = hostHeader.split(":")[0] ?? "";
+  const portSuffix = port ? `:${port}` : "";
+
+  if (host.startsWith(DASHBOARD_HOST_PREFIX)) {
+    const rest = host.slice(DASHBOARD_HOST_PREFIX.length);
+    return `${request.protocol}://console.${rest}${portSuffix}/`;
+  }
+
+  return "/";
+}
+
+function requiresDashboardAdminAccess(
+  pathname: string,
+  hostHeader: string | undefined,
+): boolean {
+  return (
+    pathname === "/dashboard" ||
+    (pathname === "/" && isDashboardHost(hostHeader))
   );
 }
 
@@ -288,6 +328,17 @@ export async function buildApp(
           reply.redirect("/auth/login");
           return;
         }
+        if (
+          requiresDashboardAdminAccess(pathname, request.headers.host) &&
+          !hasDashboardAdminRole(request.session.get("roles") ?? [])
+        ) {
+          reply.redirect(
+            pathname === "/" && isDashboardHost(request.headers.host)
+              ? consoleRedirectForDashboardHost(request)
+              : "/",
+          );
+          return;
+        }
       }
     });
   }
@@ -317,12 +368,28 @@ export async function buildApp(
   });
 
   const sendApplication = (
-    _request: unknown,
+    request: FastifyRequest,
     reply: {
       header(name: string, value: string): unknown;
+      redirect(location: string): unknown;
       type(value: string): { send(payload: string): unknown };
     },
   ) => {
+    const pathname = new URL(request.url, "http://bff.invalid").pathname;
+    // Dashboard admin enforcement applies only when OIDC is configured. In
+    // no-auth dev mode (OIDC_ISSUER unset) the operational dashboard is open.
+    if (
+      config.oidcIssuer &&
+      requiresDashboardAdminAccess(pathname, request.headers.host) &&
+      !hasDashboardAdminRole(request.session.get("roles") ?? [])
+    ) {
+      return reply.redirect(
+        pathname === "/" && isDashboardHost(request.headers.host)
+          ? consoleRedirectForDashboardHost(request)
+          : "/",
+      );
+    }
+
     reply.header("Cache-Control", "no-store");
     return reply.type("text/html; charset=utf-8").send(indexDocument);
   };
