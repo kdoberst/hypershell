@@ -69,11 +69,7 @@ export async function queryClusterPods(
   timeoutMs: number,
 ): Promise<ClusterPodsCounts> {
   const [capacity_pods, used_pods] = await Promise.all([
-    queryPrometheusInstant(
-      prometheusUrl,
-      clusterPodsCapacityPromql,
-      timeoutMs,
-    ),
+    queryPrometheusInstant(prometheusUrl, clusterPodsCapacityPromql, timeoutMs),
     queryPrometheusInstant(prometheusUrl, clusterPodsUsedPromql, timeoutMs),
   ]);
 

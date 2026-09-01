@@ -292,15 +292,15 @@ export function createDashboardControlPlaneAdapter(
       const client = apiFactory(context.correlationId);
       const [userList, memoryMetric, cpuMetric, podsMetric, nodesMetric] =
         await Promise.all([
-        client.users.list(
-          { orderBy: "username asc", page: 1, size: 1 },
-          { signal: context.signal },
-        ),
-        fetchClusterMemoryMetric(context.signal),
-        fetchClusterCpuMetric(context.signal),
-        fetchClusterPodsMetric(context.signal),
-        fetchClusterNodesMetric(context.signal),
-      ]);
+          client.users.list(
+            { orderBy: "username asc", page: 1, size: 1 },
+            { signal: context.signal },
+          ),
+          fetchClusterMemoryMetric(context.signal),
+          fetchClusterCpuMetric(context.signal),
+          fetchClusterPodsMetric(context.signal),
+          fetchClusterNodesMetric(context.signal),
+        ]);
 
       const metrics: OperationalMetric[] = [
         gatewayDisplayCountsToMetric(
