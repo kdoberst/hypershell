@@ -1,0 +1,104 @@
+.hypershell-dashboard-metric-card {
+  --pf-v6-c-content--MarginBottom: 0;
+}
+
+.hypershell-dashboard-metric-card .pf-v6-c-stack {
+  --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
+}
+
+.hypershell-dashboard-sparkline-chart {
+  width: 100%;
+}
+
+.hypershell-dashboard-sparkline-chart__plot {
+  height: 36px;
+}
+
+.hypershell-dashboard-sparkline-chart__caption {
+  display: block;
+  line-height: 1.2;
+  margin-block-start: var(--pf-t--global--spacer--xs);
+  text-align: center;
+}
+
+.hypershell-dashboard-utilization-chart {
+  padding-inline-start: var(--pf-t--global--spacer--sm);
+}
+
+.hypershell-dashboard-utilization-chart__label {
+  min-width: 0;
+}
+
+.hypershell-dashboard-utilization-chart__donut {
+  flex-shrink: 0;
+}
+
+.hypershell-dashboard-gateway-status-card {
+  --pf-v6-c-content--MarginBottom: 0;
+}
+
+.hypershell-dashboard-gateway-status-card .pf-v6-c-stack {
+  --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
+}
+
+.hypershell-dashboard-gateway-status-chart {
+  min-width: 0;
+  --hypershell-gateway-status-degraded-color: var(
+    --pf-t--global--icon--color--status--warning--default
+  );
+  --hypershell-gateway-status-failed-color: var(
+    --pf-t--global--icon--color--status--danger--default
+  );
+  --hypershell-gateway-status-provisioning-color: var(
+    --pf-t--global--icon--color--status--info--default
+  );
+  --hypershell-gateway-status-running-color: var(
+    --pf-t--global--icon--color--status--success--default
+  );
+  /*
+   * ChartDonut title, subtitle, and legend use chart label tokens that fall back
+   * to dark gray. Re-map them to global text tokens so dark mode stays readable.
+   */
+  --pf-v6-chart-donut--label--subtitle--Fill: var(
+    --pf-t--global--text--color--subtle
+  );
+  --pf-v6-chart-donut--label--title--Fill: var(
+    --pf-t--global--text--color--regular
+  );
+  --pf-v6-chart-global--label--Fill: var(--pf-t--global--text--color--regular);
+}
+
+.hypershell-dashboard-summary-trend {
+  --pf-v6-c-button--PaddingBlock: 0;
+  --pf-v6-c-button--PaddingInline: 0;
+  min-height: auto;
+}
+
+.hypershell-dashboard-summary-trend--increase {
+  color: var(--pf-t--global--icon--color--status--success--default);
+}
+
+.hypershell-dashboard-summary-trend--decrease {
+  color: var(--pf-t--global--icon--color--status--danger--default);
+}
+
+.hypershell-dashboard-summary-gateway-value {
+  --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--xs);
+}
+
+.hypershell-dashboard-summary-gateway-status {
+  flex-wrap: nowrap;
+}
+
+.hypershell-dashboard-summary-gateway-status__divider {
+  align-self: stretch;
+  height: auto;
+}
+
+.hypershell-dashboard-summary-gateway-status__icon {
+  --pf-v6-c-button--PaddingBlock: 0;
+  --pf-v6-c-button--PaddingInline: 0;
+  display: inline-flex;
+  min-height: auto;
+  vertical-align: middle;
+}
