@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import type { OperationalMetric } from "../application/dashboard-types";
 import { messages } from "../messages";
 import { buildGatewayStatusData } from "./gateway-status-data";
+import { formatOperationalMetricDisplayValue } from "./operational-metric-display";
 import { isStatusDonutMetric } from "./status-donut-metric";
 import { StatusDonutChart } from "./status-donut-chart";
 import type { StatusDonutDatum } from "./status-donut-data";
@@ -43,7 +44,7 @@ export function GatewayStatusChart({
       }
       legendData={legendData}
       subTitle={intl.formatMessage(messages.gateways)}
-      title={metric.value}
+      title={formatOperationalMetricDisplayValue(metric.value, intl)}
     />
   );
 }

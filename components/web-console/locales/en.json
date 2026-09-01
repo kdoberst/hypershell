@@ -83,6 +83,10 @@
     "defaultMessage": "{value} {label}",
     "description": "Formatted count for a dashboard metric card heading."
   },
+  "app.dashboard.metricCouldNotBeDetermined": {
+    "defaultMessage": "Metric could not be determined",
+    "description": "Fallback when a dashboard metric value is non-finite or cannot be shown as a number."
+  },
   "app.dashboard.metricUnavailable.body": {
     "defaultMessage": "This information is not currently available.",
     "description": "Recovery guidance when an individual dashboard metric is missing."

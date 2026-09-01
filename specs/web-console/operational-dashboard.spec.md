@@ -141,7 +141,16 @@ The adapter SHALL return `OperationalDashboardMetrics` containing:
 - A `provisioned-gateways` metric (see OP-DASH-07)
 - A `provisioned-sandboxes` metric whose `value` is the stringified sum of `active_sandbox_count` across all gateways in the aggregated list
 
+When summing `active_sandbox_count`, the adapter SHALL treat an omitted or null field on a gateway as `0` (matching database `COALESCE` semantics in `openshell-gateway-sandbox-count.spec.md`). The sum SHALL NOT produce a non-finite numeric result.
+
 Gateway list results SHALL reflect the caller's RBAC visibility (the API applies gateway visibility filtering; the dashboard does not bypass it).
+
+#### Scenario: Omitted sandbox counts do not break the aggregate
+
+- GIVEN the aggregated list contains gateways where some omit `active_sandbox_count` and others report `2` and `3`
+- WHEN the adapter computes `provisioned-sandboxes`
+- THEN the metric `value` SHALL be `"5"`
+- AND the dashboard SHALL NOT display `NaN`
 
 #### Scenario: Multiple pages are aggregated
 
@@ -407,6 +416,34 @@ Loading states SHALL use a `Spinner` with a localized `aria-label`. Empty and er
 - WHEN the description paragraph renders
 - THEN it SHALL summarize gateway fleet health, hub cluster capacity, and platform usage
 - AND it SHALL state that metrics refresh every 15 minutes and that Refresh updates them immediately
+
+---
+
+### Requirement: OP-DASH-18 -- Non-Displayable Metric Values
+
+The dashboard SHALL never render the literal strings `NaN`, `Infinity`, or `-Infinity` to users.
+
+When an `OperationalMetric.value` (or utilization `total`) is not a finite decimal string — including when numeric coercion yields `NaN` or another non-finite number — presentation widgets SHALL display the localized message **Metric could not be determined** instead of the raw value.
+
+This rule SHALL apply to metric cards, summary rows, utilization widgets, and status-donut center titles. Widgets that normally combine a value with a label or unit (for example `{value} {label}` or `{value} {unit}`) SHALL show only the fallback message when the value is non-displayable; they SHALL NOT append the metric label or unit after the fallback.
+
+Utilization status icons and percentage calculations SHALL be omitted when `value` or `total` is non-displayable.
+
+The fallback message SHALL be declared in the operational-dashboard-ui `messages` catalog and rendered through `react-intl`.
+
+#### Scenario: Sandboxes widget hides NaN
+
+- GIVEN the `provisioned-sandboxes` metric has `value: "NaN"`
+- WHEN the sandboxes metric card or usage-summary sandboxes row renders
+- THEN the user SHALL see the localized **Metric could not be determined** message
+- AND the user SHALL NOT see `NaN`
+
+#### Scenario: Utilization row omits percentage for non-displayable capacity
+
+- GIVEN the `memory` metric has `value: "4"`, `unit: "GiB"`, and `total: "NaN"`
+- WHEN the system-summary memory row renders
+- THEN the user SHALL see the localized **Metric could not be determined** message
+- AND no utilization status icon SHALL appear
 
 ---
 

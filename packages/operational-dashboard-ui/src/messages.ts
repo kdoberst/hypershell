@@ -92,6 +92,12 @@ export const messages = defineMessages({
     defaultMessage: "Memory",
     description: "Summary label for memory utilization.",
   },
+  metricCouldNotBeDetermined: {
+    id: "app.dashboard.metricCouldNotBeDetermined",
+    defaultMessage: "Metric could not be determined",
+    description:
+      "Fallback when a dashboard metric value is non-finite or cannot be shown as a number.",
+  },
   metricUnavailableBody: {
     id: "app.dashboard.metricUnavailable.body",
     defaultMessage: "This information is not currently available.",
