@@ -20,6 +20,12 @@ export GITLAB_APM_PAT="<your-gitlab-personal-access-token>"
 The PAT needs `read_repository` scope on the
 `hybrid-platforms-sec/ai-security-harness` project.
 
+### Harness version pin
+
+The skill bootstraps a pinned harness commit for reproducible audits.
+Override with `AI_SECURITY_HARNESS_REF` when intentionally upgrading
+(for example after verifying a newer commit on `main`).
+
 ### Model recommendation
 
 The harness audit skills are rated **mythos-class** - they require a strong

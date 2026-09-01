@@ -18,4 +18,4 @@ dependencies:
 includes: auto
 scripts:
   install: "scripts/apm-install.sh"
-  audit: "apm audit && skillspector scan . --no-llm --baseline .skillspector-baseline.yaml"
+  audit: "apm audit && scripts/skillspector-scan.sh --force"

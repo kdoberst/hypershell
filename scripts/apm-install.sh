@@ -8,7 +8,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BASELINE="$REPO_ROOT/.skillspector-baseline.yaml"
 
 FORCE=false
 for arg in "$@"; do
@@ -85,65 +84,10 @@ echo ""
 echo "Running apm install..."
 apm install
 
-# --- SkillSpector ---
+# --- SkillSpector (shared scan path with apm run audit) ---
 
-if ! command -v skillspector &>/dev/null; then
-  echo "WARNING: skillspector is not installed." >&2
-  echo "Install skillspector from https://github.com/nvidia/skillspector for full audit warnings." >&2
-  echo "WARNING: apm install succeeded but items were NOT scanned." >&2
-  exit 0
-fi
-
-echo "Running skillspector scan..."
-
-BASELINE_FLAG=()
-if [[ -f "$BASELINE" ]]; then
-  BASELINE_FLAG=(--baseline "$BASELINE")
+if [[ "$FORCE" == true ]]; then
+  "$SCRIPT_DIR/skillspector-scan.sh" --force
 else
-  echo "WARNING: baseline file not found at $BASELINE - running without suppression" >&2
+  "$SCRIPT_DIR/skillspector-scan.sh"
 fi
-
-SCAN_OUT_DIR="$REPO_ROOT/.skillspector-reports"
-mkdir -p "$SCAN_OUT_DIR"
-SCAN_OUT="$SCAN_OUT_DIR/scan-results-$(date +%s).json"
-
-skillspector scan "$REPO_ROOT" \
-  --no-llm \
-  "${BASELINE_FLAG[@]}" \
-  --format json \
-  --output "$SCAN_OUT" || true
-
-python3 - "$SCAN_OUT" <<'PY'
-import json
-import sys
-
-scan_out = sys.argv[1]
-with open(scan_out) as f:
-    data = json.load(f)
-
-issues = data.get('issues', [])
-severe = [i for i in issues if i.get('severity') in ('HIGH', 'CRITICAL')]
-
-if not severe:
-    suppressed = data.get('suppressed_count', 0)
-    print(f'Security scan passed - no HIGH or CRITICAL findings. ({suppressed} suppressed by baseline)')
-    print(f'Report saved to: {scan_out}')
-    sys.exit(0)
-
-print()
-print('=========================================')
-print(' SECURITY: HIGH/CRITICAL findings detected')
-print('=========================================')
-for i in severe:
-    sev = i['severity']
-    rid = i['id']
-    loc = i.get('location', {})
-    f = loc.get('file', '?')
-    line = loc.get('start_line', '?')
-    pattern = i.get('pattern', '')
-    print(f'  {sev}: {rid} in {f}:{line} - {pattern}')
-print()
-print('Review these findings and either fix them or add to .skillspector-baseline.yaml')
-print(f'Full report: {scan_out}')
-sys.exit(1)
-PY

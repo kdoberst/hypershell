@@ -108,15 +108,18 @@ tool with Python scripts, rule packs, and schemas needed by the audit.
 
 ```bash
 HARNESS_DIR="$(git rev-parse --show-toplevel)/apm_modules/hybrid-platforms-sec/ai-security-harness"
+HARNESS_URL="https://gitlab.cee.redhat.com/hybrid-platforms-sec/ai-security-harness.git"
+# Pin for reproducible audits. Override when intentionally upgrading the harness.
+HARNESS_REF="${AI_SECURITY_HARNESS_REF:-dac1533bde98179367fa2ee3cd2486bb81292140}"
 
 if [ -d "$HARNESS_DIR/.git" ]; then
-  git -C "$HARNESS_DIR" fetch origin main --depth 1
-  git -C "$HARNESS_DIR" reset --hard origin/main
+  git -C "$HARNESS_DIR" fetch origin "$HARNESS_REF" --depth 1
+  git -C "$HARNESS_DIR" reset --hard FETCH_HEAD
 else
   mkdir -p "$(dirname "$HARNESS_DIR")"
-  git clone --depth 1 --branch main \
-    https://gitlab.cee.redhat.com/hybrid-platforms-sec/ai-security-harness.git \
-    "$HARNESS_DIR"
+  git clone "$HARNESS_URL" "$HARNESS_DIR"
+  git -C "$HARNESS_DIR" fetch origin "$HARNESS_REF" --depth 1
+  git -C "$HARNESS_DIR" reset --hard FETCH_HEAD
 fi
 ```
 
@@ -238,11 +241,10 @@ Summarize:
 2. Top findings by severity (critical and high)
 3. Which pre-scanners ran vs. were skipped
 4. Any open questions or areas that need manual follow-up
-5. Recommend adding `security-audit/` to `.gitignore` if the user wants to keep reports out of version control
 
 ## Notes
 
 - The harness methodology is read-only against the target - it does not modify this repository's code.
 - Pre-scanner scripts may fail if the harness's Python deps aren't installed. That's OK - fall back to manual review for those sections and note it in the report.
 - The `contracts/` submodule in the harness may not be initialized in a shallow clone. If `validate_report.py` fails because the schema is missing, run `git -C $HARNESS_DIR submodule update --init contracts` first.
-- Add `security-audit/` to this repo's `.gitignore` to keep generated reports out of version control.
+- Generated reports under `security-audit/` are already ignored by this repo's `.gitignore`.
