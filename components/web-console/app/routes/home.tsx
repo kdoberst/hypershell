@@ -2,6 +2,7 @@ import { GatewaysPage } from "@openshift-online/hypershell-gateway-management-ui
 import { OperationalDashboardPage } from "@openshift-online/hypershell-operational-dashboard-ui";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
+import { RequireDashboardAdmin } from "../features/dashboard/require-dashboard-admin";
 import {
   parseGatewayListState,
   serializeGatewayListState,
@@ -19,7 +20,11 @@ export default function HomeRoute() {
   const navigate = useNavigate();
   const [searchParameters, setSearchParameters] = useSearchParams();
   if (isDashboardHost(globalThis.location.hostname)) {
-    return <OperationalDashboardPage />;
+    return (
+      <RequireDashboardAdmin>
+        <OperationalDashboardPage />
+      </RequireDashboardAdmin>
+    );
   }
   const collectionState = parseGatewayListState(searchParameters);
   const deletedGatewayName =

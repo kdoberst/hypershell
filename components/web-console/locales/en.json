@@ -35,14 +35,6 @@
     "defaultMessage": "Monitor fleet utilization, gateway health, and operational capacity.",
     "description": "Supporting text on the operational dashboard page."
   },
-  "app.dashboard.sampleData.bannerBody": {
-    "defaultMessage": "Metrics on this page are sample data until live operational metrics are connected.",
-    "description": "Body for the banner shown when the operational dashboard uses mock metrics."
-  },
-  "app.dashboard.sampleData.bannerTitle": {
-    "defaultMessage": "Sample data",
-    "description": "Title for the banner shown when the operational dashboard uses mock metrics."
-  },
   "app.dashboard.gatewayStatus.ariaDesc": {
     "defaultMessage": "Gateway count by status",
     "description": "Accessible description for the gateway status donut chart."
@@ -114,6 +106,14 @@
   "app.dashboard.resetToDefault": {
     "defaultMessage": "Reset to default",
     "description": "Label for restoring the operational dashboard default layout."
+  },
+  "app.dashboard.sampleData.bannerBody": {
+    "defaultMessage": "Metrics on this page are sample data until live operational metrics are connected.",
+    "description": "Body for the banner shown when the operational dashboard uses mock metrics."
+  },
+  "app.dashboard.sampleData.bannerTitle": {
+    "defaultMessage": "Sample data",
+    "description": "Title for the banner shown when the operational dashboard uses mock metrics."
   },
   "app.dashboard.summary.cpus": {
     "defaultMessage": "CPUs",
@@ -882,6 +882,14 @@
   "app.notifications": {
     "defaultMessage": "Notifications",
     "description": "Accessible label for transient application notifications."
+  },
+  "app.page.dashboard.accessDenied.body": {
+    "defaultMessage": "The operational dashboard is available only to HyperShell administrators.",
+    "description": "Recovery guidance shown when a signed-in user lacks the admin role for the dashboard."
+  },
+  "app.page.dashboard.accessDenied.title": {
+    "defaultMessage": "Access denied",
+    "description": "Heading shown when a signed-in user lacks the admin role for the dashboard."
   },
   "app.page.dashboard.description": {
     "defaultMessage": "Operational metrics dashboard for HyperShell adoption and provisioned resources.",
