@@ -35,7 +35,8 @@ export const messages = defineMessages({
   gatewayStatusDataLabel: {
     id: "app.dashboard.gatewayStatus.dataLabel",
     defaultMessage: "{status}: {count}",
-    description: "Data label for a gateway status donut chart segment.",
+    description:
+      "Data label for a gateway status donut chart segment. Superseded by statusDonutDataLabel.",
   },
   gatewayStatusDegraded: {
     id: "app.dashboard.gatewayStatus.degraded",
@@ -113,6 +114,26 @@ export const messages = defineMessages({
     defaultMessage: "Nodes",
     description: "Title for the nodes dashboard widget.",
   },
+  nodeStatusAriaDesc: {
+    id: "app.dashboard.nodeStatus.ariaDesc",
+    defaultMessage: "Node count by readiness",
+    description: "Accessible description for the node status donut chart.",
+  },
+  nodeStatusChartTitle: {
+    id: "app.dashboard.nodeStatus.chartTitle",
+    defaultMessage: "Node status chart",
+    description: "Accessible title for the node status donut chart.",
+  },
+  nodeStatusNotReady: {
+    id: "app.dashboard.nodeStatus.notReady",
+    defaultMessage: "Not ready",
+    description: "Legend label for not-ready nodes.",
+  },
+  nodeStatusReady: {
+    id: "app.dashboard.nodeStatus.ready",
+    defaultMessage: "Ready",
+    description: "Legend label for ready nodes.",
+  },
   pods: {
     id: "app.dashboard.summary.pods",
     defaultMessage: "Pods",
@@ -175,6 +196,16 @@ export const messages = defineMessages({
     defaultMessage: "Sample data",
     description:
       "Title for the banner shown when the operational dashboard uses mock metrics.",
+  },
+  statusDonutDataLabel: {
+    id: "app.dashboard.statusDonut.dataLabel",
+    defaultMessage: "{status}: {count}",
+    description: "Data label for a status donut chart segment.",
+  },
+  statusDonutLegend: {
+    id: "app.dashboard.statusDonut.legend",
+    defaultMessage: "{status}: {count}",
+    description: "Legend entry for a status donut chart segment.",
   },
   summary: {
     id: "app.dashboard.widget.summary",

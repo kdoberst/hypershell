@@ -2,16 +2,15 @@ import type { IntlShape } from "react-intl";
 
 import type { OperationalMetricStatus } from "../application/dashboard-types";
 import { messages } from "../messages";
+import { STATUS_DONUT_COLORS } from "./status-donut-colors";
+import {
+  buildStatusDonutData,
+  type StatusDonutDatum,
+  type StatusDonutLegendDatum,
+  type StatusDonutSeries,
+} from "./status-donut-data";
 
-/**
- * Gateway status colors aligned with PatternFly Alert and Label status semantics.
- */
-export const GATEWAY_STATUS_COLORS = {
-  degraded: "#ffcc17",
-  failed: "#b1380b",
-  healthy: "#63993d",
-  provisioning: "#0066cc",
-} as const;
+export const GATEWAY_STATUS_COLORS = STATUS_DONUT_COLORS;
 
 export const GATEWAY_STATUS_ORDER = [
   "healthy",
@@ -22,14 +21,8 @@ export const GATEWAY_STATUS_ORDER = [
 
 export type GatewayStatusKey = (typeof GATEWAY_STATUS_ORDER)[number];
 
-export interface GatewayStatusDatum {
-  x: string;
-  y: number;
-}
-
-export interface GatewayStatusLegendDatum {
-  name: string;
-}
+export type GatewayStatusDatum = StatusDonutDatum;
+export type GatewayStatusLegendDatum = StatusDonutLegendDatum;
 
 function gatewayStatusLabel(intl: IntlShape, status: GatewayStatusKey): string {
   switch (status) {
@@ -47,37 +40,21 @@ function gatewayStatusLabel(intl: IntlShape, status: GatewayStatusKey): string {
 export function buildGatewayStatusData(
   intl: IntlShape,
   status: OperationalMetricStatus,
-  colors: Record<GatewayStatusKey, string> = GATEWAY_STATUS_COLORS,
-): {
-  colorScale: string[];
-  data: GatewayStatusDatum[];
-  legendData: GatewayStatusLegendDatum[];
-} {
-  const entries = GATEWAY_STATUS_ORDER.flatMap((key) => {
-    const count = status[key];
-    if (count === undefined || count <= 0) {
-      return [];
-    }
+): StatusDonutSeries {
+  return buildStatusDonutData(
+    GATEWAY_STATUS_ORDER.map((key) => {
+      const count = status[key] ?? 0;
+      const label = gatewayStatusLabel(intl, key);
 
-    const label = gatewayStatusLabel(intl, key);
-
-    return [
-      {
-        color: colors[key],
-        datum: { x: label, y: count },
-        legend: {
-          name: intl.formatMessage(messages.gatewayStatusLegend, {
-            count,
-            status: label,
-          }),
-        },
-      },
-    ];
-  });
-
-  return {
-    colorScale: entries.map((entry) => entry.color),
-    data: entries.map((entry) => entry.datum),
-    legendData: entries.map((entry) => entry.legend),
-  };
+      return {
+        color: GATEWAY_STATUS_COLORS[key],
+        count,
+        label,
+        legendName: intl.formatMessage(messages.statusDonutLegend, {
+          count,
+          status: label,
+        }),
+      };
+    }),
+  );
 }

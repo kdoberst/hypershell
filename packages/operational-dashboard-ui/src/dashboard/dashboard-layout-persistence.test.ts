@@ -19,6 +19,7 @@ describe("dashboard layout persistence", () => {
       "registered-users",
       "cpu",
       "pods",
+      "nodes",
     ]);
   });
 

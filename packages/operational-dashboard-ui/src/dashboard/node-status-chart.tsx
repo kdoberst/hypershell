@@ -3,14 +3,12 @@ import { useIntl } from "react-intl";
 
 import type { OperationalMetric } from "../application/dashboard-types";
 import { messages } from "../messages";
-import { buildGatewayStatusData } from "./gateway-status-data";
+import { buildNodeStatusData } from "./node-status-data";
 import { isStatusDonutMetric } from "./status-donut-metric";
 import { StatusDonutChart } from "./status-donut-chart";
 import type { StatusDonutDatum } from "./status-donut-data";
 
-export { isStatusDonutMetric as isGatewayStatusMetric } from "./status-donut-metric";
-
-export function GatewayStatusChart({
+export function NodeStatusChart({
   metric,
 }: Readonly<{ metric: OperationalMetric }>) {
   const intl = useIntl();
@@ -20,7 +18,7 @@ export function GatewayStatusChart({
       return { colorScale: [], data: [], legendData: [] };
     }
 
-    return buildGatewayStatusData(intl, metric.status);
+    return buildNodeStatusData(intl, metric.status);
   }, [intl, metric]);
 
   if (!isStatusDonutMetric(metric)) {
@@ -29,8 +27,8 @@ export function GatewayStatusChart({
 
   return (
     <StatusDonutChart
-      ariaDesc={intl.formatMessage(messages.gatewayStatusAriaDesc)}
-      ariaTitle={intl.formatMessage(messages.gatewayStatusChartTitle)}
+      ariaDesc={intl.formatMessage(messages.nodeStatusAriaDesc)}
+      ariaTitle={intl.formatMessage(messages.nodeStatusChartTitle)}
       colorScale={colorScale}
       data={data}
       dataLabel={(datum: StatusDonutDatum) =>
@@ -42,7 +40,7 @@ export function GatewayStatusChart({
           : null
       }
       legendData={legendData}
-      subTitle={intl.formatMessage(messages.gateways)}
+      size="compact"
       title={metric.value}
     />
   );
