@@ -5,6 +5,10 @@ import type { OperationalMetric } from "../application/dashboard-types";
 import { messages } from "../messages";
 import { buildPodCapacityData } from "./pod-capacity-data";
 import { isPodCapacityMetric } from "./pod-capacity-metric";
+import {
+  formatOperationalMetricDisplayValue,
+  isDisplayableOperationalMetricValue,
+} from "./operational-metric-display";
 import { StatusDonutChart } from "./status-donut-chart";
 import type { StatusDonutDatum } from "./status-donut-data";
 
@@ -12,6 +16,7 @@ export function PodCapacityChart({
   metric,
 }: Readonly<{ metric: OperationalMetric }>) {
   const intl = useIntl();
+  const displayValue = formatOperationalMetricDisplayValue(metric.value, intl);
 
   const { colorScale, data, legendData } = useMemo(() => {
     if (!isPodCapacityMetric(metric)) {
@@ -46,11 +51,15 @@ export function PodCapacityChart({
       }
       legendData={legendData}
       size="compact"
-      subTitle={intl.formatMessage(messages.utilizationSubtitle, {
-        total: metric.total,
-        unit: metric.unit,
-      })}
-      title={metric.value}
+      subTitle={
+        isDisplayableOperationalMetricValue(metric.total)
+          ? intl.formatMessage(messages.utilizationSubtitle, {
+              total: metric.total,
+              unit: metric.unit,
+            })
+          : undefined
+      }
+      title={displayValue}
     />
   );
 }

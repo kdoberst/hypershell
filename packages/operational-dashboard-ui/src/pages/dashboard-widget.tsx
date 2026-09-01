@@ -31,6 +31,10 @@ import {
   getMetricTrendChange,
   type MetricTrendChange,
 } from "../dashboard/metric-trend-change";
+import {
+  formatOperationalMetricDisplayValue,
+  isDisplayableOperationalMetricValue,
+} from "../dashboard/operational-metric-display";
 import { TrendSparklineChart } from "../dashboard/trend-sparkline-chart";
 import { getGatewayExceptionStatusCounts } from "../dashboard/gateway-exception-status-counts";
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
@@ -68,6 +72,13 @@ export function MetricCard({
   title: string;
 }>) {
   const intl = useIntl();
+  const displayValue = formatOperationalMetricDisplayValue(metric.value, intl);
+  const metricHeading = isDisplayableOperationalMetricValue(metric.value)
+    ? intl.formatMessage(messages.metricValue, {
+        label: title,
+        value: displayValue,
+      })
+    : displayValue;
 
   return (
     <WidgetContent>
@@ -77,10 +88,7 @@ export function MetricCard({
             <Flex justifyContent={{ default: "justifyContentCenter" }}>
               <FlexItem>
                 <Title headingLevel="h3" size="lg">
-                  {intl.formatMessage(messages.metricValue, {
-                    label: title,
-                    value: metric.value,
-                  })}
+                  {metricHeading}
                 </Title>
                 {subtitle ? <small>{subtitle}</small> : null}
               </FlexItem>
@@ -261,6 +269,14 @@ function SummaryUtilizationValue({
     return null;
   }
 
+  if (
+    !isDisplayableOperationalMetricValue(metric.value) ||
+    (metric.total !== undefined &&
+      !isDisplayableOperationalMetricValue(metric.total))
+  ) {
+    return <>{formatOperationalMetricDisplayValue(metric.value, intl)}</>;
+  }
+
   if (!isUtilizationMetric(metric)) {
     return (
       <>
@@ -302,14 +318,18 @@ function SummaryUtilizationValue({
 function SummaryMetricValue({
   metric,
 }: Readonly<{ metric: OperationalMetric | undefined }>) {
+  const intl = useIntl();
   const trendChange = metric ? getMetricTrendChange(metric) : undefined;
+  const displayValue = metric
+    ? formatOperationalMetricDisplayValue(metric.value, intl)
+    : undefined;
 
   return (
     <Flex
       alignItems={{ default: "alignItemsCenter" }}
       spaceItems={{ default: "spaceItemsSm" }}
     >
-      <FlexItem>{metric?.value}</FlexItem>
+      <FlexItem>{displayValue}</FlexItem>
       {trendChange ? (
         <FlexItem>
           <SummaryTrendIndicator trendChange={trendChange} />

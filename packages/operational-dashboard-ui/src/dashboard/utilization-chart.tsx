@@ -7,6 +7,10 @@ import type {
   OperationalMetricTrend,
 } from "../application/dashboard-types";
 import { messages } from "../messages";
+import {
+  formatOperationalMetricDisplayValue,
+  isDisplayableOperationalMetricValue,
+} from "./operational-metric-display";
 import "../pages/dashboard-widget.css";
 
 interface UsageData {
@@ -75,6 +79,18 @@ export function UtilizationChart({
   }
 
   const { unit, total, value } = metric;
+
+  if (
+    !isDisplayableOperationalMetricValue(value) ||
+    !isDisplayableOperationalMetricValue(total)
+  ) {
+    return (
+      <Title headingLevel="h3" size="lg">
+        {formatOperationalMetricDisplayValue(value, intl)}
+      </Title>
+    );
+  }
+
   const percentage = getUtilizationPercentage(value, total);
   const capacityLabel = intl.formatMessage(messages.utilizationCapacity, {
     unit,

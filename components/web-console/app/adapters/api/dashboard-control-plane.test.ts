@@ -322,6 +322,37 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
   });
 
+  it("treats omitted active_sandbox_count as zero when summing sandboxes", async () => {
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
+
+    usersListApi.mockResolvedValueOnce({
+      items: [],
+      kind: "UserList",
+      page: 1,
+      size: 1,
+      total: 0,
+    });
+
+    gatewayListApi.mockResolvedValueOnce(
+      gatewayList(
+        [
+          gateway({ active_sandbox_count: 2 }),
+          gateway({ active_sandbox_count: undefined }),
+          gateway({ active_sandbox_count: 3 }),
+        ],
+        3,
+        1,
+      ),
+    );
+
+    const metrics = await adapter.getOperationalMetrics(context);
+    const sandboxesMetric = metrics.metrics.find(
+      (metric) => metric.id === "provisioned-sandboxes",
+    );
+
+    expect(sandboxesMetric?.value).toBe("5");
+  });
+
   it("averages provision duration across Running gateways only", async () => {
     mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
 

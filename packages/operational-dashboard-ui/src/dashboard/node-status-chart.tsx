@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import type { OperationalMetric } from "../application/dashboard-types";
 import { messages } from "../messages";
 import { buildNodeStatusData } from "./node-status-data";
+import { formatOperationalMetricDisplayValue } from "./operational-metric-display";
 import { isStatusDonutMetric } from "./status-donut-metric";
 import { StatusDonutChart } from "./status-donut-chart";
 import type { StatusDonutDatum } from "./status-donut-data";
@@ -41,7 +42,7 @@ export function NodeStatusChart({
       }
       legendData={legendData}
       size="compact"
-      title={metric.value}
+      title={formatOperationalMetricDisplayValue(metric.value, intl)}
     />
   );
 }
