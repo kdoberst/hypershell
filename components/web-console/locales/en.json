@@ -32,7 +32,7 @@
     "description": "Label for the button that opens the widget drawer."
   },
   "app.dashboard.description": {
-    "defaultMessage": "Live gateway and sandbox counts are shown where data is available. Other widgets remain placeholders until their metrics are connected.",
+    "defaultMessage": "Live view of gateway fleet health, hub cluster capacity, and platform usage. Metrics refresh every 15 minutes; use Refresh to update now.",
     "description": "Supporting text on the operational dashboard page."
   },
   "app.dashboard.gatewayStatus.ariaDesc": {
