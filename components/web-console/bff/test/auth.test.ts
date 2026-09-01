@@ -783,7 +783,12 @@ describe("web-console BFF with OIDC enabled", () => {
   // -----------------------------------------------------------------------
 
   it("redirects unauthenticated GETs to application routes to /auth/login", async () => {
-    for (const route of ["/", "/gateways/new", "/gateways/gw-1"]) {
+    for (const route of [
+      "/",
+      "/dashboard",
+      "/gateways/new",
+      "/gateways/gw-1",
+    ]) {
       const response = await app.inject({ method: "GET", url: route });
       expect(response.statusCode, route).toBe(302);
       expect(response.headers.location, route).toBe("/auth/login");
