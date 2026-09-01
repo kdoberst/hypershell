@@ -30,6 +30,11 @@ interface ClusterCpuResponse {
 interface ClusterPodsResponse {
   available_pods: number;
   capacity_pods: number;
+  phase_failed_pods: number;
+  phase_pending_pods: number;
+  phase_running_pods: number;
+  phase_succeeded_pods: number;
+  phase_unknown_pods: number;
   used_pods: number;
 }
 
@@ -110,6 +115,13 @@ async function fetchClusterPodsMetric(
 
   return {
     id: "pods",
+    podPhases: {
+      failed: body.phase_failed_pods,
+      pending: body.phase_pending_pods,
+      running: body.phase_running_pods,
+      succeeded: body.phase_succeeded_pods,
+      unknown: body.phase_unknown_pods,
+    },
     total: String(body.capacity_pods),
     unit: "pods",
     value: String(body.used_pods),

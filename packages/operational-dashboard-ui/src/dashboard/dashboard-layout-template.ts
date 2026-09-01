@@ -8,6 +8,8 @@ const METRIC_ROW_GAP = 1;
 const METRIC_ROW_STEP = METRIC_WIDGET_HEIGHT + METRIC_ROW_GAP;
 /** One row taller than standard metric widgets; fits a compact status donut. */
 export const NODE_STATUS_WIDGET_HEIGHT = METRIC_WIDGET_HEIGHT + 1;
+/** Pod capacity donut shares the same height as the nodes status widget. */
+export const POD_CAPACITY_WIDGET_HEIGHT = NODE_STATUS_WIDGET_HEIGHT;
 /** Gateway status spans two metric rows plus the row gap between them. */
 export const GATEWAY_STATUS_WIDGET_HEIGHT =
   METRIC_WIDGET_HEIGHT * 2 + METRIC_ROW_GAP;
@@ -15,7 +17,8 @@ const SUMMARY_COLUMN_HEIGHT = METRIC_WIDGET_HEIGHT + 2 * METRIC_ROW_STEP;
 const BASE_SUMMARY_WIDGET_HEIGHT = (SUMMARY_COLUMN_HEIGHT - METRIC_ROW_GAP) / 2;
 /** Equal height for usage and system summary widgets in the left column. */
 export const USAGE_SUMMARY_WIDGET_HEIGHT = BASE_SUMMARY_WIDGET_HEIGHT + 1;
-export const SYSTEM_SUMMARY_WIDGET_HEIGHT = USAGE_SUMMARY_WIDGET_HEIGHT;
+/** One row taller than usage summary; fits exception status rows on pods and nodes. */
+export const SYSTEM_SUMMARY_WIDGET_HEIGHT = USAGE_SUMMARY_WIDGET_HEIGHT + 1;
 const SYSTEM_SUMMARY_WIDGET_Y = USAGE_SUMMARY_WIDGET_HEIGHT + METRIC_ROW_GAP;
 
 const WIDGET_TITLE_MESSAGES = {
@@ -97,7 +100,7 @@ const fourColumnLayout = [
     y: METRIC_ROW_STEP,
   },
   {
-    h: METRIC_WIDGET_HEIGHT,
+    h: POD_CAPACITY_WIDGET_HEIGHT,
     i: "pods#1",
     title: "Pods",
     w: 1,
@@ -207,7 +210,7 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         METRIC_ROW_STEP * 3,
     },
     {
-      h: METRIC_WIDGET_HEIGHT,
+      h: POD_CAPACITY_WIDGET_HEIGHT,
       i: "pods#1",
       title: "Pods",
       w: 1,

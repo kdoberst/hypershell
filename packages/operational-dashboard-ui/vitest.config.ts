@@ -13,6 +13,7 @@ export default defineConfig({
         "src/dashboard/dashboard-layout-persistence.ts",
         "src/dashboard/gateway-status-data.ts",
         "src/dashboard/node-status-data.ts",
+        "src/dashboard/pod-capacity-data.ts",
         "src/dashboard/status-donut-data.ts",
         "src/dashboard/metric-trend-change.ts",
       ],

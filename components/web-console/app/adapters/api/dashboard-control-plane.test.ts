@@ -24,6 +24,17 @@ const context = {
   correlationId: "11111111-1111-4111-8111-111111111111",
 };
 
+const mockClusterPodsResponse = {
+  available_pods: 1452,
+  capacity_pods: 2000,
+  phase_failed_pods: 16,
+  phase_pending_pods: 12,
+  phase_running_pods: 500,
+  phase_succeeded_pods: 20,
+  phase_unknown_pods: 0,
+  used_pods: 548,
+};
+
 function mockClusterMetricsResponses(
   capacityBytes: number,
   usedBytes: number,
@@ -53,12 +64,7 @@ function mockClusterMetricsResponses(
     }
     if (url === "/api/metrics/cluster-pods") {
       return Promise.resolve({
-        json: () =>
-          Promise.resolve({
-            available_pods: 1452,
-            capacity_pods: 2000,
-            used_pods: 548,
-          }),
+        json: () => Promise.resolve(mockClusterPodsResponse),
         ok: true,
       });
     }
@@ -234,6 +240,13 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
     expect(podsMetric).toEqual({
       id: "pods",
+      podPhases: {
+        failed: 16,
+        pending: 12,
+        running: 500,
+        succeeded: 20,
+        unknown: 0,
+      },
       total: "2000",
       unit: "pods",
       value: "548",
@@ -463,9 +476,7 @@ describe("createDashboardControlPlaneAdapter", () => {
         return Promise.resolve({
           json: () =>
             Promise.resolve({
-              available_pods: 1452,
-              capacity_pods: 2000,
-              used_pods: 548,
+              ...mockClusterPodsResponse,
             }),
           ok: true,
         });
@@ -520,9 +531,7 @@ describe("createDashboardControlPlaneAdapter", () => {
         return Promise.resolve({
           json: () =>
             Promise.resolve({
-              available_pods: 1452,
-              capacity_pods: 2000,
-              used_pods: 548,
+              ...mockClusterPodsResponse,
             }),
           ok: true,
         });
@@ -639,9 +648,7 @@ describe("createDashboardControlPlaneAdapter", () => {
         return Promise.resolve({
           json: () =>
             Promise.resolve({
-              available_pods: 1452,
-              capacity_pods: 2000,
-              used_pods: 548,
+              ...mockClusterPodsResponse,
             }),
           ok: true,
         });

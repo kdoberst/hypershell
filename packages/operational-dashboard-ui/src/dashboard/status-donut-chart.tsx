@@ -28,6 +28,22 @@ export const COMPACT_STATUS_DONUT_CHART_PADDING = {
   top: 4,
 } as const;
 
+/** Extra bottom padding reserves space for the capacity subtitle without enlarging the donut. */
+export const COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_PADDING = {
+  bottom: 28,
+  left: 12,
+  right: 115,
+  top: 4,
+} as const;
+
+/** Same donut ring as compact; extra height fits the subtitle below the chart. */
+export const COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_HEIGHT =
+  COMPACT_STATUS_DONUT_CHART_HEIGHT -
+  COMPACT_STATUS_DONUT_CHART_PADDING.top -
+  COMPACT_STATUS_DONUT_CHART_PADDING.bottom +
+  COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_PADDING.top +
+  COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_PADDING.bottom;
+
 export type StatusDonutChartSize = "compact" | "default";
 
 export interface StatusDonutChartProps {
@@ -55,13 +71,18 @@ export function StatusDonutChart({
 }: Readonly<StatusDonutChartProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(275);
+  const compactWithSubtitle = size === "compact" && subTitle !== undefined;
   const chartHeight =
     size === "compact"
-      ? COMPACT_STATUS_DONUT_CHART_HEIGHT
+      ? compactWithSubtitle
+        ? COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_HEIGHT
+        : COMPACT_STATUS_DONUT_CHART_HEIGHT
       : STATUS_DONUT_CHART_HEIGHT;
   const chartPadding =
     size === "compact"
-      ? COMPACT_STATUS_DONUT_CHART_PADDING
+      ? compactWithSubtitle
+        ? COMPACT_STATUS_DONUT_WITH_SUBTITLE_CHART_PADDING
+        : COMPACT_STATUS_DONUT_CHART_PADDING
       : STATUS_DONUT_CHART_PADDING;
 
   useEffect(() => {

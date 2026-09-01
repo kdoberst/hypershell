@@ -48,9 +48,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; cluster-memory CM-W1–W3, cluster-cpu CC-W1–W3, cluster-pods CLP-W1–W3, cluster-nodes CLN-W1–W3, gateway-provision-time GPT-W1 executed; OP-DASH-16 status donut + nodes widget alignment; registered-users complete; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
+**Last analyzed**: 2026-09-02 (scoped analysis of the CP-OBS-07 Gateway provision-duration changes; cluster-memory CM-W1–W3, cluster-cpu CC-W1–W3, cluster-pods CLP-W1–W3, cluster-nodes CLN-W1–W3, gateway-provision-time GPT-W1 executed; OP-DASH-16 status donut + nodes widget alignment; OP-DASH-17 pod capacity chart + phase breakdown; registered-users complete; operational-dashboard OP-W1 complete; Keycloak event-storm KC-ES-W1 complete; OpenShift local-dev OS-W2 complete; rebased e2e performance harness and manual OpenShift e2e driver from 2026-08-25/27)
 **Spec corpus**: 48 spec files; the coverage table tracks 39 analyzed feature/spec groups after adding OpenShell Gateway Console, OpenShift Development, Operational Dashboard, Registered Users, Cluster Memory, Cluster CPU, Cluster Pods, Cluster Nodes, and Gateway Provision Time
-**Codebase commit**: working tree (CP-OBS-GPD-W1 + cluster memory + cluster CPU + cluster pods + cluster nodes Prometheus/kube-state-metrics scrape, BFF routes, dashboard adapters + shared status donut + gateway provision time + registered users API + OpenShift local-dev OS-W2 + Keycloak event-storm KC-ES-W1; e2e performance + OpenShift driver)
+**Codebase commit**: working tree (CP-OBS-GPD-W1 + cluster memory + cluster CPU + cluster pods + cluster nodes Prometheus/kube-state-metrics scrape, BFF routes, dashboard adapters + shared status donut + gateway provision time + registered users API + pod capacity chart with phase breakdown + OpenShift local-dev OS-W2 + Keycloak event-storm KC-ES-W1; e2e performance + OpenShift driver)
 
 ### Coverage Summary
 
@@ -389,12 +389,13 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 | OP-DASH-08 | Connected vs placeholder metrics | Present | - | `DATA_SOURCES.md`, `dashboard/dashboard-data.ts` | OP-W1 ✅ |
 | OP-DASH-09 | Metrics refresh policy (15 min + manual refresh) | Present | - | `get-metrics-data.ts`, `operational-dashboard-page.tsx` | - |
 | OP-DASH-10 | Widgetized grid layout | Present | - | `operational-dashboard-page.tsx`, `dashboard-layout-template.ts` | - |
-| OP-DASH-11 | Layout persistence (`localStorage` v17) | Present | - | `operational-dashboard-page.tsx` | - |
+| OP-DASH-11 | Layout persistence (`localStorage` v18) | Present | - | `operational-dashboard-page.tsx` | - |
 | OP-DASH-12 | Gateway status donut widget | Present | - | `dashboard/gateway-status-chart.tsx`, `dashboard/status-donut-chart.tsx`, `dashboard-widget.tsx` | - |
 | OP-DASH-13 | Metric, utilization, and summary widgets | Present | - | `dashboard-widget.tsx`, `dashboard/utilization-chart.tsx` | - |
 | OP-DASH-14 | Localization and accessibility | Present | - | `messages.ts`, `web-console/locales/en.json` | - |
 | OP-DASH-15 | Verification fixtures and Storybook | Present | - | `fixtures/`, `operational-dashboard.stories.tsx`, `src/dashboard/*.test.ts`, `dashboard-control-plane.test.ts` | OP-W1 ✅ |
 | OP-DASH-16 | Shared status donut + nodes widget | Present | - | `dashboard/status-donut-*.ts(x)`, `dashboard/node-status-*.ts(x)`, `dashboard-layout-template.ts` | - |
+| OP-DASH-17 | Pod capacity widget (phase + Unused segments) | Present | - | `dashboard/pod-capacity-*.ts(x)`, `bff/src/metrics-cluster-pods.ts`, `dashboard-control-plane.ts` | - |
 
 **Scoped analysis notes:**
 
@@ -402,6 +403,7 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 - `dashboard.layout.template.invalid` probe name is declared but never published; invalid saved templates silently fall back to default (acceptable for v1; no gap recorded).
 - CI registers `packages/operational-dashboard-ui` with `pnpm check` in `.github/workflows/lint.yml`.
 - OP-DASH-16 (2026-08-31): shared `StatusDonutChart` stack; `nodes` widget at `NODE_STATUS_WIDGET_HEIGHT`; layout persistence key `hypershell.operational-dashboard.layout.v17`.
+- OP-DASH-17 (2026-08-31): `pods` widget uses `PodCapacityChart` (phase segments + gray Unused); BFF phase PromQL; layout persistence key `hypershell.operational-dashboard.layout.v18`. Operational dashboard 17/17 present.
 
 ### registered-users.spec.md
 
@@ -473,8 +475,8 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 
 **Scoped analysis notes:**
 
-- **Delivered:** kube-state-metrics Deployment/ServiceMonitor; BFF instant queries for capacity/used pods; dashboard adapter maps to `pods` metric; OP-DASH-08 `pods` row connected.
-- **Used pods:** `count(kube_pod_info)` — all phases including Failed/Succeeded while objects exist; utilization donut only (no phase breakdown in v1).
+- **Delivered:** kube-state-metrics Deployment/ServiceMonitor; BFF instant queries for capacity/used pods and per-phase counts; dashboard adapter maps to `pods` metric with `podPhases`; `pods` widget uses `PodCapacityChart` (OP-DASH-17); OP-DASH-08 `pods` row connected.
+- **Used pods:** `count(kube_pod_info)` — all phases including Failed/Succeeded while objects exist; phase breakdown via `kube_pod_status_phase`; Unused segment = `capacity - used`.
 - **Scrape target:** `registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0`.
 
 ### cluster-nodes.spec.md
@@ -1172,4 +1174,5 @@ label-selected pod informer.
 | 2026-08-31 | working tree | Dry-run: gateway-provision-time | 85% | Authored `platform/gateway-provision-time.spec.md` (8 reqs: 1 present, 7 missing). Mean duration from gateway list timestamps; no BFF route. Planned GPT-W1 (adapter). |
 | 2026-08-31 | 54cf5b0 | OP-DASH-16: status donut + nodes widget alignment | 85% | Shared `StatusDonutChart`; `nodes` widget; layout v17; `i18n:extract` for new dashboard message IDs; OP-DASH-16 scenario aligned with implementation (no chart subtitle). Operational dashboard 16/16 present. |
 | 2026-08-31 | working tree | Executed GPT-W1: gateway provision time | 85% | Adapter computes mean `Running` gateway provision minutes from paginated list; `provision-time` metric connected; adapter tests; `DATA_SOURCES.md` + OP-DASH-08 updated. Gateway provision time 8/8 present. OP-DASH-08 all metrics connected. |
+| 2026-08-31 | working tree | OP-DASH-17: pod capacity chart + phase breakdown | 85% | BFF phase PromQL + validation; `PodCapacityChart` with Unused segment; layout v18; CLP-02/04/05 spec updates; BFF + adapter tests. Operational dashboard 17/17 present. |
 | 2026-09-01 | feecbcb, da771fb | Reconciled commit-driven stale doc gaps | 84% (unchanged) | Two recent commits removed hardcoded image defaults (`GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` now required env vars, no fallback) and unified deploy paths (deleted `components/api-server/deploy/*`, using repo-root `deploy/` as single source of truth). Updated 7 docs: `skills/deploy/ibm-cluster/SKILL.md` (image refs, path, namespace, image-var explanation), `skills/deploy/gcp-cluster/SKILL.md` (path fix, RBAC ref), `skills/deploy/deploy-cluster/SKILL.md` (full rewrite: Keycloak bootstrap, `hypershell-api-config` Secret creation, CNPG database, OIDC/JWT security, troubleshooting for missing Secret), `skills/tooling/update-openshell/SKILL.md` (grep patterns for new image names, search path fixes), `skills/RECONCILE.md` (skill directory tree, this log entry), `README.md` (env var rows, namespace refs), `specs/platform/openshift-development.spec.md` (deploy/ directory layout, overlay limitations note). Overlay gaps surfaced: `deploy/openshift/` requires manually-created `hypershell-api-config` Secret (missing from repo; documented in deploy-cluster), hardcoded domain placeholder, missing Keycloak Route on OpenShift. Marked as known limitations in specs. |

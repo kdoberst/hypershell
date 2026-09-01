@@ -139,6 +139,46 @@ export const messages = defineMessages({
     defaultMessage: "Pods",
     description: "Summary label for pod utilization.",
   },
+  podStatusAriaDesc: {
+    id: "app.dashboard.podStatus.ariaDesc",
+    defaultMessage: "Pod capacity by phase and unused slots",
+    description: "Accessible description for the pod capacity donut chart.",
+  },
+  podStatusChartTitle: {
+    id: "app.dashboard.podStatus.chartTitle",
+    defaultMessage: "Pod capacity chart",
+    description: "Accessible title for the pod capacity donut chart.",
+  },
+  podStatusFailed: {
+    id: "app.dashboard.podStatus.failed",
+    defaultMessage: "Failed",
+    description: "Legend label for failed pods.",
+  },
+  podStatusPending: {
+    id: "app.dashboard.podStatus.pending",
+    defaultMessage: "Pending",
+    description: "Legend label for pending pods.",
+  },
+  podStatusRunning: {
+    id: "app.dashboard.podStatus.running",
+    defaultMessage: "Running",
+    description: "Legend label for running pods.",
+  },
+  podStatusSucceeded: {
+    id: "app.dashboard.podStatus.succeeded",
+    defaultMessage: "Succeeded",
+    description: "Legend label for succeeded pods.",
+  },
+  podStatusUnknown: {
+    id: "app.dashboard.podStatus.unknown",
+    defaultMessage: "Unknown",
+    description: "Legend label for unknown-phase pods.",
+  },
+  podStatusUnused: {
+    id: "app.dashboard.podStatus.unused",
+    defaultMessage: "Unused",
+    description: "Legend label for unused pod capacity slots.",
+  },
   provisionedGateways: {
     id: "app.dashboard.widget.provisionedGateways",
     defaultMessage: "Provisioned gateways",
