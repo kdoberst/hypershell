@@ -100,10 +100,7 @@ describe("queryClusterNodes", () => {
 
     try {
       await expect(
-        queryClusterNodes(
-          `http://127.0.0.1:${String(prometheus.port)}`,
-          5_000,
-        ),
+        queryClusterNodes(`http://127.0.0.1:${String(prometheus.port)}`, 5_000),
       ).rejects.toThrow("No cluster node data");
     } finally {
       prometheus.close();
@@ -129,10 +126,7 @@ describe("queryClusterNodes", () => {
 
     try {
       await expect(
-        queryClusterNodes(
-          `http://127.0.0.1:${String(prometheus.port)}`,
-          5_000,
-        ),
+        queryClusterNodes(`http://127.0.0.1:${String(prometheus.port)}`, 5_000),
       ).rejects.toThrow("Inconsistent cluster node samples");
     } finally {
       prometheus.close();

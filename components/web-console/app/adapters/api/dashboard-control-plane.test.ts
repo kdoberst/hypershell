@@ -201,7 +201,9 @@ describe("createDashboardControlPlaneAdapter", () => {
     const registeredUsersMetric = metrics.metrics.find(
       (metric) => metric.id === "registered-users",
     );
-    const memoryMetric = metrics.metrics.find((metric) => metric.id === "memory");
+    const memoryMetric = metrics.metrics.find(
+      (metric) => metric.id === "memory",
+    );
     const cpuMetric = metrics.metrics.find((metric) => metric.id === "cpu");
     const podsMetric = metrics.metrics.find((metric) => metric.id === "pods");
     const nodesMetric = metrics.metrics.find((metric) => metric.id === "nodes");
