@@ -411,7 +411,7 @@ Loading states SHALL use a `Spinner` with a localized `aria-label`. Empty and er
 
 ### Requirement: OP-DASH-15 -- Verification Fixtures
 
-The operational-dashboard-ui package SHALL ship `mockOperationalDashboardMetrics` containing all widget metric IDs with representative `status`, `trend`, `unit`, and `total` fields for Storybook and local development.
+The operational-dashboard-ui package SHALL ship `mockOperationalDashboardMetrics` containing all widget metric IDs with representative fields matching production adapter output (`status`, `podPhases`, `unit`, `total` where applicable). Fixtures SHALL NOT include `trend` data because historical series are not loaded in version 1.
 
 The web console SHALL provide Storybook stories for default, loading, initial-load-error, and refresh-error states using mock or stub `DashboardControlPlane` adapters.
 
