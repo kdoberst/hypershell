@@ -1,4 +1,9 @@
-import { createServer, type Server } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -151,7 +156,7 @@ describe("GET /api/metrics/cluster-cpu", () => {
   }
 
   async function startPrometheusStub(
-    handler: Parameters<typeof createServer>[0],
+    handler: (request: IncomingMessage, response: ServerResponse) => void,
   ): Promise<string> {
     prometheusServer = createServer(handler);
     await new Promise<void>((resolve) => {

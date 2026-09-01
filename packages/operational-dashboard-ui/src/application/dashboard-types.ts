@@ -14,8 +14,17 @@ export interface OperationalMetricStatus {
   provisioning?: number;
 }
 
+export interface OperationalMetricPodPhases {
+  failed: number;
+  pending: number;
+  running: number;
+  succeeded: number;
+  unknown: number;
+}
+
 export interface OperationalMetric {
   id: string;
+  podPhases?: OperationalMetricPodPhases;
   status?: OperationalMetricStatus;
   total?: string;
   trend?: OperationalMetricTrend;

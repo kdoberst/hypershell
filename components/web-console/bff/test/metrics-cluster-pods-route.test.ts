@@ -1,4 +1,9 @@
-import { createServer, type Server } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,8 +14,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import type { ServerConfig } from "../src/config.js";
 import {
+  clusterPodPhasePromql,
   clusterPodsCapacityPromql,
   clusterPodsUsedPromql,
+  type ClusterPodPhase,
 } from "../src/metrics-cluster-pods.js";
 
 const testSessionSecret =
@@ -28,6 +35,49 @@ function prometheusSample(value: string) {
       ],
     },
   });
+}
+
+const defaultPhaseCounts: Record<ClusterPodPhase, string> = {
+  Failed: "16",
+  Pending: "12",
+  Running: "500",
+  Succeeded: "20",
+  Unknown: "0",
+};
+
+function handleClusterPodsQuery(
+  query: string | null,
+  response: ServerResponse,
+  options: {
+    capacity?: string;
+    phases?: Partial<Record<ClusterPodPhase, string>>;
+    used?: string;
+  } = {},
+): boolean {
+  response.setHeader("content-type", "application/json");
+  if (query === clusterPodsCapacityPromql) {
+    response.end(prometheusSample(options.capacity ?? "2000"));
+    return true;
+  }
+  if (query === clusterPodsUsedPromql) {
+    response.end(prometheusSample(options.used ?? "548"));
+    return true;
+  }
+  for (const phase of [
+    "Pending",
+    "Running",
+    "Succeeded",
+    "Failed",
+    "Unknown",
+  ] as const) {
+    if (query === clusterPodPhasePromql(phase)) {
+      response.end(
+        prometheusSample(options.phases?.[phase] ?? defaultPhaseCounts[phase]),
+      );
+      return true;
+    }
+  }
+  return false;
 }
 
 function createOidcServer(): Promise<{ close: () => void; issuer: string }> {
@@ -151,7 +201,7 @@ describe("GET /api/metrics/cluster-pods", () => {
   }
 
   async function startPrometheusStub(
-    handler: Parameters<typeof createServer>[0],
+    handler: (request: IncomingMessage, response: ServerResponse) => void,
   ): Promise<string> {
     prometheusServer = createServer(handler);
     await new Promise<void>((resolve) => {
@@ -168,13 +218,7 @@ describe("GET /api/metrics/cluster-pods", () => {
     const prometheusUrl = await startPrometheusStub((request, response) => {
       const url = new URL(request.url ?? "", "http://127.0.0.1");
       const query = url.searchParams.get("query");
-      response.setHeader("content-type", "application/json");
-      if (query === clusterPodsCapacityPromql) {
-        response.end(prometheusSample("2000"));
-        return;
-      }
-      if (query === clusterPodsUsedPromql) {
-        response.end(prometheusSample("548"));
+      if (handleClusterPodsQuery(query, response)) {
         return;
       }
       response.statusCode = 400;
@@ -191,6 +235,11 @@ describe("GET /api/metrics/cluster-pods", () => {
     expect(response.json()).toEqual({
       available_pods: 1452,
       capacity_pods: 2000,
+      phase_failed_pods: 16,
+      phase_pending_pods: 12,
+      phase_running_pods: 500,
+      phase_succeeded_pods: 20,
+      phase_unknown_pods: 0,
       used_pods: 548,
     });
   });
@@ -240,13 +289,19 @@ describe("GET /api/metrics/cluster-pods", () => {
     const prometheusUrl = await startPrometheusStub((request, response) => {
       const url = new URL(request.url ?? "", "http://127.0.0.1");
       const query = url.searchParams.get("query");
-      response.setHeader("content-type", "application/json");
-      if (query === clusterPodsCapacityPromql) {
-        response.end(prometheusSample("100"));
-        return;
-      }
-      if (query === clusterPodsUsedPromql) {
-        response.end(prometheusSample("42"));
+      if (
+        handleClusterPodsQuery(query, response, {
+          capacity: "100",
+          phases: {
+            Failed: "0",
+            Pending: "2",
+            Running: "40",
+            Succeeded: "0",
+            Unknown: "0",
+          },
+          used: "42",
+        })
+      ) {
         return;
       }
       response.statusCode = 400;
@@ -283,6 +338,11 @@ describe("GET /api/metrics/cluster-pods", () => {
     expect(response.json()).toEqual({
       available_pods: 58,
       capacity_pods: 100,
+      phase_failed_pods: 0,
+      phase_pending_pods: 2,
+      phase_running_pods: 40,
+      phase_succeeded_pods: 0,
+      phase_unknown_pods: 0,
       used_pods: 42,
     });
   });

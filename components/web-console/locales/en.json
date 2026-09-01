@@ -107,6 +107,38 @@
     "defaultMessage": "Ready",
     "description": "Legend label for ready nodes."
   },
+  "app.dashboard.podStatus.ariaDesc": {
+    "defaultMessage": "Pod capacity by phase and unused slots",
+    "description": "Accessible description for the pod capacity donut chart."
+  },
+  "app.dashboard.podStatus.chartTitle": {
+    "defaultMessage": "Pod capacity chart",
+    "description": "Accessible title for the pod capacity donut chart."
+  },
+  "app.dashboard.podStatus.failed": {
+    "defaultMessage": "Failed",
+    "description": "Legend label for failed pods."
+  },
+  "app.dashboard.podStatus.pending": {
+    "defaultMessage": "Pending",
+    "description": "Legend label for pending pods."
+  },
+  "app.dashboard.podStatus.running": {
+    "defaultMessage": "Running",
+    "description": "Legend label for running pods."
+  },
+  "app.dashboard.podStatus.succeeded": {
+    "defaultMessage": "Succeeded",
+    "description": "Legend label for succeeded pods."
+  },
+  "app.dashboard.podStatus.unknown": {
+    "defaultMessage": "Unknown",
+    "description": "Legend label for unknown-phase pods."
+  },
+  "app.dashboard.podStatus.unused": {
+    "defaultMessage": "Unused",
+    "description": "Legend label for unused pod capacity slots."
+  },
   "app.dashboard.refresh": {
     "defaultMessage": "Refresh dashboard metrics",
     "description": "Accessible label for refreshing operational dashboard metrics."
