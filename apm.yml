@@ -17,5 +17,5 @@ dependencies:
   mcp: []
 includes: auto
 scripts:
-  install: "scripts/apm-install.sh"
+  install: "scripts/apm-install-hook.sh"
   audit: "apm audit && scripts/skillspector-scan.sh --force"

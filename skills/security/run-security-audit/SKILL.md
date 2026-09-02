@@ -106,11 +106,42 @@ Flags:
 Clone or update the ai-security-harness repo. The harness is a standalone
 tool with Python scripts, rule packs, and schemas needed by the audit.
 
+Authenticate with the `GITLAB_HOST` and `GITLAB_APM_PAT` variables documented
+in `README.md` (PAT needs `read_repository` on the harness project). Git does
+not read arbitrary `GITLAB_*` variables, so wire them through an ephemeral
+`GIT_ASKPASS` helper for clone/fetch instead of embedding the token in the URL.
+
 ```bash
 HARNESS_DIR="$(git rev-parse --show-toplevel)/apm_modules/hybrid-platforms-sec/ai-security-harness"
-HARNESS_URL="https://gitlab.cee.redhat.com/hybrid-platforms-sec/ai-security-harness.git"
+GITLAB_HOST="${GITLAB_HOST:-gitlab.cee.redhat.com}"
+HARNESS_URL="https://${GITLAB_HOST}/hybrid-platforms-sec/ai-security-harness.git"
 # Pin for reproducible audits. Override when intentionally upgrading the harness.
 HARNESS_REF="${AI_SECURITY_HARNESS_REF:-dac1533bde98179367fa2ee3cd2486bb81292140}"
+
+if [ -z "${GITLAB_APM_PAT:-}" ]; then
+  echo "STOP: GITLAB_APM_PAT is not set." >&2
+  echo "  export GITLAB_HOST=${GITLAB_HOST}" >&2
+  echo "  export GITLAB_APM_PAT=<PAT with read_repository on the harness project>" >&2
+  exit 1
+fi
+
+GIT_ASKPASS_SCRIPT="$(mktemp)"
+cat > "$GIT_ASKPASS_SCRIPT" <<'ASKPASS'
+#!/bin/sh
+case "$1" in
+  *Username*) echo oauth2 ;;
+  *Password*) printf '%s' "$GITLAB_APM_PAT" ;;
+esac
+ASKPASS
+chmod +x "$GIT_ASKPASS_SCRIPT"
+export GIT_ASKPASS="$GIT_ASKPASS_SCRIPT"
+export GIT_TERMINAL_PROMPT=0
+
+_harness_git_cleanup() {
+  rm -f "$GIT_ASKPASS_SCRIPT"
+  unset GIT_ASKPASS GIT_TERMINAL_PROMPT
+}
+trap _harness_git_cleanup EXIT
 
 if [ -d "$HARNESS_DIR/.git" ]; then
   git -C "$HARNESS_DIR" fetch origin "$HARNESS_REF" --depth 1
@@ -124,7 +155,9 @@ fi
 ```
 
 If the clone fails (network, auth), stop and tell the user - the harness
-is required.
+is required. Confirm `GITLAB_APM_PAT` has `read_repository` on
+`hybrid-platforms-sec/ai-security-harness` and that `GITLAB_HOST` matches the
+GitLab instance hostname.
 
 ## Step 3 - Install Python dependencies
 
@@ -246,5 +279,5 @@ Summarize:
 
 - The harness methodology is read-only against the target - it does not modify this repository's code.
 - Pre-scanner scripts may fail if the harness's Python deps aren't installed. That's OK - fall back to manual review for those sections and note it in the report.
-- The `contracts/` submodule in the harness may not be initialized in a shallow clone. If `validate_report.py` fails because the schema is missing, run `git -C $HARNESS_DIR submodule update --init contracts` first.
+- The `contracts/` submodule in the harness may not be initialized in a shallow clone. If `validate_report.py` fails because the schema is missing, run `git -C $HARNESS_DIR submodule update --init contracts` first (reuse the Step 2 `GIT_ASKPASS` setup if submodule fetch needs GitLab auth).
 - Generated reports under `security-audit/` are already ignored by this repo's `.gitignore`.

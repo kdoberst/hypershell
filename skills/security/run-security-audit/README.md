@@ -20,6 +20,9 @@ export GITLAB_APM_PAT="<your-gitlab-personal-access-token>"
 The PAT needs `read_repository` scope on the
 `hybrid-platforms-sec/ai-security-harness` project.
 
+The skill passes these variables to Git through an ephemeral `GIT_ASKPASS`
+helper during harness clone/fetch (the token is never embedded in the URL).
+
 ### Harness version pin
 
 The skill bootstraps a pinned harness commit for reproducible audits.

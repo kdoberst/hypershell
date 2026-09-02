@@ -68,7 +68,7 @@ if [ "$missing_required" -ne 0 ]; then
   if ! command -v git &>/dev/null; then
     echo "  git: your platform package manager" >&2
   fi
-  if command -v skillspector &>/dev/null && ! command -v python3 &>/dev/null; then
+  if ! command -v python3 &>/dev/null; then
     echo "  python3: your platform package manager (needed to parse skillspector results)" >&2
   fi
   if [[ "$FORCE" == true ]] && ! command -v skillspector &>/dev/null; then

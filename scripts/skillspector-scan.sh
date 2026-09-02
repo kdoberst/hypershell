@@ -111,8 +111,8 @@ print("=========================================")
 print(" SECURITY: HIGH/CRITICAL findings detected")
 print("=========================================")
 for issue in severe:
-    sev = issue["severity"]
-    rid = issue["id"]
+    sev = issue.get("severity", "?")
+    rid = issue.get("id", "?")
     loc = issue.get("location", {})
     path = loc.get("file", "?")
     line = loc.get("start_line", "?")
