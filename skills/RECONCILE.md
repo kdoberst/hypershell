@@ -48,9 +48,9 @@ skills/
 
 ## Reconciliation State
 
-**Last analyzed**: 2026-09-02 (cluster-memory CM-W1–W3, cluster-cpu CC-W1–W3, cluster-pods CLP-W1–W3, cluster-nodes CLN-W1–W3, gateway-provision-time GPT-W1 executed; OP-DASH-16 status donut + nodes widget alignment; OP-DASH-17 pod capacity chart + phase breakdown; registered-users complete; operational-dashboard OP-W1 complete); Keycloak event-storm KC-ES-W1 complete; rebased e2e performance harness and OpenShift manual e2e driver features from 2026-08-25/26
+**Last analyzed**: 2026-09-02 (06d6c56: removed sample-data banner; cluster-memory CM-W1–W3, cluster-cpu CC-W1–W3, cluster-pods CLP-W1–W3, cluster-nodes CLN-W1–W3, gateway-provision-time GPT-W1 executed; OP-DASH-16 status donut + nodes widget alignment; OP-DASH-17 pod capacity chart + phase breakdown; registered-users complete; operational-dashboard OP-W1 complete); Keycloak event-storm KC-ES-W1 complete; rebased e2e performance harness and OpenShift manual e2e driver features from 2026-08-25/26
 **Spec corpus**: 48 spec files; the coverage table tracks 39 analyzed feature/spec groups
-**Codebase commit**: working tree (cluster memory + cluster CPU + cluster pods + cluster nodes Prometheus/kube-state-metrics scrape, BFF routes, dashboard adapters + shared status donut + gateway provision time + registered users API + pod capacity chart with phase breakdown); e2e performance + OpenShift driver
+**Codebase commit**: 06d6c56 (cluster memory + cluster CPU + cluster pods + cluster nodes Prometheus/kube-state-metrics scrape, BFF routes, dashboard adapters + shared status donut + gateway provision time + registered users API + pod capacity chart with phase breakdown; sample-data banner removed); e2e performance + OpenShift driver
 
 
 ### Coverage Summary
@@ -82,10 +82,10 @@ skills/
 | Platform - Cluster Nodes | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Platform - Gateway Provision Time | 1 | 8 | 8 | 0 | 0 | 0 | 100% |
 | Web Console - Architecture | 1 | 28 | 21 | 5 | 2 | 0 | 86% |
-| Web Console - Operational Dashboard | 1 | 16 | 16 | 0 | 0 | 0 | 100% |
+| Web Console - Operational Dashboard | 1 | 17 | 17 | 0 | 0 | 0 | 100% |
 | Security - RBAC Enforcement | 1 | 13 | 11 | 0 | 0 | 2 | 85% |
 | Standards | 13 | 0 | 0 | 0 | 0 | 0 | N/A |
-| **TOTAL** | **39** | **287** | **244** | **17** | **13** | **5** | **85%** |
+| **TOTAL** | **39** | **288** | **245** | **17** | **13** | **5** | **85%** |
 
 ### Spec Dependency Order
 
@@ -374,6 +374,7 @@ The other 12 OpenShift Development requirements remain missing and are intention
 - OP-DASH-16 (2026-08-31): shared `StatusDonutChart` stack; `nodes` widget at `NODE_STATUS_WIDGET_HEIGHT`; layout persistence key `hypershell.operational-dashboard.layout.v17`.
 - OP-DASH-17 (2026-08-31): `pods` widget uses `PodCapacityChart` (phase segments + gray Unused); BFF phase PromQL; layout persistence key `hypershell.operational-dashboard.layout.v18`.
 - Post-OP-DASH-17 polish (2026-08-31): system-summary failed pod count; taller system-summary widget; expanded compact donut for pods subtitle; Storybook mock aligned to production adapter; layout persistence key `hypershell.operational-dashboard.layout.v19`.
+- Post-connect polish (2026-09-02, `06d6c56`): removed interim `usesSampleData` info banner and i18n keys; all OP-DASH-08 metrics are connected so the banner is no longer required.
 
 ### registered-users.spec.md
 
@@ -1121,3 +1122,4 @@ label-selected pod informer.
 | 2026-08-31 | working tree | Executed GPT-W1: gateway provision time | 85% | Adapter computes mean `Running` gateway provision minutes from paginated list; `provision-time` metric connected; adapter tests; `DATA_SOURCES.md` + OP-DASH-08 updated. Gateway provision time 8/8 present. OP-DASH-08 all metrics connected. |
 | 2026-08-31 | working tree | OP-DASH-17: pod capacity chart + phase breakdown | 85% | BFF phase PromQL + validation; `PodCapacityChart` with Unused segment; layout v18; CLP-02/04/05 spec updates; BFF + adapter tests. Operational dashboard 17/17 present. |
 | 2026-09-01 | feecbcb, da771fb | Reconciled commit-driven stale doc gaps | 78% (unchanged) | Two recent commits removed hardcoded image defaults (`GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` now required env vars, no fallback) and unified deploy paths (deleted `components/api-server/deploy/*`, using repo-root `deploy/` as single source of truth). Updated 7 docs: `skills/deploy/ibm-cluster/SKILL.md` (image refs, path, namespace, image-var explanation), `skills/deploy/gcp-cluster/SKILL.md` (path fix, RBAC ref), `skills/deploy/deploy-cluster/SKILL.md` (full rewrite: Keycloak bootstrap, `hypershell-api-config` Secret creation, CNPG database, OIDC/JWT security, troubleshooting for missing Secret), `skills/tooling/update-openshell/SKILL.md` (grep patterns for new image names, search path fixes), `skills/RECONCILE.md` (skill directory tree, this log entry), `README.md` (env var rows, namespace refs), `specs/platform/openshift-development.spec.md` (deploy/ directory layout, overlay limitations note). Overlay gaps surfaced: `deploy/openshift/` requires manually-created `hypershell-api-config` Secret (missing from repo; documented in deploy-cluster), hardcoded domain placeholder, missing Keycloak Route on OpenShift. Marked as known limitations in specs. |
+| 2026-09-02 | 06d6c56 | Post-connect polish: remove sample-data banner | 85% (unchanged) | Removed `usesSampleData` provider flag, inline info `Alert`, and `app.dashboard.sampleData.*` i18n keys after all OP-DASH-08 metrics connected. Operational dashboard 17/17 present. |
