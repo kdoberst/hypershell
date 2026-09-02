@@ -12,7 +12,6 @@ export interface DashboardUiServices {
   dashboard: DashboardOperations;
   navigation: DashboardUiNavigation;
   probes?: DashboardProbePublisher;
-  usesSampleData?: boolean;
 }
 
 const DashboardUiContext = createContext<DashboardUiServices | undefined>(
@@ -24,11 +23,10 @@ export function DashboardUiProvider({
   dashboard,
   navigation,
   probes,
-  usesSampleData = false,
 }: PropsWithChildren<DashboardUiServices>) {
   return (
     <DashboardUiContext.Provider
-      value={{ dashboard, navigation, probes, usesSampleData }}
+      value={{ dashboard, navigation, probes }}
     >
       {children}
     </DashboardUiContext.Provider>

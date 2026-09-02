@@ -159,14 +159,6 @@
     "defaultMessage": "Reset to default",
     "description": "Label for restoring the operational dashboard default layout."
   },
-  "app.dashboard.sampleData.bannerBody": {
-    "defaultMessage": "Metrics on this page are sample data until live operational metrics are connected.",
-    "description": "Body for the banner shown when the operational dashboard uses mock metrics."
-  },
-  "app.dashboard.sampleData.bannerTitle": {
-    "defaultMessage": "Sample data",
-    "description": "Title for the banner shown when the operational dashboard uses mock metrics."
-  },
   "app.dashboard.statusDonut.dataLabel": {
     "defaultMessage": "{status}: {count}",
     "description": "Data label for a status donut chart segment."

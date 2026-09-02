@@ -230,19 +230,6 @@ export const messages = defineMessages({
     description:
       "Label for restoring the operational dashboard default layout.",
   },
-  sampleDataBannerBody: {
-    id: "app.dashboard.sampleData.bannerBody",
-    defaultMessage:
-      "Metrics on this page are sample data until live operational metrics are connected.",
-    description:
-      "Body for the banner shown when the operational dashboard uses mock metrics.",
-  },
-  sampleDataBannerTitle: {
-    id: "app.dashboard.sampleData.bannerTitle",
-    defaultMessage: "Sample data",
-    description:
-      "Title for the banner shown when the operational dashboard uses mock metrics.",
-  },
   statusDonutDataLabel: {
     id: "app.dashboard.statusDonut.dataLabel",
     defaultMessage: "{status}: {count}",

@@ -146,7 +146,6 @@ export function ApplicationShell() {
     <DashboardUiProvider
       dashboard={dashboardOperations}
       navigation={dashboardNavigation}
-      usesSampleData
     >
       <GatewayUiProvider
         gateways={gatewayOperations}

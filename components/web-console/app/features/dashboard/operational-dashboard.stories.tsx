@@ -82,7 +82,6 @@ function DashboardPreview({
         dashboard ?? (metrics === undefined ? mockDashboard : stubDashboard)
       }
       navigation={stubNavigation}
-      usesSampleData={metrics === undefined}
     >
       <OperationalDashboardPage metrics={metrics} />
     </DashboardUiProvider>
