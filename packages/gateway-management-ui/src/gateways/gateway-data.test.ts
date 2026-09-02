@@ -289,9 +289,9 @@ describe("gateway presentation data", () => {
   });
 
   it("presents transitional and failed lifecycle phases before health", () => {
-    expect(
-      resolveGatewayDisplayStatus("Provisioning", "Ready"),
-    ).toBe("Provisioning");
+    expect(resolveGatewayDisplayStatus("Provisioning", "Ready")).toBe(
+      "Provisioning",
+    );
     expect(
       toGatewayConnection(
         gateway({ phase: "Provisioning", status: "Ready" }),

@@ -25,9 +25,7 @@ export function DashboardUiProvider({
   probes,
 }: PropsWithChildren<DashboardUiServices>) {
   return (
-    <DashboardUiContext.Provider
-      value={{ dashboard, navigation, probes }}
-    >
+    <DashboardUiContext.Provider value={{ dashboard, navigation, probes }}>
       {children}
     </DashboardUiContext.Provider>
   );
