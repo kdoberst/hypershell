@@ -267,7 +267,8 @@ async function aggregateGatewayList(
     }
 
     for (const gateway of result.items) {
-      activeSandboxCount += gateway.active_sandbox_count ?? 0;
+      const sandboxCount = gateway.active_sandbox_count;
+      activeSandboxCount += typeof sandboxCount === "number" ? sandboxCount : 0;
       lifecycleRecords.push({
         phase: gateway.phase,
         status: gateway.status,
