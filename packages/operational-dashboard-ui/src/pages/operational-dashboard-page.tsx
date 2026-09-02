@@ -324,8 +324,7 @@ export function OperationalDashboardPage({
   title,
 }: Readonly<OperationalDashboardPageProps>) {
   const intl = useIntl();
-  const { probes = noopDashboardProbePublisher, usesSampleData = false } =
-    useDashboardUi();
+  const { probes = noopDashboardProbePublisher } = useDashboardUi();
   const pageTitle = title ?? intl.formatMessage(messages.title);
   const metricsQuery = useGetMetricsData({
     enabled: metrics === undefined,
@@ -503,15 +502,6 @@ export function OperationalDashboardPage({
           </FlexItem>
         ) : null}
       </Flex>
-      {usesSampleData ? (
-        <Alert
-          isInline
-          title={intl.formatMessage(messages.sampleDataBannerTitle)}
-          variant="info"
-        >
-          <FormattedMessage {...messages.sampleDataBannerBody} />
-        </Alert>
-      ) : null}
       {metricsQuery.isPending && metrics === undefined ? (
         <Bullseye>
           <Spinner aria-label={intl.formatMessage(messages.loading)} />
