@@ -11,12 +11,13 @@ import {
 describe("dashboard layout persistence", () => {
   it("collects active widget types across responsive variants", () => {
     expect(getActiveWidgetTypes(defaultDashboardLayoutTemplate)).toEqual([
+      "section-title",
       "usage-summary",
       "gateway-status",
       "provisioned-sandboxes",
-      "memory",
-      "system-summary",
       "registered-users",
+      "system-summary",
+      "memory",
       "cpu",
       "pods",
       "nodes",
@@ -65,5 +66,13 @@ describe("dashboard layout persistence", () => {
     expect(
       sanitized.xl.filter((item) => item.widgetType === "cpu"),
     ).toHaveLength(1);
+  });
+
+  it("keeps multiple section title widgets in a variant on save", () => {
+    const sanitized = sanitizeDashboardTemplate(defaultDashboardLayoutTemplate);
+
+    expect(
+      sanitized.xl.filter((item) => item.widgetType === "section-title"),
+    ).toHaveLength(2);
   });
 });
