@@ -90,6 +90,8 @@ The SPA route modules for `/dashboard` and the dashboard-host root (`/`) SHALL w
 
 When OIDC is enabled, the BFF SHALL enforce the same role requirement for browser navigations to `/dashboard` and for `/` on hosts whose hostname starts with `dashboard.`. Non-admin users SHALL be redirected away (to `/` on the console host, or to the console host when the request arrived on a dashboard subdomain).
 
+When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
+
 #### Scenario: Non-admin is turned away from /dashboard
 
 - GIVEN OIDC is enabled and the signed-in user has only `hypershell-users`
@@ -103,6 +105,19 @@ When OIDC is enabled, the BFF SHALL enforce the same role requirement for browse
 - WHEN the user navigates to `/dashboard`
 - THEN the BFF SHALL serve `index.html` with HTTP `200`
 - AND `OperationalDashboardPage` SHALL render
+
+#### Scenario: Non-admin cannot fetch cluster metrics via BFF
+
+- GIVEN OIDC is enabled and the signed-in user has only `hypershell-users`
+- WHEN the user sends `GET /api/metrics/cluster-cpu`
+- THEN the BFF SHALL respond with HTTP `403`
+
+#### Scenario: Dashboard administrator can fetch cluster metrics
+
+- GIVEN OIDC is enabled and the signed-in user has `hypershell-admins`
+- AND Prometheus returns successful instant-query results
+- WHEN the user sends `GET /api/metrics/cluster-memory`
+- THEN the BFF SHALL respond with HTTP `200`
 
 ---
 

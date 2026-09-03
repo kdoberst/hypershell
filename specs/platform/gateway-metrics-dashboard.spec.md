@@ -19,7 +19,7 @@ The widgetized **operational dashboard** at `/dashboard` is specified separately
 
 ### Requirement: DASH-01 -- Gateway Phase Metric
 
-The API server SHALL expose a custom Prometheus Collector named `hypershell_gateways_total` with a `phase` label that reports the current count of Gateway instances in each of the four known phases: `Running`, `Provisioning`, `Degraded`, and `Failed`.
+The API server SHALL expose a custom Prometheus Collector named `hypershell_gateways_total` with a `phase` label that reports the current count of Gateway instances in each known lifecycle phase. The canonical phase vocabulary SHALL be owned by `@openshift-online/hypershell-gateway-management-ui` (single source of truth shared with gateway list presentation). The BFF metrics route and this collector SHALL emit every phase in that vocabulary on every scrape/response, even when a phase count is zero.
 
 The Collector SHALL query the database once per scrape via `CountByPhase`  -  a single `SELECT phase, count(*) FROM gateways GROUP BY phase`  -  and emit one `GaugeValue` sample per phase. All four phases SHALL be emitted on every scrape, even when a phase count is zero, so Prometheus never observes a gap in the series.
 
@@ -134,7 +134,9 @@ When Prometheus is unreachable or returns a non-`200` status, or when the Promet
 
 The `/api/metrics/gateways` route SHALL be exempt from the general `/api/*` proxy handler: it does not forward to the API server, it does not require or forward a bearer token, and it does not require a Prometheus authentication header in its current form.
 
-When OIDC is enabled, the route SHALL still require a valid session (the existing session-enforcement hook applies to all non-exempt paths). When OIDC is disabled, no session is required.
+When OIDC is enabled, the route SHALL require **dashboard-operator authorization** matching `web-console/operational-dashboard.spec.md` OP-DASH-04 (`hypershell-admins` or `platform:admin`). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled, no session or role is required.
+
+Fleet-wide phase counts from Prometheus are intentionally **not** filtered by per-gateway RoleBindings; this route is restricted to dashboard administrators who are authorized to view platform-wide operational data. Per-user gateway visibility for the operational dashboard gateway-status widget remains on the RBAC-scoped HyperShell REST list API (`operational-dashboard.spec.md` OP-DASH-06).
 
 #### Scenario: Successful metrics fetch
 
@@ -154,6 +156,19 @@ When OIDC is enabled, the route SHALL still require a valid session (the existin
 - GIVEN Prometheus is reachable but returns `{ "status": "error", ... }`
 - WHEN the BFF processes the response
 - THEN the BFF SHALL respond with HTTP `502` and `{ "error": "Metrics unavailable", "statusCode": 502 }`
+
+#### Scenario: Authenticated non-admin is rejected
+
+- GIVEN OIDC is enabled and the caller has only `hypershell-users`
+- WHEN the SPA calls `GET /api/metrics/gateways`
+- THEN the BFF SHALL respond with HTTP `403`
+
+#### Scenario: Dashboard administrator can fetch gateway phase counts
+
+- GIVEN OIDC is enabled and the caller has `hypershell-admins` or `platform:admin`
+- AND Prometheus returns successful `hypershell_gateways_total` samples
+- WHEN the SPA calls `GET /api/metrics/gateways`
+- THEN the BFF SHALL respond with HTTP `200`
 
 ---
 
@@ -209,6 +224,8 @@ All user-visible strings SHALL be declared with `defineMessages` and rendered th
 ### Requirement: DASH-07 -- BFF Metrics Route Registration
 
 The BFF SHALL recognise `/dashboard` and `/metrics` as valid SPA shell routes (returning `index.html` for direct navigation and refresh) alongside `/`, `/login`, `/gateways/new`, and `/gateways/:gatewayId`.
+
+When OIDC is enabled, browser navigations to `/metrics` SHALL require dashboard-operator authorization (OP-DASH-04). Non-admin users SHALL be redirected to `/`. The SPA route module for `/metrics` SHALL wrap `GatewayMetricsDashboard` in the same `RequireDashboardAdmin` guard used by `/dashboard`.
 
 The `route-contract.json` file SHALL declare `"dashboard": "dashboard"` and `"metrics": "metrics"` so the BFF and SPA share a single source of truth for each path.
 

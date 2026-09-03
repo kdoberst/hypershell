@@ -112,7 +112,7 @@ The BFF SHALL NOT contact the Kubernetes API directly for pod counts in version 
 
 The web-console BFF SHALL expose `GET /api/metrics/cluster-pods` as a same-origin route that:
 
-1. Requires an authenticated session when OIDC is enabled (same session gate as `GET /api/metrics/cluster-memory`)
+1. Requires **dashboard-operator authorization** when OIDC is enabled (same role gate as `web-console/operational-dashboard.spec.md` OP-DASH-04: `hypershell-admins` or `platform:admin`)
 2. Executes Prometheus instant queries for hub-cluster pods (CLP-03)
 3. Returns JSON:
 
@@ -133,12 +133,18 @@ The route SHALL NOT forward to the HyperShell API server and SHALL NOT require a
 
 On Prometheus failure, timeout, or non-success Prometheus response status, the BFF SHALL respond with HTTP `502` and `{ "error": "Metrics unavailable", "statusCode": 502 }`. The BFF SHALL NOT return zeroed pod figures as a fallback.
 
-#### Scenario: Authenticated dashboard operator receives pod counts
+#### Scenario: Dashboard administrator receives pod counts
 
-- GIVEN OIDC is enabled and the caller has a valid session
+- GIVEN OIDC is enabled and the caller has `hypershell-admins` or `platform:admin`
 - AND Prometheus returns successful instant-query results
 - WHEN the caller sends `GET /api/metrics/cluster-pods`
 - THEN the BFF SHALL respond with HTTP `200` and the CLP-04 JSON body
+
+#### Scenario: Authenticated non-admin is rejected
+
+- GIVEN OIDC is enabled and the caller has only `hypershell-users`
+- WHEN the caller sends `GET /api/metrics/cluster-pods`
+- THEN the BFF SHALL respond with HTTP `403`
 
 #### Scenario: Unauthenticated caller is rejected
 
