@@ -150,13 +150,14 @@ If the gateway list response is inconsistent (page/total/items mismatch), the ad
 
 Provision time SHALL load through the existing operational dashboard metrics query (`useGetMetricsData`) and SHALL inherit its refresh policy (`operationalDashboardRefreshMilliseconds`, currently 15 minutes) and manual refresh behavior (OP-DASH-09).
 
-When no qualifying Running gateway samples exist, or gateway list pagination fails, `getOperationalMetrics` SHALL fail. The dashboard SHALL NOT display `0` minutes as a fallback.
+When no qualifying Running gateway samples exist, the adapter SHALL omit only the `provision-time` metric; other gateway-list-derived metrics SHALL still be emitted when the list succeeds (OP-DASH-19). Gateway list pagination failure SHALL omit `provisioned-gateways`, `provisioned-sandboxes`, and `provision-time`. The dashboard SHALL NOT display `0` minutes as a fallback.
 
-#### Scenario: No Running gateways fails metrics load
+#### Scenario: No Running gateways omits provision time only
 
 - GIVEN the authorized gateway list contains only `Provisioning` or `Failed` gateways
 - WHEN the operator opens `/dashboard`
-- THEN the dashboard SHALL show its localized load-error state
+- THEN gateway and sandbox metrics SHALL still load when the list request succeeds
+- AND the provision-time widget or summary row SHALL render the localized metric-unavailable state
 - AND the provision-time row SHALL NOT silently show zero
 
 ---
@@ -167,7 +168,7 @@ The web console SHALL include unit tests for:
 
 - Average duration mapping from mocked gateway list items with `created_at` / `updated_at`
 - Exclusion of non-`Running` gateways and invalid timestamps
-- Failure when no samples qualify
+- Failure when no samples qualify (omits `provision-time` only; does not fail other metrics)
 - Co-use of the same paginated list as sandboxes (no extra list calls)
 
 The operational dashboard package SHALL update `mockOperationalDashboardMetrics` only as needed for Storybook fixtures.
