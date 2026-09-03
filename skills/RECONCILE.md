@@ -478,7 +478,7 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 **Scoped analysis notes:**
 
 - **Delivered:** kube-state-metrics Deployment/ServiceMonitor; BFF instant queries for capacity/used pods and per-phase counts; dashboard adapter maps to `pods` metric with `podPhases`; `pods` widget uses `PodCapacityChart` (OP-DASH-17); OP-DASH-08 `pods` row connected.
-- **Used pods:** `count(kube_pod_info)` — all phases including Failed/Succeeded while objects exist; phase breakdown via `kube_pod_status_phase`; Unused segment = `capacity - used`.
+- **Used pods:** `count(kube_pod_info)` - all phases including Failed/Succeeded while objects exist; phase breakdown via `kube_pod_status_phase`; Unused segment = `capacity - used`.
 - **Scrape target:** `registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0`.
 
 ### cluster-nodes.spec.md

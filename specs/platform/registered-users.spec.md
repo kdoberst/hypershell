@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Expose **registered users** — HyperShell `User` records auto-provisioned from JWT claims on first authenticated API access — to the operational dashboard so administrators can see how many identities have used the platform.
+Expose **registered users** - HyperShell `User` records auto-provisioned from JWT claims on first authenticated API access - to the operational dashboard so administrators can see how many identities have used the platform.
 
 A registered user is a durable row in the API server database (`username`, optional `email` and `name`, `created_at`). This is **not** a live session count, Keycloak concurrent login metric, or "users online now" signal. Users who exist only in Keycloak and have never triggered HyperShell auto-provisioning SHALL NOT appear in the count.
 
@@ -23,8 +23,8 @@ Prometheus gateway metrics (`platform/gateway-metrics-dashboard.spec.md`) are un
 
 The API server SHALL expose read-only HTTP endpoints:
 
-- `GET /api/hypershell/v1/users` — paginated List
-- `GET /api/hypershell/v1/users/{id}` — singleton Get
+- `GET /api/hypershell/v1/users` - paginated List
+- `GET /api/hypershell/v1/users/{id}` - singleton Get
 
 The endpoints SHALL NOT support Create, Patch, or Delete. User records SHALL continue to be created and updated only through JWT auto-provisioning middleware.
 

@@ -28,12 +28,12 @@ The repository SHALL publish a private pnpm workspace package `@openshift-online
 
 The package SHALL export at minimum:
 
-- `OperationalDashboardPage` — the full dashboard page
-- `DashboardUiProvider` and `useDashboardUi` — host service injection
-- `createDashboardOperations` — application workflow entry port
+- `OperationalDashboardPage` - the full dashboard page
+- `DashboardUiProvider` and `useDashboardUi` - host service injection
+- `createDashboardOperations` - application workflow entry port
 - `DashboardControlPlane`, `DashboardOperations`, `OperationalDashboardMetrics`, `OperationalMetric`, and related types
 - `operationalDashboardMetricsQueryKey` and `operationalDashboardRefreshMilliseconds`
-- `dashboardMessages` — canonical `defineMessages` catalog for dashboard strings
+- `dashboardMessages` - canonical `defineMessages` catalog for dashboard strings
 - `mockOperationalDashboardMetrics` fixture (via `@openshift-online/hypershell-operational-dashboard-ui/fixtures`)
 
 #### Scenario: Host imports the dashboard page
@@ -174,8 +174,8 @@ Gateway status widgets SHALL use the same display-status presentation rules as t
 
 The `provisioned-gateways` metric SHALL include:
 
-- `value` — total gateway count as a decimal string
-- `status` — counts for `healthy`, `provisioning`, `degraded`, and `failed` display buckets
+- `value` - total gateway count as a decimal string
+- `status` - counts for `healthy`, `provisioning`, `degraded`, and `failed` display buckets
 
 Display buckets SHALL NOT be confused with raw lifecycle `phase` values. Mapping from phase/status to display buckets SHALL remain owned by the gateway-management-ui package so the dashboard and gateway list stay aligned.
 
@@ -223,7 +223,7 @@ The package SHALL maintain `DATA_SOURCES.md` documenting connected vs placeholde
 `useGetMetricsData` SHALL load metrics through TanStack Query with:
 
 - `queryKey` from `operationalDashboardMetricsQueryKey()` (`["operational-dashboard", "metrics"]`)
-- `refetchInterval` and `staleTime` of `operationalDashboardRefreshMilliseconds` (`900_000` ms — 15 minutes)
+- `refetchInterval` and `staleTime` of `operationalDashboardRefreshMilliseconds` (`900_000` ms - 15 minutes)
 - `enabled` controlled by the page (disabled when static `metrics` props are supplied for Storybook/tests)
 
 The page SHALL expose a manual refresh control that calls `refetch()` on the query. While a refetch is in flight, the refresh button SHALL expose a localized refreshing state.
@@ -382,8 +382,8 @@ The `pods` widget SHALL use `PodCapacityChart` (OP-DASH-17), not `UtilizationCha
 
 **Summary widgets:**
 
-- `usage-summary` — horizontal `DescriptionList` for active users, gateways (with exception status counts), and sandboxes
-- `system-summary` — horizontal `DescriptionList` for memory, CPU, pods (with failed pod count when `podPhases.failed` is non-zero), nodes (with exception status counts when `status.failed` is non-zero), and provision time
+- `usage-summary` - horizontal `DescriptionList` for active users, gateways (with exception status counts), and sandboxes
+- `system-summary` - horizontal `DescriptionList` for memory, CPU, pods (with failed pod count when `podPhases.failed` is non-zero), nodes (with exception status counts when `status.failed` is non-zero), and provision time
 
 Trend direction indicators in summary rows SHALL appear only when `getMetricTrendChange` detects at least a 5% change between the first and last trend point.
 
@@ -423,7 +423,7 @@ Loading states SHALL use a `Spinner` with a localized `aria-label`. Empty and er
 
 The dashboard SHALL never render the literal strings `NaN`, `Infinity`, or `-Infinity` to users.
 
-When an `OperationalMetric.value` (or utilization `total`) is not a finite decimal string — including when numeric coercion yields `NaN` or another non-finite number — presentation widgets SHALL display the localized message **Metric could not be determined** instead of the raw value.
+When an `OperationalMetric.value` (or utilization `total`) is not a finite decimal string - including when numeric coercion yields `NaN` or another non-finite number - presentation widgets SHALL display the localized message **Metric could not be determined** instead of the raw value.
 
 This rule SHALL apply to metric cards, summary rows, utilization widgets, and status-donut center titles. Widgets that normally combine a value with a label or unit (for example `{value} {label}` or `{value} {unit}`) SHALL show only the fallback message when the value is non-displayable; they SHALL NOT append the metric label or unit after the fallback.
 

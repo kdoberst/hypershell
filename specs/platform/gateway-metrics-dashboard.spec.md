@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Expose the live count of Gateway instances by phase — Running, Provisioning, Degraded, and Failed — as a Prometheus metric and a reusable React component, so operators can assess fleet-wide gateway health without querying Prometheus directly. The metric is collected by a custom Prometheus Collector in the API server that queries the database on each scrape; it is scraped by a Prometheus instance deployed alongside the platform; and it is surfaced to browser code through a BFF proxy route that shields the browser from direct Prometheus access.
+Expose the live count of Gateway instances by phase - Running, Provisioning, Degraded, and Failed - as a Prometheus metric and a reusable React component, so operators can assess fleet-wide gateway health without querying Prometheus directly. The metric is collected by a custom Prometheus Collector in the API server that queries the database on each scrape; it is scraped by a Prometheus instance deployed alongside the platform; and it is surfaced to browser code through a BFF proxy route that shields the browser from direct Prometheus access.
 
 This specification covers the metrics pipeline end to end: the API server collector, Prometheus deployment and scrape configuration, the BFF metrics route, the `GatewayMetricsDashboard` shared component, the `/metrics` SPA route, and the Kubernetes manifests required to deploy and operate the pipeline on any cluster.
 
