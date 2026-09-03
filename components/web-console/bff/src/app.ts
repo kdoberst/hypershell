@@ -7,6 +7,7 @@ import helmet from "@fastify/helmet";
 import fastifyStatic from "@fastify/static";
 import Fastify, {
   type FastifyInstance,
+  type FastifyReply,
   type FastifyRequest,
   LogController,
 } from "fastify";
@@ -96,6 +97,7 @@ function requiresDashboardAdminAccess(
 ): boolean {
   return (
     pathname === "/dashboard" ||
+    pathname === "/metrics" ||
     (pathname === "/" && isDashboardHost(hostHeader))
   );
 }
@@ -416,6 +418,22 @@ export async function buildApp(
     };
   };
 
+  const requireDashboardMetricsAccess = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
+    reply.header("Cache-Control", "no-store");
+    if (!config.oidcIssuer) {
+      return;
+    }
+    if (!request.session.get("accessToken")) {
+      return reply.send(respondReauth(reply));
+    }
+    if (!hasDashboardAdminRole(request.session.get("roles") ?? [])) {
+      return reply.code(403).send({ error: "Forbidden", statusCode: 403 });
+    }
+  };
+
   // Same-origin browser telemetry ingest. The browser exporter posts OTLP/HTTP
   // JSON here; the BFF validates it and relays it to the configured collector,
   // keeping the collector origin out of the browser and reusing the session and
@@ -438,84 +456,79 @@ export async function buildApp(
     return { status: "accepted" };
   });
 
-  app.get("/api/metrics/gateways", async (request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    if (config.oidcIssuer && !request.session.get("accessToken")) {
-      return respondReauth(reply);
-    }
+  app.get(
+    "/api/metrics/gateways",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        const counts = await queryGatewayPhaseCounts(
+          config.prometheusUrl,
+          10_000,
+        );
+        return { counts };
+      } catch (error) {
+        request.log.warn({ err: error }, "gateway metrics query failed");
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
 
-    try {
-      const counts = await queryGatewayPhaseCounts(
-        config.prometheusUrl,
-        10_000,
-      );
-      return { counts };
-    } catch (error) {
-      request.log.warn({ err: error }, "gateway metrics query failed");
-      reply.code(502);
-      return { error: "Metrics unavailable", statusCode: 502 };
-    }
-  });
+  app.get(
+    "/api/metrics/cluster-memory",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryClusterMemory(config.prometheusUrl, 10_000);
+      } catch (error) {
+        request.log.warn({ err: error }, "cluster memory metrics query failed");
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
 
-  app.get("/api/metrics/cluster-memory", async (request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    if (config.oidcIssuer && !request.session.get("accessToken")) {
-      return respondReauth(reply);
-    }
+  app.get(
+    "/api/metrics/cluster-cpu",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryClusterCpu(config.prometheusUrl, 10_000);
+      } catch (error) {
+        request.log.warn({ err: error }, "cluster CPU metrics query failed");
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
 
-    try {
-      return await queryClusterMemory(config.prometheusUrl, 10_000);
-    } catch (error) {
-      request.log.warn({ err: error }, "cluster memory metrics query failed");
-      reply.code(502);
-      return { error: "Metrics unavailable", statusCode: 502 };
-    }
-  });
+  app.get(
+    "/api/metrics/cluster-pods",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryClusterPods(config.prometheusUrl, 10_000);
+      } catch (error) {
+        request.log.warn({ err: error }, "cluster pods metrics query failed");
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
 
-  app.get("/api/metrics/cluster-cpu", async (request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    if (config.oidcIssuer && !request.session.get("accessToken")) {
-      return respondReauth(reply);
-    }
-
-    try {
-      return await queryClusterCpu(config.prometheusUrl, 10_000);
-    } catch (error) {
-      request.log.warn({ err: error }, "cluster CPU metrics query failed");
-      reply.code(502);
-      return { error: "Metrics unavailable", statusCode: 502 };
-    }
-  });
-
-  app.get("/api/metrics/cluster-pods", async (request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    if (config.oidcIssuer && !request.session.get("accessToken")) {
-      return respondReauth(reply);
-    }
-
-    try {
-      return await queryClusterPods(config.prometheusUrl, 10_000);
-    } catch (error) {
-      request.log.warn({ err: error }, "cluster pods metrics query failed");
-      reply.code(502);
-      return { error: "Metrics unavailable", statusCode: 502 };
-    }
-  });
-
-  app.get("/api/metrics/cluster-nodes", async (request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    if (config.oidcIssuer && !request.session.get("accessToken")) {
-      return respondReauth(reply);
-    }
-
-    try {
-      return await queryClusterNodes(config.prometheusUrl, 10_000);
-    } catch (error) {
-      request.log.warn({ err: error }, "cluster nodes metrics query failed");
-      reply.code(502);
-      return { error: "Metrics unavailable", statusCode: 502 };
-    }
-  });
+  app.get(
+    "/api/metrics/cluster-nodes",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryClusterNodes(config.prometheusUrl, 10_000);
+      } catch (error) {
+        request.log.warn({ err: error }, "cluster nodes metrics query failed");
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
 
   app.all("/api/*", async (request, reply) => {
     // Start one BFF server span per proxied request. It continues a valid

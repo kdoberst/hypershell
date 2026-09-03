@@ -284,7 +284,7 @@ describe("GET /api/metrics/cluster-pods", () => {
     });
   });
 
-  it("allows authenticated callers when OIDC is enabled", async () => {
+  it("allows dashboard administrators when OIDC is enabled", async () => {
     oidcServer = await createOidcServer();
     const prometheusUrl = await startPrometheusStub((request, response) => {
       const url = new URL(request.url ?? "", "http://127.0.0.1");
@@ -322,7 +322,7 @@ describe("GET /api/metrics/cluster-pods", () => {
       expiresAt: Math.floor(Date.now() / 1000) + 3600,
       name: "Test User",
       preferredUsername: "testuser",
-      roles: ["admin"],
+      roles: ["hypershell-admins"],
       sub: "user-123",
     });
 
@@ -344,6 +344,37 @@ describe("GET /api/metrics/cluster-pods", () => {
       phase_succeeded_pods: 0,
       phase_unknown_pods: 0,
       used_pods: 42,
+    });
+  });
+
+  it("rejects authenticated non-admin callers when OIDC is enabled", async () => {
+    oidcServer = await createOidcServer();
+    app = await buildTestApp({
+      oidcClientId: "test-client",
+      oidcIssuer: oidcServer.issuer,
+      oidcRedirectUri: "http://127.0.0.1:8080/auth/callback",
+      sessionSecret: Buffer.from(testSessionSecret, "hex"),
+    });
+
+    const session = app.createSecureSession({
+      accessToken: "test-access-token",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      roles: ["hypershell-users"],
+      sub: "user-123",
+    });
+
+    const response = await app.inject({
+      headers: {
+        cookie: `session=${encodeURIComponent(app.encodeSecureSession(session))}`,
+      },
+      method: "GET",
+      url: "/api/metrics/cluster-pods",
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      error: "Forbidden",
+      statusCode: 403,
     });
   });
 });
