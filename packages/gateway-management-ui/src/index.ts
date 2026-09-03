@@ -59,6 +59,8 @@ export {
 } from "./gateways/gateway-create";
 export {
   aggregateGatewayDisplayStatusCounts,
+  gatewayCanonicalPhaseStrings,
+  gatewayCanonicalPhases,
   gatewayListQueryKey,
   gatewayListQueryRoot,
   gatewayPlacementBatchQueryKey,
@@ -96,6 +98,7 @@ export {
   fetchGatewayMetrics,
   gatewayMetricsQueryKey,
   gatewayPhases,
+  emptyGatewayPhaseCounts,
   type GatewayPhaseCounts,
 } from "./metrics/gateway-metrics-data";
 export { GatewayMetricsDashboard } from "./metrics/gateway-metrics-dashboard";

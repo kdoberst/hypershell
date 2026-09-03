@@ -53,8 +53,9 @@ describe("GatewayMetricsDashboard", () => {
     ).toBeTruthy();
   });
 
-  it("renders all four phase cards when metrics load", async () => {
+  it("renders all five phase cards when metrics load", async () => {
     vi.spyOn(gatewayMetricsData, "fetchGatewayMetrics").mockResolvedValue({
+      Pending: 1,
       Running: 5,
       Provisioning: 2,
       Degraded: 1,
@@ -64,16 +65,17 @@ describe("GatewayMetricsDashboard", () => {
     renderDashboard();
 
     expect(await screen.findByText("Gateway metrics")).toBeTruthy();
+    expect(screen.getByText("Pending")).toBeTruthy();
     expect(screen.getByText("Running")).toBeTruthy();
     expect(screen.getByText("Provisioning")).toBeTruthy();
     expect(screen.getByText("Degraded")).toBeTruthy();
     expect(screen.getByText("Failed")).toBeTruthy();
     expect(screen.getByText("5")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
-    expect(screen.getByText("1")).toBeTruthy();
+    expect(screen.getAllByText("1")).toHaveLength(2);
     expect(screen.getByText("0")).toBeTruthy();
     expect(screen.getByText("5 gateways")).toBeTruthy();
-    expect(screen.getByText("1 gateway")).toBeTruthy();
-    expect(screen.getAllByText("0 gateways")).toHaveLength(1);
+    expect(screen.getAllByText("1 gateway")).toHaveLength(2);
+    expect(screen.getByText("0 gateways")).toBeTruthy();
   });
 });

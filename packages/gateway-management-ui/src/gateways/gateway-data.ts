@@ -24,14 +24,49 @@ export const gatewayStatusPollMilliseconds = 5_000;
 // creation -- from being marked unavailable the instant it loads.
 export const gatewayConsoleReadyDeadlineMilliseconds = 600_000;
 
-const gatewayPollingStates = new Set([
-  "pending",
-  "provisioning",
+// Canonical Gateway phase vocabulary emitted by the control plane, lowercased.
+// Single source of truth on the console side, mirroring the Go gatewayhealth
+// package (components/api-server/pkg/gatewayhealth). See
+// specs/platform/gateway-phase-vocabulary.spec.md; keep in sync when the
+// canonical phases change.
+export const gatewayCanonicalPhases = {
+  pending: "pending",
+  provisioning: "provisioning",
+  running: "running",
+  degraded: "degraded",
+  failed: "failed",
+} as const;
+
+// TitleCase canonical phases for metrics and API labels. Derived from the same
+// vocabulary as gatewayhealth.PhaseStrings() in lifecycle order.
+export const gatewayCanonicalPhaseStrings = [
+  "Pending",
+  "Provisioning",
+  "Running",
+  "Degraded",
+  "Failed",
+] as const;
+
+export type GatewayCanonicalPhase =
+  (typeof gatewayCanonicalPhaseStrings)[number];
+
+// Recoverable (non-terminal) canonical phases keep the UI polling. The extra
+// transitional descriptors (reconciling/updating) are tolerated in case they
+// surface through the free-form health status, but the canonical phase set above
+// is the source of truth for classification.
+const gatewayPollingStates = new Set<string>([
+  gatewayCanonicalPhases.pending,
+  gatewayCanonicalPhases.provisioning,
+  gatewayCanonicalPhases.degraded,
   "reconciling",
   "updating",
-  "degraded",
 ]);
-const gatewayFailedLifecycleStates = new Set(["error", "failed"]);
+// The canonical terminal-failure phase; "error" is tolerated from free-form
+// status text.
+const gatewayFailedLifecycleStates = new Set<string>([
+  gatewayCanonicalPhases.failed,
+  "error",
+]);
 
 export interface GatewayDisplayStatusCounts {
   degraded: number;

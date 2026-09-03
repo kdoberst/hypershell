@@ -943,6 +943,10 @@
     "defaultMessage": "{count, plural, one {# gateway} other {# gateways}}",
     "description": "Pluralized gateway count shown inside each phase card."
   },
+  "app.metrics.phase.pending": {
+    "defaultMessage": "Pending",
+    "description": "Label for the Pending gateway phase metric card."
+  },
   "app.metrics.phase.provisioning": {
     "defaultMessage": "Provisioning",
     "description": "Label for the Provisioning gateway phase metric card."

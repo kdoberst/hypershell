@@ -1,11 +1,14 @@
-export const gatewayMetricPhases = [
-  "Running",
-  "Provisioning",
-  "Degraded",
-  "Failed",
-] as const;
+import {
+  emptyGatewayPhaseCounts,
+  gatewayCanonicalPhaseStrings,
+  type GatewayCanonicalPhase,
+} from "../../shared/gateway-phases.js";
 
-export type GatewayMetricPhase = (typeof gatewayMetricPhases)[number];
+export type GatewayPhaseCounts = Record<GatewayCanonicalPhase, number>;
+
+export const gatewayPhases = gatewayCanonicalPhaseStrings;
+
+export { emptyGatewayPhaseCounts };
 
 interface PrometheusQueryResponse {
   status: string;
@@ -17,23 +20,16 @@ interface PrometheusQueryResponse {
   };
 }
 
-export function emptyGatewayPhaseCounts(): Record<GatewayMetricPhase, number> {
-  return {
-    Running: 0,
-    Provisioning: 0,
-    Degraded: 0,
-    Failed: 0,
-  };
-}
-
-function isGatewayMetricPhase(value: string): value is GatewayMetricPhase {
-  return (gatewayMetricPhases as readonly string[]).includes(value);
+function isGatewayMetricPhase(
+  value: string,
+): value is keyof GatewayPhaseCounts {
+  return (gatewayPhases as readonly string[]).includes(value);
 }
 
 export async function queryGatewayPhaseCounts(
   prometheusUrl: string,
   timeoutMs: number,
-): Promise<Record<GatewayMetricPhase, number>> {
+): Promise<GatewayPhaseCounts> {
   const queryUrl = new URL("/api/v1/query", prometheusUrl);
   queryUrl.searchParams.set("query", "hypershell_gateways_total");
 

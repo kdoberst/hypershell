@@ -58,6 +58,7 @@ describe("queryGatewayPhaseCounts", () => {
         5_000,
       );
       expect(counts).toEqual({
+        Pending: 0,
         Running: 5,
         Provisioning: 0,
         Degraded: 0,

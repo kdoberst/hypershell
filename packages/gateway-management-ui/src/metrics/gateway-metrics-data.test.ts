@@ -23,6 +23,7 @@ describe("fetchGatewayMetrics", () => {
     );
 
     await expect(fetchGatewayMetrics()).resolves.toEqual({
+      Pending: 0,
       Running: 5,
       Provisioning: 2,
       Degraded: 1,
@@ -42,6 +43,7 @@ describe("fetchGatewayMetrics", () => {
     );
 
     await expect(fetchGatewayMetrics()).resolves.toEqual({
+      Pending: 0,
       Running: 3,
       Provisioning: 0,
       Degraded: 0,
@@ -64,7 +66,13 @@ describe("fetchGatewayMetrics", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          counts: { Running: 1, Provisioning: 0, Degraded: 0, Failed: 0 },
+          counts: {
+            Pending: 0,
+            Running: 1,
+            Provisioning: 0,
+            Degraded: 0,
+            Failed: 0,
+          },
         }),
         { status: 200 },
       ),

@@ -57,4 +57,4 @@ COPY --from=build /tmp/web-console/ ./
 
 EXPOSE 8080
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/bff/src/index.js"]

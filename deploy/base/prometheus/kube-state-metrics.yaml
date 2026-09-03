@@ -15,52 +15,8 @@ metadata:
 rules:
   - apiGroups: [""]
     resources:
-      - configmaps
-      - secrets
       - nodes
       - pods
-      - services
-      - resourcequotas
-      - replicationcontrollers
-      - limitranges
-      - persistentvolumeclaims
-      - persistentvolumes
-      - namespaces
-      - endpoints
-    verbs: ["list", "watch"]
-  - apiGroups: ["apps"]
-    resources:
-      - statefulsets
-      - daemonsets
-      - deployments
-      - replicasets
-    verbs: ["list", "watch"]
-  - apiGroups: ["batch"]
-    resources:
-      - cronjobs
-      - jobs
-    verbs: ["list", "watch"]
-  - apiGroups: ["autoscaling"]
-    resources:
-      - horizontalpodautoscalers
-    verbs: ["list", "watch"]
-  - apiGroups: ["policy"]
-    resources:
-      - poddisruptionbudgets
-    verbs: ["list", "watch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources:
-      - storageclasses
-      - volumeattachments
-    verbs: ["list", "watch"]
-  - apiGroups: ["coordination.k8s.io"]
-    resources:
-      - leases
-    verbs: ["list", "watch"]
-  - apiGroups: ["networking.k8s.io"]
-    resources:
-      - ingresses
-      - networkpolicies
     verbs: ["list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -112,6 +68,7 @@ spec:
             - --port=8080
             - --telemetry-host=0.0.0.0
             - --telemetry-port=8081
+            - --resources=pods,nodes
           ports:
             - name: metrics
               containerPort: 8080
