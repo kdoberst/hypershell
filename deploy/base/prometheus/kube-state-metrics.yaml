@@ -106,7 +106,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: kube-state-metrics
-          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0@sha256:2336fb0ec5b0841ce5871d777627943cda0a7fd875917a8abdb3fe27d78ac6fc
           args:
             - --host=0.0.0.0
             - --port=8080
