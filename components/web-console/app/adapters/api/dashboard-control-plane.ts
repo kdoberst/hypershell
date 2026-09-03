@@ -5,6 +5,7 @@ import {
 import type {
   DashboardControlPlane,
   DashboardInvocationContext,
+  DashboardMetricSourceId,
   OperationalDashboardMetrics,
   OperationalMetric,
 } from "@openshift-online/hypershell-operational-dashboard-ui";
@@ -171,18 +172,31 @@ function gatewayDisplayCountsToMetric(
 
 interface GatewayListAggregate {
   activeSandboxCount: number;
-  averageProvisionMinutes: number;
   displayStatusCounts: GatewayDisplayStatusCounts;
+  provisionSamples: readonly {
+    created_at?: string | null;
+    phase?: string;
+    updated_at?: string | null;
+  }[];
   total: number;
 }
 
-function averageGatewayProvisionMinutes(
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "AbortError"
+  );
+}
+
+function tryAverageGatewayProvisionMinutes(
   gateways: readonly {
     created_at?: string | null;
     phase?: string;
     updated_at?: string | null;
   }[],
-): number {
+): number | undefined {
   const durationsMs: number[] = [];
 
   for (const gateway of gateways) {
@@ -212,7 +226,7 @@ function averageGatewayProvisionMinutes(
   }
 
   if (durationsMs.length === 0) {
-    throw new Error("No gateway provision duration samples");
+    return undefined;
   }
 
   const averageMs =
@@ -286,11 +300,94 @@ async function aggregateGatewayList(
 
   return {
     activeSandboxCount,
-    averageProvisionMinutes: averageGatewayProvisionMinutes(provisionSamples),
     displayStatusCounts: aggregateGatewayDisplayStatusCounts(lifecycleRecords),
+    provisionSamples,
     total,
   };
 }
+
+async function fetchGatewayListMetrics(
+  context: DashboardInvocationContext,
+  apiFactory: DashboardApiFactory,
+): Promise<OperationalMetric[]> {
+  const aggregate = await aggregateGatewayList(context, apiFactory);
+  const metrics: OperationalMetric[] = [
+    gatewayDisplayCountsToMetric(
+      aggregate.total,
+      aggregate.displayStatusCounts,
+    ),
+    {
+      id: "provisioned-sandboxes",
+      value: String(aggregate.activeSandboxCount),
+    },
+  ];
+
+  const averageProvisionMinutes = tryAverageGatewayProvisionMinutes(
+    aggregate.provisionSamples,
+  );
+  if (averageProvisionMinutes !== undefined) {
+    metrics.push({
+      id: "provision-time",
+      unit: "minutes",
+      value: formatProvisionMinutes(averageProvisionMinutes),
+    });
+  }
+
+  return metrics;
+}
+
+async function fetchRegisteredUsersMetric(
+  context: DashboardInvocationContext,
+  apiFactory: DashboardApiFactory,
+): Promise<OperationalMetric[]> {
+  const client = apiFactory(context.correlationId);
+  const userList = await client.users.list(
+    { orderBy: "username asc", page: 1, size: 1 },
+    { signal: context.signal },
+  );
+
+  return [
+    {
+      id: "registered-users",
+      value: String(userList.total),
+    },
+  ];
+}
+
+interface MetricSourceDefinition {
+  fetch: (
+    context: DashboardInvocationContext,
+    apiFactory: DashboardApiFactory,
+  ) => Promise<OperationalMetric[]>;
+  id: DashboardMetricSourceId;
+}
+
+const metricSources: readonly MetricSourceDefinition[] = [
+  {
+    id: "gateway-list",
+    fetch: fetchGatewayListMetrics,
+  },
+  {
+    id: "registered-users",
+    fetch: fetchRegisteredUsersMetric,
+  },
+  {
+    id: "cluster-memory",
+    fetch: async (context) => [await fetchClusterMemoryMetric(context.signal)],
+  },
+  {
+    id: "cluster-cpu",
+    fetch: async (context) => [await fetchClusterCpuMetric(context.signal)],
+  },
+  {
+    id: "cluster-pods",
+    fetch: async (context) => [await fetchClusterPodsMetric(context.signal)],
+  },
+  {
+    id: "cluster-nodes",
+    fetch: async (context) => [await fetchClusterNodesMetric(context.signal)],
+  },
+];
 
 export function createDashboardControlPlaneAdapter(
   apiFactory: DashboardApiFactory,
@@ -301,48 +398,42 @@ export function createDashboardControlPlaneAdapter(
     ): Promise<OperationalDashboardMetrics> {
       context.signal?.throwIfAborted();
 
-      const aggregate = await aggregateGatewayList(context, apiFactory);
-      const client = apiFactory(context.correlationId);
-      const [userList, memoryMetric, cpuMetric, podsMetric, nodesMetric] =
-        await Promise.all([
-          client.users.list(
-            { orderBy: "username asc", page: 1, size: 1 },
-            { signal: context.signal },
-          ),
-          fetchClusterMemoryMetric(context.signal),
-          fetchClusterCpuMetric(context.signal),
-          fetchClusterPodsMetric(context.signal),
-          fetchClusterNodesMetric(context.signal),
-        ]);
-
-      const metrics: OperationalMetric[] = [
-        gatewayDisplayCountsToMetric(
-          aggregate.total,
-          aggregate.displayStatusCounts,
+      const settled = await Promise.allSettled(
+        metricSources.map((source) =>
+          source.fetch(context, apiFactory).then((metrics) => ({
+            id: source.id,
+            metrics,
+          })),
         ),
-      ];
+      );
 
-      metrics.push({
-        id: "provisioned-sandboxes",
-        value: String(aggregate.activeSandboxCount),
-      });
+      const metrics: OperationalMetric[] = [];
+      const failedSources: DashboardMetricSourceId[] = [];
 
-      metrics.push({
-        id: "registered-users",
-        value: String(userList.total),
-      });
+      for (const [index, result] of settled.entries()) {
+        const source = metricSources[index];
+        if (source === undefined) {
+          continue;
+        }
 
-      metrics.push(memoryMetric);
-      metrics.push(cpuMetric);
-      metrics.push(podsMetric);
-      metrics.push(nodesMetric);
-      metrics.push({
-        id: "provision-time",
-        unit: "minutes",
-        value: formatProvisionMinutes(aggregate.averageProvisionMinutes),
-      });
+        if (result.status === "fulfilled") {
+          metrics.push(...result.value.metrics);
+          continue;
+        }
+
+        if (isAbortError(result.reason)) {
+          throw result.reason;
+        }
+
+        failedSources.push(source.id);
+      }
+
+      if (metrics.length === 0) {
+        throw new Error("All operational dashboard metric sources failed");
+      }
 
       return {
+        ...(failedSources.length > 0 ? { failedSources } : {}),
         lastSuccessfulRefresh: new Date(),
         metrics,
       };

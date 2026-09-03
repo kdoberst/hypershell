@@ -266,7 +266,7 @@ function SummaryUtilizationValue({
   const intl = useIntl();
 
   if (!metric) {
-    return null;
+    return <SummaryUnavailableValue />;
   }
 
   if (
@@ -315,14 +315,25 @@ function SummaryUtilizationValue({
   );
 }
 
+function SummaryUnavailableValue() {
+  return (
+    <span className="hypershell-dashboard-summary-unavailable">
+      <FormattedMessage {...messages.metricUnavailableTitle} />
+    </span>
+  );
+}
+
 function SummaryMetricValue({
   metric,
 }: Readonly<{ metric: OperationalMetric | undefined }>) {
   const intl = useIntl();
-  const trendChange = metric ? getMetricTrendChange(metric) : undefined;
-  const displayValue = metric
-    ? formatOperationalMetricDisplayValue(metric.value, intl)
-    : undefined;
+
+  if (!metric) {
+    return <SummaryUnavailableValue />;
+  }
+
+  const trendChange = getMetricTrendChange(metric);
+  const displayValue = formatOperationalMetricDisplayValue(metric.value, intl);
 
   return (
     <Flex
@@ -450,16 +461,18 @@ function SummaryGatewayStatusCounts({
 function SummaryGatewayValue({
   metric,
 }: Readonly<{ metric: OperationalMetric | undefined }>) {
+  if (!metric) {
+    return <SummaryUnavailableValue />;
+  }
+
   return (
     <Stack hasGutter className="hypershell-dashboard-summary-gateway-value">
       <StackItem>
         <SummaryMetricValue metric={metric} />
       </StackItem>
-      {metric ? (
-        <StackItem>
-          <SummaryGatewayStatusCounts metric={metric} />
-        </StackItem>
-      ) : null}
+      <StackItem>
+        <SummaryGatewayStatusCounts metric={metric} />
+      </StackItem>
     </Stack>
   );
 }
