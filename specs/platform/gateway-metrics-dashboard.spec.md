@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Expose the live count of Gateway instances by phase - Running, Provisioning, Degraded, and Failed - as a Prometheus metric and a reusable React component, so operators can assess fleet-wide gateway health without querying Prometheus directly. The metric is collected by a custom Prometheus Collector in the API server that queries the database on each scrape; it is scraped by a Prometheus instance deployed alongside the platform; and it is surfaced to browser code through a BFF proxy route that shields the browser from direct Prometheus access.
+Expose the live count of Gateway instances by phase - Pending, Provisioning, Running, Degraded, and Failed - as a Prometheus metric and a reusable React component, so operators can assess fleet-wide gateway health without querying Prometheus directly. The metric is collected by a custom Prometheus Collector in the API server that queries the database on each scrape; it is scraped by a Prometheus instance deployed alongside the platform; and it is surfaced to browser code through a BFF proxy route that shields the browser from direct Prometheus access.
 
 This specification covers the metrics pipeline end to end: the API server collector, Prometheus deployment and scrape configuration, the BFF metrics route, the `GatewayMetricsDashboard` shared component, the `/metrics` SPA route, and the Kubernetes manifests required to deploy and operate the pipeline on any cluster.
 
@@ -19,9 +19,9 @@ The widgetized **operational dashboard** at `/dashboard` is specified separately
 
 ### Requirement: DASH-01 -- Gateway Phase Metric
 
-The API server SHALL expose a custom Prometheus Collector named `hypershell_gateways_total` with a `phase` label that reports the current count of Gateway instances in each known lifecycle phase. The canonical phase vocabulary SHALL be owned by `@openshift-online/hypershell-gateway-management-ui` (single source of truth shared with gateway list presentation). The BFF metrics route and this collector SHALL emit every phase in that vocabulary on every scrape/response, even when a phase count is zero.
+The API server SHALL expose a custom Prometheus Collector named `hypershell_gateways_total` with a `phase` label that reports the current count of Gateway instances in each known lifecycle phase. The canonical phase vocabulary SHALL be owned by `components/api-server/pkg/gatewayhealth` (single source of truth shared with the control plane); the web console mirrors it via `gatewayCanonicalPhaseStrings` in `@openshift-online/hypershell-gateway-management-ui`. See `platform/gateway-phase-vocabulary.spec.md`. The BFF metrics route and this collector SHALL emit every phase in that vocabulary on every scrape/response, even when a phase count is zero.
 
-The Collector SHALL query the database once per scrape via `CountByPhase`  -  a single `SELECT phase, count(*) FROM gateways GROUP BY phase`  -  and emit one `GaugeValue` sample per phase. All four phases SHALL be emitted on every scrape, even when a phase count is zero, so Prometheus never observes a gap in the series.
+The Collector SHALL query the database once per scrape via `CountByPhase`  -  a single `SELECT phase, count(*) FROM gateways GROUP BY phase`  -  and emit one `GaugeValue` sample per phase. All five canonical phases SHALL be emitted on every scrape, even when a phase count is zero, so Prometheus never observes a gap in the series.
 
 When the database query fails, the Collector SHALL emit a `prometheus.NewInvalidMetric` so the scrape registers as failed and the error is surfaced to Prometheus rather than silently dropped.
 
@@ -31,7 +31,7 @@ The Collector SHALL be registered exactly once using `sync.Once`; subsequent cal
 
 - GIVEN the API server is running with a reachable database
 - WHEN Prometheus scrapes `GET :4433/metrics`
-- THEN the response SHALL contain `hypershell_gateways_total{phase="Running"}`, `hypershell_gateways_total{phase="Provisioning"}`, `hypershell_gateways_total{phase="Degraded"}`, and `hypershell_gateways_total{phase="Failed"}`
+- THEN the response SHALL contain `hypershell_gateways_total{phase="Pending"}`, `hypershell_gateways_total{phase="Provisioning"}`, `hypershell_gateways_total{phase="Running"}`, `hypershell_gateways_total{phase="Degraded"}`, and `hypershell_gateways_total{phase="Failed"}`
 - AND each value SHALL equal the current count of Gateways in that phase
 
 #### Scenario: Zero-count phases still appear
@@ -174,7 +174,7 @@ Fleet-wide phase counts from Prometheus are intentionally **not** filtered by pe
 
 ### Requirement: DASH-06 -- Dashboard Component
 
-The `gateway-management-ui` shared library SHALL export a `GatewayMetricsDashboard` React component that renders the `hypershell_gateways_total` phase counts as four PatternFly `Card` components inside a `Gallery`.
+The `gateway-management-ui` shared library SHALL export a `GatewayMetricsDashboard` React component that renders the `hypershell_gateways_total` phase counts as five PatternFly `Card` components inside a `Gallery`.
 
 Each card SHALL display the phase name (localized via `react-intl`) in the PatternFly semantic status color for that phase, the numeric count in a large heading, and a pluralized gateway count label. The phase-to-color mapping SHALL be:
 
@@ -187,11 +187,11 @@ Each card SHALL display the phase name (localized via `react-intl`) in the Patte
 
 The component SHALL use TanStack Query with `queryKey: ["gateways", "metrics"]` and SHALL refetch every `30_000` ms to stay aligned with the Prometheus scrape interval.
 
-While loading, the component SHALL render a PatternFly `Spinner` with a localized `aria-label`. When the query has errored or produced no data, the component SHALL render a PatternFly `EmptyState` with a localized error title and recovery guidance. When data is available, the component SHALL render all four phase cards, defaulting absent phases from the API response to `0`.
+While loading, the component SHALL render a PatternFly `Spinner` with a localized `aria-label`. When the query has errored or produced no data, the component SHALL render a PatternFly `EmptyState` with a localized error title and recovery guidance. When data is available, the component SHALL render all five phase cards, defaulting absent phases from the API response to `0`.
 
 All user-visible strings SHALL be declared with `defineMessages` and rendered through `FormattedMessage` or `intl.formatMessage`. No literal string SHALL appear in JSX.
 
-#### Scenario: Dashboard renders all four phase cards
+#### Scenario: Dashboard renders all five phase cards
 
 - GIVEN `GET /api/metrics/gateways` returns `{ counts: { Running: 5, Provisioning: 2, Degraded: 1, Failed: 0 } }`
 - WHEN `GatewayMetricsDashboard` mounts
