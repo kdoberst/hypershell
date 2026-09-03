@@ -21,6 +21,10 @@ describe("dashboard layout persistence", () => {
       "cpu",
       "pods",
       "nodes",
+      "inventory-summary",
+      "managed-cluster-providers",
+      "managed-cluster-regions",
+      "managed-database-status",
     ]);
   });
 
@@ -73,6 +77,6 @@ describe("dashboard layout persistence", () => {
 
     expect(
       sanitized.xl.filter((item) => item.widgetType === "section-title"),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 });
