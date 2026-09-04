@@ -22,9 +22,16 @@ export interface OperationalMetricPodPhases {
   unknown: number;
 }
 
+export interface OperationalMetricProvisionDuration {
+  mean: string;
+  p50: string;
+  p95: string;
+}
+
 export interface OperationalMetric {
   id: string;
   podPhases?: OperationalMetricPodPhases;
+  provisionDuration?: OperationalMetricProvisionDuration;
   status?: OperationalMetricStatus;
   total?: string;
   trend?: OperationalMetricTrend;

@@ -499,23 +499,25 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 - **Delivered:** Reuses CLP-W1 kube-state-metrics; BFF instant queries for total/ready nodes; adapter maps to `nodes` metric with gateway-style `value` + `status` (`healthy`/`failed`); `system-summary` row uses `SummaryGatewayValue`.
 - **UI:** Total count with failed-node exception icon when `status.failed > 0`; no `provisioning`/`degraded` buckets in v1.
 
-### gateway-provision-time.spec.md
+### gateway-provision-time.spec.md (v2 — histogram mean / P50 / P95)
 
 | # | Requirement | Status | Gap | Code Location | Wave |
 |---|-------------|--------|-----|---------------|------|
-| GPT-01 | Dashboard operator scope (paginated gateway list) | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
-| GPT-02 | Provision duration measurement contract (`average_minutes`) | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
-| GPT-03 | Timestamp proxy semantics (`updated_at - created_at`) | Present | - | `dashboard-control-plane.ts`, `DATA_SOURCES.md` | GPT-W1 ✅ |
-| GPT-04 | No dedicated BFF or Prometheus route | Present | - | Reuses gateway list aggregate | GPT-W1 ✅ |
-| GPT-05 | Operational dashboard `provision-time` metric mapping | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
-| GPT-06 | List consistency guard | Present | - | `dashboard-control-plane.ts` | GPT-W1 ✅ |
-| GPT-07 | Refresh and error semantics | Present | - | `get-metrics-data.ts`, adapter fails when no samples | - |
-| GPT-08 | Verification (adapter tests) | Present | - | `dashboard-control-plane.test.ts` | GPT-W1 ✅ |
+| GPT-00 | Prometheus histogram availability (`gateway_provision_duration_seconds`) | Missing | CP OTLP metrics not wired to Prometheus in deploy/kind | - | GPT-W2 |
+| GPT-01 | Measurement contract (mean, P50, P95 in minutes) | Missing | Adapter still emits mean only from gateway list | `dashboard-control-plane.ts` | GPT-W2 |
+| GPT-02 | Control-plane histogram semantics (CP-OBS-07) | Present | - | `control-plane/internal/otel/metrics.go` | CP-OBS-GPD-W1 ✅ |
+| GPT-03 | Prometheus data source | Missing | No BFF PromQL queries | - | GPT-W2 |
+| GPT-04 | BFF `GET /api/metrics/gateway-provision-duration` | Missing | Route does not exist | - | GPT-W2 |
+| GPT-05 | Operational dashboard mapping + three system-summary rows | Missing | Single mean row; no `provisionDuration` field | `dashboard-widget.tsx`, `dashboard-types.ts` | GPT-W2 |
+| GPT-06 | Decoupled from gateway list | Missing | Still computed from gateway list | `dashboard-control-plane.ts` | GPT-W2 |
+| GPT-07 | Refresh and error semantics | Partial | Omit-on-failure works; zero-count path still list-based | `dashboard-control-plane.ts` | GPT-W2 |
+| GPT-08 | Verification | Partial | List-based adapter tests only | `dashboard-control-plane.test.ts` | GPT-W2 |
 
 **Scoped analysis notes:**
 
-- **Delivered:** Mean provision minutes for `Running` gateways computed from the existing paginated gateway list; `value` + `unit: "minutes"` on `provision-time` metric; no extra API or BFF route.
-- **Proxy:** v1 uses `updated_at - created_at`; per-gateway breakdown and percentiles deferred.
+- **Spec v2 (2026-09-03):** Retires gateway-list timestamp proxy. Provision time becomes fleet-wide histogram stats via BFF Prometheus proxy (same pattern as cluster memory).
+- **Drift:** GPT-W1 implementation (mean from gateway list) remains until GPT-W2 lands.
+- **Prerequisite:** Deploy/kind must expose `gateway_provision_duration_seconds` to the BFF's `PROMETHEUS_URL` (GPT-00).
 
 ### e2e-testing.spec.md
 
@@ -1085,6 +1087,19 @@ label-selected pod informer.
 3. Emit `provision-time` metric with `unit: "minutes"`; fail when no qualifying samples
 4. Document proxy semantics in `DATA_SOURCES.md`; connect OP-DASH-08 `provision-time` row
 5. Add adapter unit tests for averaging, exclusions, and empty-sample failure
+
+### Wave GPT-W2: Histogram Provision Time (mean / P50 / P95)
+
+**Scope:** GPT-00 through GPT-08 (v2 spec), OP-DASH-13 three-row system-summary, OP-DASH-19 independent source
+**Dependency:** CP-OBS-GPD-W1 ✅; `gateway-provision-time.spec.md` v2; Prometheus pipeline for CP histogram (GPT-00)
+**Status:** Planned
+
+1. Wire control-plane OTLP metrics into Prometheus (`gateway_provision_duration_seconds`) in deploy/kind (GPT-00)
+2. Add BFF `GET /api/metrics/gateway-provision-duration` with mean / P50 / P95 PromQL (GPT-03, GPT-04)
+3. Decouple adapter: new `gateway-provision-duration` metric source; remove list-based computation (GPT-06)
+4. Extend `OperationalMetric` with `provisionDuration`; map BFF JSON to `provision-time` metric (GPT-01, GPT-05)
+5. Render three system-summary rows (mean, median, P95) with localized labels (GPT-05, OP-DASH-13)
+6. BFF + adapter unit tests; update `DATA_SOURCES.md` and `dashboard-metric-sources.ts`
 
 ### Future (Deferred)
 

@@ -260,6 +260,43 @@ function UtilizationStatusIcon({
   );
 }
 
+function SummaryProvisionDurationValue({
+  metric,
+  valueKey,
+}: Readonly<{
+  metric: OperationalMetric | undefined;
+  valueKey: "mean" | "p50" | "p95";
+}>) {
+  const intl = useIntl();
+
+  if (!metric) {
+    return null;
+  }
+
+  const durationValue =
+    valueKey === "mean"
+      ? (metric.provisionDuration?.mean ?? metric.value)
+      : metric.provisionDuration?.[valueKey];
+
+  if (
+    durationValue === undefined ||
+    !isDisplayableOperationalMetricValue(durationValue)
+  ) {
+    return null;
+  }
+
+  return (
+    <>
+      {metric.unit
+        ? intl.formatMessage(messages.utilizationLabel, {
+            unit: metric.unit,
+            value: durationValue,
+          })
+        : durationValue}
+    </>
+  );
+}
+
 function SummaryUtilizationValue({
   metric,
 }: Readonly<{ metric: OperationalMetric | undefined }>) {
@@ -607,8 +644,31 @@ export function SystemSummaryCard({
             <FormattedMessage {...messages.provisionTime} />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            <SummaryUtilizationValue
+            <SummaryProvisionDurationValue
               metric={metrics.find((metric) => metric.id === "provision-time")}
+              valueKey="mean"
+            />
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.provisionTimeP50} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            <SummaryProvisionDurationValue
+              metric={metrics.find((metric) => metric.id === "provision-time")}
+              valueKey="p50"
+            />
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+        <DescriptionListGroup>
+          <DescriptionListTerm>
+            <FormattedMessage {...messages.provisionTimeP95} />
+          </DescriptionListTerm>
+          <DescriptionListDescription>
+            <SummaryProvisionDurationValue
+              metric={metrics.find((metric) => metric.id === "provision-time")}
+              valueKey="p95"
             />
           </DescriptionListDescription>
         </DescriptionListGroup>

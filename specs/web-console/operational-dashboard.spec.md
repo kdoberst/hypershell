@@ -216,7 +216,7 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | `nodes` | Yes | BFF `GET /api/metrics/cluster-nodes` (Prometheus kube-state-metrics); see `platform/cluster-nodes.spec.md` |
 | `cpu` | Yes | BFF `GET /api/metrics/cluster-cpu` (Prometheus node-exporter); see `platform/cluster-cpu.spec.md` |
 | `pods` | Yes | BFF `GET /api/metrics/cluster-pods` (Prometheus kube-state-metrics); see `platform/cluster-pods.spec.md` |
-| `provision-time` | Yes | Mean `Running` gateway duration from paginated gateway list (`updated_at - created_at`); see `platform/gateway-provision-time.spec.md` |
+| `provision-time` | Yes | BFF `GET /api/metrics/gateway-provision-duration` (Prometheus control-plane histogram); see `platform/gateway-provision-time.spec.md` |
 
 Widgets for placeholder metrics SHALL remain in the default layout and in the add-widgets drawer. When a metric ID is missing from the adapter response, the widget body SHALL render a localized "Metric unavailable" empty state (title and recovery guidance) instead of failing the entire dashboard.
 
@@ -294,7 +294,7 @@ Users SHALL be able to add widgets from the drawer, drag to rearrange, and remov
 
 ### Requirement: OP-DASH-11 -- Layout Persistence
 
-The dashboard SHALL persist the sanitized layout template to `localStorage` under the key `hypershell.operational-dashboard.layout.v19`.
+The dashboard SHALL persist the sanitized layout template to `localStorage` under the key `hypershell.operational-dashboard.layout.v20`.
 
 On mount, a saved template SHALL be loaded when it parses as valid JSON and contains an array entry for every responsive variant (`xl`, `lg`, `md`, `sm`). Invalid or corrupt saved state SHALL fall back to the default template without surfacing an error to the user.
 
@@ -398,7 +398,7 @@ The `pods` widget SHALL use `PodCapacityChart` (OP-DASH-17), not `UtilizationCha
 **Summary widgets:**
 
 - `usage-summary` - horizontal `DescriptionList` for active users, gateways (with exception status counts), and sandboxes
-- `system-summary` - horizontal `DescriptionList` for memory, CPU, pods (with failed pod count when `podPhases.failed` is non-zero), nodes (with exception status counts when `status.failed` is non-zero), and provision time
+- `system-summary` - horizontal `DescriptionList` for memory, CPU, pods (with failed pod count when `podPhases.failed` is non-zero), nodes (with exception status counts when `status.failed` is non-zero), and provision duration (average, P50, and P95 rows when `provisionDuration` is present on the `provision-time` metric; see `platform/gateway-provision-time.spec.md` GPT-05)
 
 Trend direction indicators in summary rows SHALL appear only when `getMetricTrendChange` detects at least a 5% change between the first and last trend point.
 
@@ -414,6 +414,12 @@ Trend direction indicators in summary rows SHALL appear only when `getMetricTren
 - GIVEN the `pods` metric has `podPhases.failed: 16`
 - WHEN the system summary pods row renders
 - THEN a failed count of `16` SHALL appear below the utilization value with a danger status icon
+
+#### Scenario: Provision duration shows average, P50, and P95
+
+- GIVEN the `provision-time` metric has `unit: "minutes"`, `value: "5.25"`, and `provisionDuration: { mean: "5.25", p50: "4.80", p95: "12.10" }`
+- WHEN the system summary provision-duration rows render
+- THEN three localized rows SHALL appear for average, P50, and P95
 
 ---
 

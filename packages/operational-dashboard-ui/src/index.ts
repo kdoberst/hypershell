@@ -17,6 +17,7 @@ export type {
   OperationalDashboardMetrics,
   OperationalMetric,
   OperationalMetricPodPhases,
+  OperationalMetricProvisionDuration,
   OperationalMetricStatus,
   OperationalMetricTrend,
   OperationalMetricTrendPoint,

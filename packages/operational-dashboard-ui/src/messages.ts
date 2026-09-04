@@ -192,8 +192,18 @@ export const messages = defineMessages({
   },
   provisionTime: {
     id: "app.dashboard.summary.provisionTime",
-    defaultMessage: "Provision time",
-    description: "Summary label for provision time.",
+    defaultMessage: "Provision time (average)",
+    description: "Summary label for average gateway provision time.",
+  },
+  provisionTimeP50: {
+    id: "app.dashboard.summary.provisionTimeP50",
+    defaultMessage: "Provision time (P50)",
+    description: "Summary label for P50 gateway provision time.",
+  },
+  provisionTimeP95: {
+    id: "app.dashboard.summary.provisionTimeP95",
+    defaultMessage: "Provision time (P95)",
+    description: "Summary label for P95 gateway provision time.",
   },
   refresh: {
     id: "app.dashboard.refresh",

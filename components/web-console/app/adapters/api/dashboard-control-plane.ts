@@ -14,6 +14,7 @@ type DashboardApiFactory = (correlationId: string) => SDKClient;
 
 const gatewayListPageSize = 100;
 const gibibyteDivisor = 1024 ** 3;
+const secondsPerMinute = 60;
 
 interface ClusterMemoryResponse {
   available_bytes: number;
@@ -42,6 +43,13 @@ interface ClusterNodesResponse {
   not_ready_nodes: number;
   ready_nodes: number;
   total_nodes: number;
+}
+
+interface GatewayProvisionDurationResponse {
+  mean_seconds: number;
+  observation_count: number;
+  p50_seconds: number;
+  p95_seconds: number;
 }
 
 function bytesToRoundedGib(bytes: number): string {
@@ -153,6 +161,40 @@ async function fetchClusterNodesMetric(
   };
 }
 
+function formatProvisionMinutesFromSeconds(seconds: number): string {
+  return (seconds / secondsPerMinute).toFixed(2);
+}
+
+async function fetchGatewayProvisionDurationMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const response = await fetch("/api/metrics/gateway-provision-duration", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch gateway provision duration metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as GatewayProvisionDurationResponse;
+  const mean = formatProvisionMinutesFromSeconds(body.mean_seconds);
+  const p50 = formatProvisionMinutesFromSeconds(body.p50_seconds);
+  const p95 = formatProvisionMinutesFromSeconds(body.p95_seconds);
+
+  return {
+    id: "provision-time",
+    provisionDuration: {
+      mean,
+      p50,
+      p95,
+    },
+    unit: "minutes",
+    value: mean,
+  };
+}
+
 function gatewayDisplayCountsToMetric(
   total: number,
   counts: GatewayDisplayStatusCounts,
@@ -171,59 +213,8 @@ function gatewayDisplayCountsToMetric(
 
 interface GatewayListAggregate {
   activeSandboxCount: number;
-  averageProvisionMinutes: number;
   displayStatusCounts: GatewayDisplayStatusCounts;
   total: number;
-}
-
-function averageGatewayProvisionMinutes(
-  gateways: readonly {
-    created_at?: string | null;
-    phase?: string;
-    updated_at?: string | null;
-  }[],
-): number {
-  const durationsMs: number[] = [];
-
-  for (const gateway of gateways) {
-    if (gateway.phase !== "Running") {
-      continue;
-    }
-
-    const createdAt = gateway.created_at;
-    const updatedAt = gateway.updated_at;
-    if (createdAt === null || createdAt === undefined) {
-      continue;
-    }
-    if (updatedAt === null || updatedAt === undefined) {
-      continue;
-    }
-
-    const createdMs = Date.parse(createdAt);
-    const updatedMs = Date.parse(updatedAt);
-    if (!Number.isFinite(createdMs) || !Number.isFinite(updatedMs)) {
-      continue;
-    }
-    if (updatedMs < createdMs) {
-      continue;
-    }
-
-    durationsMs.push(updatedMs - createdMs);
-  }
-
-  if (durationsMs.length === 0) {
-    throw new Error("No gateway provision duration samples");
-  }
-
-  const averageMs =
-    durationsMs.reduce((sum, durationMs) => sum + durationMs, 0) /
-    durationsMs.length;
-
-  return averageMs / 60_000;
-}
-
-function formatProvisionMinutes(minutes: number): string {
-  return minutes.toFixed(2);
 }
 
 async function aggregateGatewayList(
@@ -235,11 +226,6 @@ async function aggregateGatewayList(
   let total = 0;
   let activeSandboxCount = 0;
   const lifecycleRecords: { phase?: string; status?: string }[] = [];
-  const provisionSamples: {
-    created_at?: string | null;
-    phase?: string;
-    updated_at?: string | null;
-  }[] = [];
 
   do {
     const result = await client.gateways.list(
@@ -273,11 +259,6 @@ async function aggregateGatewayList(
         phase: gateway.phase,
         status: gateway.status,
       });
-      provisionSamples.push({
-        created_at: gateway.created_at,
-        phase: gateway.phase,
-        updated_at: gateway.updated_at,
-      });
     }
 
     total = result.total;
@@ -286,7 +267,6 @@ async function aggregateGatewayList(
 
   return {
     activeSandboxCount,
-    averageProvisionMinutes: averageGatewayProvisionMinutes(provisionSamples),
     displayStatusCounts: aggregateGatewayDisplayStatusCounts(lifecycleRecords),
     total,
   };
@@ -303,44 +283,44 @@ export function createDashboardControlPlaneAdapter(
 
       const aggregate = await aggregateGatewayList(context, apiFactory);
       const client = apiFactory(context.correlationId);
-      const [userList, memoryMetric, cpuMetric, podsMetric, nodesMetric] =
-        await Promise.all([
-          client.users.list(
-            { orderBy: "username asc", page: 1, size: 1 },
-            { signal: context.signal },
-          ),
-          fetchClusterMemoryMetric(context.signal),
-          fetchClusterCpuMetric(context.signal),
-          fetchClusterPodsMetric(context.signal),
-          fetchClusterNodesMetric(context.signal),
-        ]);
+      const [
+        userList,
+        memoryMetric,
+        cpuMetric,
+        podsMetric,
+        nodesMetric,
+        provisionTimeMetric,
+      ] = await Promise.all([
+        client.users.list(
+          { orderBy: "username asc", page: 1, size: 1 },
+          { signal: context.signal },
+        ),
+        fetchClusterMemoryMetric(context.signal),
+        fetchClusterCpuMetric(context.signal),
+        fetchClusterPodsMetric(context.signal),
+        fetchClusterNodesMetric(context.signal),
+        fetchGatewayProvisionDurationMetric(context.signal),
+      ]);
 
       const metrics: OperationalMetric[] = [
         gatewayDisplayCountsToMetric(
           aggregate.total,
           aggregate.displayStatusCounts,
         ),
+        {
+          id: "provisioned-sandboxes",
+          value: String(aggregate.activeSandboxCount),
+        },
+        {
+          id: "registered-users",
+          value: String(userList.total),
+        },
+        memoryMetric,
+        cpuMetric,
+        podsMetric,
+        nodesMetric,
+        provisionTimeMetric,
       ];
-
-      metrics.push({
-        id: "provisioned-sandboxes",
-        value: String(aggregate.activeSandboxCount),
-      });
-
-      metrics.push({
-        id: "registered-users",
-        value: String(userList.total),
-      });
-
-      metrics.push(memoryMetric);
-      metrics.push(cpuMetric);
-      metrics.push(podsMetric);
-      metrics.push(nodesMetric);
-      metrics.push({
-        id: "provision-time",
-        unit: "minutes",
-        value: formatProvisionMinutes(aggregate.averageProvisionMinutes),
-      });
 
       return {
         lastSuccessfulRefresh: new Date(),

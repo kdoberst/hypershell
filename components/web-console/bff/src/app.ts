@@ -22,6 +22,7 @@ import {
 import { queryGatewayPhaseCounts } from "./metrics-gateways.js";
 import { queryClusterCpu } from "./metrics-cluster-cpu.js";
 import { queryClusterMemory } from "./metrics-cluster-memory.js";
+import { queryGatewayProvisionDuration } from "./metrics-gateway-provision-duration.js";
 import { queryClusterPods } from "./metrics-cluster-pods.js";
 import { queryClusterNodes } from "./metrics-cluster-nodes.js";
 import { tokenExpired } from "./tokens.js";
@@ -529,6 +530,24 @@ export async function buildApp(
       }
     },
   );
+
+  app.get("/api/metrics/gateway-provision-duration", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+    if (config.oidcIssuer && !request.session.get("accessToken")) {
+      return respondReauth(reply);
+    }
+
+    try {
+      return await queryGatewayProvisionDuration(config.prometheusUrl, 10_000);
+    } catch (error) {
+      request.log.warn(
+        { err: error },
+        "gateway provision duration metrics query failed",
+      );
+      reply.code(502);
+      return { error: "Metrics unavailable", statusCode: 502 };
+    }
+  });
 
   app.all("/api/*", async (request, reply) => {
     // Start one BFF server span per proxied request. It continues a valid

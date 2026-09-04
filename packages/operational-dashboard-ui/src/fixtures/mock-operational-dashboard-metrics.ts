@@ -60,6 +60,11 @@ export const mockOperationalDashboardMetrics: OperationalDashboardMetrics =
       }),
       Object.freeze({
         id: "provision-time",
+        provisionDuration: Object.freeze({
+          mean: "5.25",
+          p50: "4.80",
+          p95: "12.10",
+        }),
         unit: "minutes",
         value: "5.25",
       }),

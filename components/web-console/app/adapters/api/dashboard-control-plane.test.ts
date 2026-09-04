@@ -35,6 +35,13 @@ const mockClusterPodsResponse = {
   used_pods: 548,
 };
 
+const mockGatewayProvisionDurationResponse = {
+  mean_seconds: 315,
+  observation_count: 2,
+  p50_seconds: 288,
+  p95_seconds: 726,
+};
+
 function mockClusterMetricsResponses(
   capacityBytes: number,
   usedBytes: number,
@@ -76,6 +83,12 @@ function mockClusterMetricsResponses(
             ready_nodes: 8,
             total_nodes: 8,
           }),
+        ok: true,
+      });
+    }
+    if (url === "/api/metrics/gateway-provision-duration") {
+      return Promise.resolve({
+        json: () => Promise.resolve(mockGatewayProvisionDurationResponse),
         ok: true,
       });
     }
@@ -260,6 +273,11 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
     expect(provisionTimeMetric).toEqual({
       id: "provision-time",
+      provisionDuration: {
+        mean: "5.25",
+        p50: "4.80",
+        p95: "12.10",
+      },
       unit: "minutes",
       value: "5.25",
     });
@@ -352,7 +370,7 @@ describe("createDashboardControlPlaneAdapter", () => {
     expect(sandboxesMetric?.value).toBe("5");
   });
 
-  it("averages provision duration across Running gateways only", async () => {
+  it("maps gateway provision duration histogram into average, P50, and P95 minutes", async () => {
     mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
 
     usersListApi.mockResolvedValueOnce({
@@ -364,23 +382,7 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
 
     gatewayListApi.mockResolvedValueOnce(
-      gatewayList(
-        [
-          gateway({
-            created_at: "2026-08-01T10:00:00.000Z",
-            phase: "Running",
-            updated_at: "2026-08-01T10:04:00.000Z",
-          }),
-          gateway({
-            created_at: "2026-08-01T10:00:00.000Z",
-            phase: "Running",
-            updated_at: "2026-08-01T10:06:30.000Z",
-          }),
-          gateway({ phase: "Provisioning", status: "route pending" }),
-        ],
-        3,
-        1,
-      ),
+      gatewayList([gateway({ phase: "Provisioning", status: "route pending" })], 1, 1),
     );
 
     const metrics = await adapter.getOperationalMetrics(context);
@@ -390,13 +392,71 @@ describe("createDashboardControlPlaneAdapter", () => {
 
     expect(provisionTimeMetric).toEqual({
       id: "provision-time",
+      provisionDuration: {
+        mean: "5.25",
+        p50: "4.80",
+        p95: "12.10",
+      },
       unit: "minutes",
       value: "5.25",
     });
   });
 
-  it("fails when no Running gateways provide provision duration samples", async () => {
-    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
+  it("fails when the BFF provision duration route is unavailable", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/metrics/gateway-provision-duration") {
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+        });
+      }
+      if (url === "/api/metrics/cluster-memory") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_bytes: 512 * 1024 ** 2,
+              capacity_bytes: 1024 ** 3,
+              used_bytes: 512 * 1024 ** 2,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-cpu") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              available_cores: 11.8,
+              capacity_cores: 60,
+              used_cores: 48.2,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-pods") {
+        return Promise.resolve({
+          json: () => Promise.resolve(mockClusterPodsResponse),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/cluster-nodes") {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              not_ready_nodes: 0,
+              ready_nodes: 8,
+              total_nodes: 8,
+            }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/gateway-provision-duration") {
+        return Promise.resolve({
+          json: () => Promise.resolve(mockGatewayProvisionDurationResponse),
+          ok: true,
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch url: ${url}`));
+    });
 
     usersListApi.mockResolvedValueOnce({
       items: [],
@@ -418,7 +478,7 @@ describe("createDashboardControlPlaneAdapter", () => {
     );
 
     await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
-      "No gateway provision duration samples",
+      "Failed to fetch gateway provision duration metrics: 502",
     );
   });
 
@@ -522,6 +582,12 @@ describe("createDashboardControlPlaneAdapter", () => {
           ok: true,
         });
       }
+      if (url === "/api/metrics/gateway-provision-duration") {
+        return Promise.resolve({
+          json: () => Promise.resolve(mockGatewayProvisionDurationResponse),
+          ok: true,
+        });
+      }
       return Promise.reject(new Error(`unexpected fetch url: ${url}`));
     });
     usersListApi.mockResolvedValueOnce({
@@ -574,6 +640,12 @@ describe("createDashboardControlPlaneAdapter", () => {
               ready_nodes: 8,
               total_nodes: 8,
             }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/gateway-provision-duration") {
+        return Promise.resolve({
+          json: () => Promise.resolve(mockGatewayProvisionDurationResponse),
           ok: true,
         });
       }
@@ -631,6 +703,12 @@ describe("createDashboardControlPlaneAdapter", () => {
               ready_nodes: 8,
               total_nodes: 8,
             }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/gateway-provision-duration") {
+        return Promise.resolve({
+          json: () => Promise.resolve(mockGatewayProvisionDurationResponse),
           ok: true,
         });
       }
