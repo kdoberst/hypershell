@@ -499,7 +499,7 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 - **Delivered:** Reuses CLP-W1 kube-state-metrics; BFF instant queries for total/ready nodes; adapter maps to `nodes` metric with gateway-style `value` + `status` (`healthy`/`failed`); `system-summary` row uses `SummaryGatewayValue`.
 - **UI:** Total count with failed-node exception icon when `status.failed > 0`; no `provisioning`/`degraded` buckets in v1.
 
-### gateway-provision-time.spec.md (v2 — histogram mean / P50 / P95)
+### gateway-provision-time.spec.md (v2 - histogram mean / P50 / P95)
 
 | # | Requirement | Status | Gap | Code Location | Wave |
 |---|-------------|--------|-----|---------------|------|

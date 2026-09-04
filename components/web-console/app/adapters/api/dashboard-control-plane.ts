@@ -167,32 +167,34 @@ function formatProvisionMinutesFromSeconds(seconds: number): string {
 
 async function fetchGatewayProvisionDurationMetric(
   signal?: AbortSignal,
-): Promise<OperationalMetric> {
-  const response = await fetch("/api/metrics/gateway-provision-duration", {
-    credentials: "same-origin",
-    signal,
-  });
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch gateway provision duration metrics: ${String(response.status)}`,
-    );
+): Promise<OperationalMetric | undefined> {
+  try {
+    const response = await fetch("/api/metrics/gateway-provision-duration", {
+      credentials: "same-origin",
+      signal,
+    });
+    if (!response.ok) {
+      return undefined;
+    }
+
+    const body = (await response.json()) as GatewayProvisionDurationResponse;
+    const mean = formatProvisionMinutesFromSeconds(body.mean_seconds);
+    const p50 = formatProvisionMinutesFromSeconds(body.p50_seconds);
+    const p95 = formatProvisionMinutesFromSeconds(body.p95_seconds);
+
+    return {
+      id: "provision-time",
+      provisionDuration: {
+        mean,
+        p50,
+        p95,
+      },
+      unit: "minutes",
+      value: mean,
+    };
+  } catch {
+    return undefined;
   }
-
-  const body = (await response.json()) as GatewayProvisionDurationResponse;
-  const mean = formatProvisionMinutesFromSeconds(body.mean_seconds);
-  const p50 = formatProvisionMinutesFromSeconds(body.p50_seconds);
-  const p95 = formatProvisionMinutesFromSeconds(body.p95_seconds);
-
-  return {
-    id: "provision-time",
-    provisionDuration: {
-      mean,
-      p50,
-      p95,
-    },
-    unit: "minutes",
-    value: mean,
-  };
 }
 
 function gatewayDisplayCountsToMetric(
@@ -319,8 +321,11 @@ export function createDashboardControlPlaneAdapter(
         cpuMetric,
         podsMetric,
         nodesMetric,
-        provisionTimeMetric,
       ];
+
+      if (provisionTimeMetric !== undefined) {
+        metrics.push(provisionTimeMetric);
+      }
 
       return {
         lastSuccessfulRefresh: new Date(),

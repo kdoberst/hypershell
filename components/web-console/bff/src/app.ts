@@ -464,7 +464,7 @@ export async function buildApp(
       try {
         const counts = await queryGatewayPhaseCounts(
           config.prometheusUrl,
-          10_000,
+          config.prometheusQueryTimeoutMs,
         );
         return { counts };
       } catch (error) {
@@ -480,7 +480,10 @@ export async function buildApp(
     { preHandler: requireDashboardMetricsAccess },
     async (request, reply) => {
       try {
-        return await queryClusterMemory(config.prometheusUrl, 10_000);
+        return await queryClusterMemory(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+        );
       } catch (error) {
         request.log.warn({ err: error }, "cluster memory metrics query failed");
         reply.code(502);
@@ -494,7 +497,10 @@ export async function buildApp(
     { preHandler: requireDashboardMetricsAccess },
     async (request, reply) => {
       try {
-        return await queryClusterCpu(config.prometheusUrl, 10_000);
+        return await queryClusterCpu(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+        );
       } catch (error) {
         request.log.warn({ err: error }, "cluster CPU metrics query failed");
         reply.code(502);
@@ -508,7 +514,10 @@ export async function buildApp(
     { preHandler: requireDashboardMetricsAccess },
     async (request, reply) => {
       try {
-        return await queryClusterPods(config.prometheusUrl, 10_000);
+        return await queryClusterPods(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+        );
       } catch (error) {
         request.log.warn({ err: error }, "cluster pods metrics query failed");
         reply.code(502);
@@ -522,7 +531,10 @@ export async function buildApp(
     { preHandler: requireDashboardMetricsAccess },
     async (request, reply) => {
       try {
-        return await queryClusterNodes(config.prometheusUrl, 10_000);
+        return await queryClusterNodes(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+        );
       } catch (error) {
         request.log.warn({ err: error }, "cluster nodes metrics query failed");
         reply.code(502);
@@ -531,23 +543,25 @@ export async function buildApp(
     },
   );
 
-  app.get("/api/metrics/gateway-provision-duration", async (request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    if (config.oidcIssuer && !request.session.get("accessToken")) {
-      return respondReauth(reply);
-    }
-
-    try {
-      return await queryGatewayProvisionDuration(config.prometheusUrl, 10_000);
-    } catch (error) {
-      request.log.warn(
-        { err: error },
-        "gateway provision duration metrics query failed",
-      );
-      reply.code(502);
-      return { error: "Metrics unavailable", statusCode: 502 };
-    }
-  });
+  app.get(
+    "/api/metrics/gateway-provision-duration",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryGatewayProvisionDuration(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+        );
+      } catch (error) {
+        request.log.warn(
+          { err: error },
+          "gateway provision duration metrics query failed",
+        );
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
 
   app.all("/api/*", async (request, reply) => {
     // Start one BFF server span per proxied request. It continues a valid

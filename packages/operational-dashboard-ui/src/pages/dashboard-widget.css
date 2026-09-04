@@ -110,3 +110,26 @@
   min-height: auto;
   vertical-align: middle;
 }
+
+.hypershell-dashboard-provision-time-card {
+  --pf-v6-c-content--MarginBottom: 0;
+}
+
+.hypershell-dashboard-provision-time {
+  --pf-v6-c-stack--m-gutter--Gap: var(--pf-t--global--spacer--sm);
+}
+
+/*
+ * Widgetized dashboard summary cards apply display:grid to description lists.
+ * Restore the default horizontal description-list layout here.
+ */
+.hypershell-dashboard-provision-time .pf-v6-c-description-list,
+.hypershell-dashboard-provision-time .pf-v6-c-description-list > .pf-v6-c-card {
+  display: block;
+}
+
+.hypershell-dashboard-provision-time__note {
+  color: var(--pf-t--global--text--color--subtle);
+  font-size: var(--pf-t--global--font--size--sm);
+  margin-block-end: 0;
+}

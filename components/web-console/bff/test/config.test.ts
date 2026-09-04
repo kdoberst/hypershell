@@ -49,6 +49,21 @@ describe("loadConfig", () => {
     expect(config.prometheusUrl).toBe("http://127.0.0.1:9090");
   });
 
+  it("accepts a custom Prometheus query timeout", () => {
+    const config = loadConfig({
+      PROMETHEUS_QUERY_TIMEOUT_MS: "15000",
+      STATIC_ROOT: "./public",
+    });
+
+    expect(config.prometheusQueryTimeoutMs).toBe(15_000);
+  });
+
+  it("defaults the Prometheus query timeout to ten seconds", () => {
+    const config = loadConfig({ STATIC_ROOT: "./public" });
+
+    expect(config.prometheusQueryTimeoutMs).toBe(10_000);
+  });
+
   it("leaves tracing disabled when no collector endpoint is set", () => {
     const config = loadConfig({ STATIC_ROOT: "./public" });
 

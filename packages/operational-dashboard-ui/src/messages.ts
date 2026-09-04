@@ -195,15 +195,48 @@ export const messages = defineMessages({
     defaultMessage: "Provision time (average)",
     description: "Summary label for average gateway provision time.",
   },
+  provisionTimeAverage: {
+    id: "app.dashboard.provisionTime.average",
+    defaultMessage: "Average",
+    description: "Label for average gateway provision duration.",
+  },
+  provisionTimeMedian: {
+    id: "app.dashboard.provisionTime.median",
+    defaultMessage: "Median (P50)",
+    description: "Label for median gateway provision duration.",
+  },
   provisionTimeP50: {
     id: "app.dashboard.summary.provisionTimeP50",
     defaultMessage: "Provision time (P50)",
-    description: "Summary label for P50 gateway provision time.",
+    description: "Deprecated summary label retained for locale extraction.",
   },
   provisionTimeP95: {
     id: "app.dashboard.summary.provisionTimeP95",
     defaultMessage: "Provision time (P95)",
-    description: "Summary label for P95 gateway provision time.",
+    description: "Deprecated summary label retained for locale extraction.",
+  },
+  provisionTimeP95Label: {
+    id: "app.dashboard.provisionTime.p95",
+    defaultMessage: "P95",
+    description: "Label for the 95th percentile gateway provision duration.",
+  },
+  provisionTimeP95Note: {
+    id: "app.dashboard.provisionTime.p95Note",
+    defaultMessage:
+      "95% of gateways were provisioned in under {duration} {unit}.",
+    description:
+      "Context note explaining the 95th percentile gateway provision duration.",
+  },
+  provisionTimeStatsAriaLabel: {
+    id: "app.dashboard.provisionTime.statsAriaLabel",
+    defaultMessage: "Gateway provision duration statistics",
+    description:
+      "Accessible label for the provision time statistics description list.",
+  },
+  provisionTimeWidget: {
+    id: "app.dashboard.widget.provisionTime",
+    defaultMessage: "Gateway provision time",
+    description: "Title for the gateway provision time dashboard widget.",
   },
   refresh: {
     id: "app.dashboard.refresh",

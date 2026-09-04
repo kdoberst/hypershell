@@ -147,6 +147,7 @@ describe("GET /api/metrics/cluster-cpu", () => {
       logLevel: "silent",
       nodeEnv: "test",
       port: 8080,
+      prometheusQueryTimeoutMs: 10_000,
       prometheusUrl: "http://127.0.0.1:9090",
       sessionTtlSeconds: 28_800,
       staticRoot,

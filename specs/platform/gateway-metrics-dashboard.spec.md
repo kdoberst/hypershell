@@ -126,7 +126,7 @@ The named port `metrics` on the `hypershell-api-server` Service SHALL map to por
 
 The web-console BFF SHALL expose `GET /api/metrics/gateways` as a same-origin proxy route that queries Prometheus and returns the `hypershell_gateways_total` phase counts as JSON. The browser SHALL never contact Prometheus directly.
 
-The BFF SHALL accept a `PROMETHEUS_URL` environment variable (validated as an HTTP or HTTPS origin, no credentials, no path) defaulting to `http://127.0.0.1:9090`. The route SHALL query `GET {PROMETHEUS_URL}/api/v1/query?query=hypershell_gateways_total` with a 10-second timeout.
+The BFF SHALL accept a `PROMETHEUS_URL` environment variable (validated as an HTTP or HTTPS origin, no credentials, no path) defaulting to `http://127.0.0.1:9090`. The BFF SHALL accept a `PROMETHEUS_QUERY_TIMEOUT_MS` environment variable (integer milliseconds, 100–120000) defaulting to `10000`. Every `/api/metrics/*` route SHALL query `GET {PROMETHEUS_URL}/api/v1/query` with the configured timeout.
 
 The response SHALL be `{ "counts": { "Running": N, "Provisioning": N, "Degraded": N, "Failed": N } }` where each value is an integer. Phases absent from the Prometheus response SHALL NOT be omitted from the JSON; the client is responsible for defaulting absent phases to zero.
 
@@ -146,7 +146,7 @@ Fleet-wide phase counts from Prometheus are intentionally **not** filtered by pe
 
 #### Scenario: Prometheus unreachable
 
-- GIVEN the BFF cannot connect to Prometheus within 10 seconds
+- GIVEN the BFF cannot connect to Prometheus within the configured query timeout
 - WHEN the SPA calls `GET /api/metrics/gateways`
 - THEN the BFF SHALL respond with HTTP `502` and `{ "error": "Metrics unavailable", "statusCode": 502 }`
 - AND no Prometheus error detail SHALL appear in the response body

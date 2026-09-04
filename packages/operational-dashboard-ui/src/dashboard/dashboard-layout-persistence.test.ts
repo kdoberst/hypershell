@@ -13,6 +13,7 @@ describe("dashboard layout persistence", () => {
     expect(getActiveWidgetTypes(defaultDashboardLayoutTemplate)).toEqual([
       "usage-summary",
       "gateway-status",
+      "provision-time",
       "provisioned-sandboxes",
       "memory",
       "system-summary",

@@ -277,6 +277,7 @@ describe("web-console BFF with OIDC enabled", () => {
       oidcIssuer: `http://127.0.0.1:${String(oidcCtx.port)}`,
       oidcRedirectUri: `http://127.0.0.1:8080/auth/callback`,
       port: 8080,
+      prometheusQueryTimeoutMs: 10_000,
       prometheusUrl: "http://127.0.0.1:9090",
       sessionSecret: Buffer.from(testSessionSecret, "hex"),
       sessionTtlSeconds: 28_800,
@@ -845,6 +846,7 @@ describe("web-console BFF with OIDC enabled", () => {
       "/api/metrics/cluster-cpu",
       "/api/metrics/cluster-pods",
       "/api/metrics/cluster-nodes",
+      "/api/metrics/gateway-provision-duration",
     ]) {
       const response = await app.inject({
         headers: { cookie },

@@ -40,6 +40,7 @@ import { getGatewayExceptionStatusCounts } from "../dashboard/gateway-exception-
 import { GatewayStatusChart } from "../dashboard/gateway-status-chart";
 import { NodeStatusChart } from "../dashboard/node-status-chart";
 import { PodCapacityChart } from "../dashboard/pod-capacity-chart";
+import { ProvisionTimeChart } from "../dashboard/provision-time-chart";
 import { isPodCapacityMetric } from "../dashboard/pod-capacity-metric";
 import {
   getUtilizationPercentage,
@@ -148,6 +149,18 @@ export function PodCapacityCard({
     <WidgetContent bodyClassName="hypershell-dashboard-status-donut-card--compact">
       <Content className="hypershell-dashboard-status-donut-card">
         <PodCapacityChart metric={metric} />
+      </Content>
+    </WidgetContent>
+  );
+}
+
+export function ProvisionTimeCard({
+  metric,
+}: Readonly<{ metric: OperationalMetric }>) {
+  return (
+    <WidgetContent>
+      <Content className="hypershell-dashboard-provision-time-card">
+        <ProvisionTimeChart metric={metric} />
       </Content>
     </WidgetContent>
   );
@@ -647,28 +660,6 @@ export function SystemSummaryCard({
             <SummaryProvisionDurationValue
               metric={metrics.find((metric) => metric.id === "provision-time")}
               valueKey="mean"
-            />
-          </DescriptionListDescription>
-        </DescriptionListGroup>
-        <DescriptionListGroup>
-          <DescriptionListTerm>
-            <FormattedMessage {...messages.provisionTimeP50} />
-          </DescriptionListTerm>
-          <DescriptionListDescription>
-            <SummaryProvisionDurationValue
-              metric={metrics.find((metric) => metric.id === "provision-time")}
-              valueKey="p50"
-            />
-          </DescriptionListDescription>
-        </DescriptionListGroup>
-        <DescriptionListGroup>
-          <DescriptionListTerm>
-            <FormattedMessage {...messages.provisionTimeP95} />
-          </DescriptionListTerm>
-          <DescriptionListDescription>
-            <SummaryProvisionDurationValue
-              metric={metrics.find((metric) => metric.id === "provision-time")}
-              valueKey="p95"
             />
           </DescriptionListDescription>
         </DescriptionListGroup>

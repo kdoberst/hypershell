@@ -51,7 +51,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: otel-collector
-          image: otel/opentelemetry-collector-contrib:0.128.0
+          image: otel/opentelemetry-collector-contrib:0.128.0@sha256:1ab0baba0ee3695d823c46653d8a6e8894896e668ce8bd7ebe002e948d827bc7
           args:
             - --config=/conf/config.yaml
           ports:

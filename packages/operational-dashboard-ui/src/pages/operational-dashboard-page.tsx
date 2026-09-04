@@ -19,6 +19,7 @@ import {
 import {
   ClusterIcon,
   CubesIcon,
+  HourglassHalfIcon,
   UsersIcon,
   MicrochipIcon,
   MemoryIcon,
@@ -44,6 +45,7 @@ import {
   GATEWAY_STATUS_WIDGET_HEIGHT,
   NODE_STATUS_WIDGET_HEIGHT,
   localizeDashboardLayoutTemplate,
+  PROVISION_TIME_WIDGET_HEIGHT,
   SYSTEM_SUMMARY_WIDGET_HEIGHT,
   USAGE_SUMMARY_WIDGET_HEIGHT,
 } from "../dashboard/dashboard-layout-template";
@@ -62,6 +64,7 @@ import {
   MetricCard,
   NodeStatusCard,
   PodCapacityCard,
+  ProvisionTimeCard,
   SystemSummaryCard,
   UsageSummaryCard,
 } from "./dashboard-widget";
@@ -69,7 +72,7 @@ import { useGetMetricsData } from "./get-metrics-data";
 
 const baseTemplate = defaultDashboardLayoutTemplate;
 
-const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v20";
+const LAYOUT_STORAGE_KEY = "hypershell.operational-dashboard.layout.v21";
 const CUSTOM_COLUMNS: Record<Variants, number> = {
   xl: 4,
   lg: 4,
@@ -152,6 +155,7 @@ function createWidgetMapping(
       | "gateway-status"
       | "node-status"
       | "pod-capacity"
+      | "provision-time"
       | "utilization",
   ) => {
     const metric = metricById.get(metricId);
@@ -186,6 +190,10 @@ function createWidgetMapping(
 
     if (metricType === "pod-capacity") {
       return <PodCapacityCard metric={metric} />;
+    }
+
+    if (metricType === "provision-time") {
+      return <ProvisionTimeCard metric={metric} />;
     }
 
     return <UtilizationChart metric={metric} />;
@@ -249,6 +257,25 @@ function createWidgetMapping(
           "",
           messages.gatewayStatusWidget,
           "gateway-status",
+        ),
+    },
+    "provision-time": {
+      defaults: {
+        h: PROVISION_TIME_WIDGET_HEIGHT,
+        maxH: PROVISION_TIME_WIDGET_HEIGHT + 2,
+        minH: METRIC_WIDGET_DEFAULTS.minH,
+        w: 1,
+      },
+      config: {
+        icon: <HourglassHalfIcon />,
+        title: intl.formatMessage(messages.provisionTimeWidget),
+      },
+      renderWidget: () =>
+        renderMetric(
+          "provision-time",
+          "",
+          messages.provisionTimeWidget,
+          "provision-time",
         ),
     },
     "provisioned-sandboxes": {

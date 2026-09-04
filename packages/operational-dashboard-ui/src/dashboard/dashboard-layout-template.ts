@@ -17,8 +17,10 @@ const SUMMARY_COLUMN_HEIGHT = METRIC_WIDGET_HEIGHT + 2 * METRIC_ROW_STEP;
 const BASE_SUMMARY_WIDGET_HEIGHT = (SUMMARY_COLUMN_HEIGHT - METRIC_ROW_GAP) / 2;
 /** Equal height for usage and system summary widgets in the left column. */
 export const USAGE_SUMMARY_WIDGET_HEIGHT = BASE_SUMMARY_WIDGET_HEIGHT + 1;
-/** Two rows taller than usage summary; fits exception status rows on pods and nodes and provision P95. */
-export const SYSTEM_SUMMARY_WIDGET_HEIGHT = USAGE_SUMMARY_WIDGET_HEIGHT + 2;
+/** One row taller than usage summary; fits exception status rows on pods and nodes. */
+export const SYSTEM_SUMMARY_WIDGET_HEIGHT = USAGE_SUMMARY_WIDGET_HEIGHT + 1;
+/** Stats list and P95 note. */
+export const PROVISION_TIME_WIDGET_HEIGHT = METRIC_WIDGET_HEIGHT + 1;
 const SYSTEM_SUMMARY_WIDGET_Y = USAGE_SUMMARY_WIDGET_HEIGHT + METRIC_ROW_GAP;
 
 const WIDGET_TITLE_MESSAGES = {
@@ -28,6 +30,7 @@ const WIDGET_TITLE_MESSAGES = {
   "gateway-status": messages.gatewayStatusWidget,
   memory: messages.widgetMemory,
   nodes: messages.nodes,
+  "provision-time": messages.provisionTimeWidget,
   "provisioned-sandboxes": messages.widgetSandboxes,
   cpu: messages.widgetCpu,
   pods: messages.widgetPods,
@@ -53,6 +56,15 @@ const fourColumnLayout = [
     widgetType: "gateway-status",
     x: 1,
     y: 0,
+  },
+  {
+    h: PROVISION_TIME_WIDGET_HEIGHT,
+    i: "provision-time#1",
+    title: "Provision time",
+    w: 1,
+    widgetType: "provision-time",
+    x: 1,
+    y: GATEWAY_STATUS_WIDGET_HEIGHT,
   },
   {
     h: METRIC_WIDGET_HEIGHT,
@@ -155,6 +167,19 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         SYSTEM_SUMMARY_WIDGET_HEIGHT,
     },
     {
+      h: PROVISION_TIME_WIDGET_HEIGHT,
+      i: "provision-time#1",
+      title: "Provision time",
+      w: 1,
+      widgetType: "provision-time",
+      x: 0,
+      y:
+        USAGE_SUMMARY_WIDGET_HEIGHT +
+        METRIC_ROW_GAP +
+        SYSTEM_SUMMARY_WIDGET_HEIGHT +
+        GATEWAY_STATUS_WIDGET_HEIGHT,
+    },
+    {
       h: METRIC_WIDGET_HEIGHT,
       i: "provisioned-sandboxes#1",
       title: "Sandboxes",
@@ -165,7 +190,8 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         USAGE_SUMMARY_WIDGET_HEIGHT +
         METRIC_ROW_GAP +
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
-        GATEWAY_STATUS_WIDGET_HEIGHT,
+        GATEWAY_STATUS_WIDGET_HEIGHT +
+        PROVISION_TIME_WIDGET_HEIGHT,
     },
     {
       h: METRIC_WIDGET_HEIGHT,
@@ -179,6 +205,7 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         METRIC_ROW_GAP +
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
+        PROVISION_TIME_WIDGET_HEIGHT +
         METRIC_ROW_STEP,
     },
     {
@@ -193,6 +220,7 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         METRIC_ROW_GAP +
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
+        PROVISION_TIME_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 2,
     },
     {
@@ -207,6 +235,7 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         METRIC_ROW_GAP +
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
+        PROVISION_TIME_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 3,
     },
     {
@@ -221,6 +250,7 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         METRIC_ROW_GAP +
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
+        PROVISION_TIME_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 4,
     },
     {
@@ -235,6 +265,7 @@ export const defaultDashboardLayoutTemplate: ExtendedTemplateConfig = {
         METRIC_ROW_GAP +
         SYSTEM_SUMMARY_WIDGET_HEIGHT +
         GATEWAY_STATUS_WIDGET_HEIGHT +
+        PROVISION_TIME_WIDGET_HEIGHT +
         METRIC_ROW_STEP * 5,
     },
   ],

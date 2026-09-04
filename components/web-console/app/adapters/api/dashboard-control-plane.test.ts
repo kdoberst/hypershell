@@ -382,7 +382,11 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
 
     gatewayListApi.mockResolvedValueOnce(
-      gatewayList([gateway({ phase: "Provisioning", status: "route pending" })], 1, 1),
+      gatewayList(
+        [gateway({ phase: "Provisioning", status: "route pending" })],
+        1,
+        1,
+      ),
     );
 
     const metrics = await adapter.getOperationalMetrics(context);
@@ -402,7 +406,7 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
   });
 
-  it("fails when the BFF provision duration route is unavailable", async () => {
+  it("omits provision time when the BFF provision duration route is unavailable", async () => {
     fetchMock.mockImplementation((url: string) => {
       if (url === "/api/metrics/gateway-provision-duration") {
         return Promise.resolve({
@@ -449,12 +453,6 @@ describe("createDashboardControlPlaneAdapter", () => {
           ok: true,
         });
       }
-      if (url === "/api/metrics/gateway-provision-duration") {
-        return Promise.resolve({
-          json: () => Promise.resolve(mockGatewayProvisionDurationResponse),
-          ok: true,
-        });
-      }
       return Promise.reject(new Error(`unexpected fetch url: ${url}`));
     });
 
@@ -477,9 +475,21 @@ describe("createDashboardControlPlaneAdapter", () => {
       ),
     );
 
-    await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
-      "Failed to fetch gateway provision duration metrics: 502",
+    const metrics = await adapter.getOperationalMetrics(context);
+    const provisionTimeMetric = metrics.metrics.find(
+      (metric) => metric.id === "provision-time",
     );
+    const memoryMetric = metrics.metrics.find(
+      (metric) => metric.id === "memory",
+    );
+
+    expect(provisionTimeMetric).toBeUndefined();
+    expect(memoryMetric).toEqual({
+      id: "memory",
+      total: "1",
+      unit: "GiB",
+      value: "1",
+    });
   });
 
   it("rejects inconsistent pagination responses", async () => {

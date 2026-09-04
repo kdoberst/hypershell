@@ -90,7 +90,7 @@ The SPA route modules for `/dashboard` and the dashboard-host root (`/`) SHALL w
 
 When OIDC is enabled, the BFF SHALL enforce the same role requirement for browser navigations to `/dashboard` and for `/` on hosts whose hostname starts with `dashboard.`. Non-admin users SHALL be redirected away (to `/` on the console host, or to the console host when the request arrived on a dashboard subdomain).
 
-When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
+When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes`, and `gateway-provision-duration` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
 
 #### Scenario: Non-admin is turned away from /dashboard
 
