@@ -64,7 +64,7 @@ func (r *ManagedClusterReconciler) Handle(ctx context.Context, event watcher.Eve
 		r.mu.Unlock()
 	}()
 
-	_, endSpan := cpotel.StartReconcileSpan(ctx, "ManagedCluster", event.Type.String())
+	_, endSpan := cpotel.StartReconcileSpan(ctx, "ManagedCluster", event.Type.String(), event.Resource.GetMetadata().GetTraceparent())
 	defer func() { endSpan(nil) }()
 
 	log.Printf("INFO reconciling ManagedCluster %s (event=%d)", event.ResourceID, event.Type)
@@ -149,7 +149,7 @@ func (r *ManagedDatabaseReconciler) Handle(ctx context.Context, event watcher.Ev
 }
 
 func (r *ManagedDatabaseReconciler) handleOne(ctx context.Context, event watcher.Event[*pb.ManagedDatabase]) (reconcileErr error) {
-	ctx, endSpan := cpotel.StartReconcileSpan(ctx, "ManagedDatabase", event.Type.String())
+	ctx, endSpan := cpotel.StartReconcileSpan(ctx, "ManagedDatabase", event.Type.String(), event.Resource.GetMetadata().GetTraceparent())
 	defer func() { endSpan(reconcileErr) }()
 
 	if r.clientset == nil || r.dynamicClient == nil {
@@ -1152,7 +1152,7 @@ func (r *GatewayReleaseReconciler) Handle(ctx context.Context, event watcher.Eve
 		r.mu.Unlock()
 	}()
 
-	_, endSpan := cpotel.StartReconcileSpan(ctx, "GatewayRelease", event.Type.String())
+	_, endSpan := cpotel.StartReconcileSpan(ctx, "GatewayRelease", event.Type.String(), event.Resource.GetMetadata().GetTraceparent())
 	defer func() { endSpan(nil) }()
 
 	log.Printf("INFO reconciling GatewayRelease %s (event=%d)", event.ResourceID, event.Type)
@@ -1259,7 +1259,7 @@ func (r *GatewayReconciler) Handle(ctx context.Context, event watcher.Event[*pb.
 	}
 	suppressGatewayProvisionObservation(event.ResourceID, previousPhase)
 
-	ctx, endSpan := cpotel.StartReconcileSpan(ctx, "Gateway", event.Type.String())
+	ctx, endSpan := cpotel.StartReconcileSpan(ctx, "Gateway", event.Type.String(), gw.GetMetadata().GetTraceparent())
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(attribute.String("hypershell.resource_id", event.ResourceID))
 	var reconcileErr error
@@ -2220,7 +2220,7 @@ func (r *GatewayNetworkReconciler) Handle(ctx context.Context, event watcher.Eve
 		r.mu.Unlock()
 	}()
 
-	_, endSpan := cpotel.StartReconcileSpan(ctx, "GatewayNetwork", event.Type.String())
+	_, endSpan := cpotel.StartReconcileSpan(ctx, "GatewayNetwork", event.Type.String(), event.Resource.GetMetadata().GetTraceparent())
 	defer func() { endSpan(nil) }()
 
 	log.Printf("INFO reconciling GatewayNetwork %s (event=%d)", event.ResourceID, event.Type)
