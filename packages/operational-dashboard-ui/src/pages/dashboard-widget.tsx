@@ -680,3 +680,7 @@ export function SystemSummaryCard({
     </WidgetContent>
   );
 }
+
+export function SectionTitleCard({ title }: Readonly<{ title: string }>) {
+  return <h2 className="hypershell-dashboard-section-title">{title}</h2>;
+}
