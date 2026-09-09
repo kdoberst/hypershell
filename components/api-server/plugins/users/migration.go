@@ -12,7 +12,7 @@ import (
 func migration() *gormigrate.Migration {
 	type User struct {
 		db.Model
-		Username string  `gorm:"uniqueIndex"`
+		Username string `gorm:"uniqueIndex"`
 		Email    *string
 		Name     *string
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/openshift-online/hypershell/components/api-server/pkg/api"
 	"github.com/openshift-online/hypershell/components/api-server/pkg/api/openapi"
 	"github.com/openshift-online/hypershell/components/api-server/pkg/rbac"
+	"github.com/openshift-online/hypershell/components/api-server/plugins/roleBindings"
 	"github.com/openshift-online/hypershell/components/api-server/plugins/roles"
 	"github.com/openshift-online/hypershell/components/api-server/plugins/users"
 	"github.com/openshift-online/hypershell/components/api-server/test"
@@ -159,6 +160,33 @@ func TestUserActivityStats_ForbiddenForGatewayCreator(t *testing.T) {
 
 	account := h.NewAccount("stats-creator", "Stats Creator", "creator@example.com")
 	ctx := jwtContextWithRealmRoles(h, account, []string{roles.RoleGatewayCreator})
+
+	_, resp, err := client.DefaultAPI.GetUserActivityStats(ctx).Execute()
+	Expect(err).To(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+}
+
+func TestUserActivityStats_ForbiddenForGatewayCreatorBinding(t *testing.T) {
+	h, client := test.RegisterIntegration(t)
+
+	account := h.NewAccount("stats-bound-creator", "Bound Creator", "bound-creator@example.com")
+	ctx := h.NewAuthenticatedContext(account)
+
+	userService := users.Service(&environments.Environment().Services)
+	userID, userErr := userService.UpsertByUsername(context.Background(), account.Username, nil, nil)
+	Expect(userErr).NotTo(HaveOccurred())
+
+	roleService := roles.Service(&environments.Environment().Services)
+	creatorRole, roleErr := roleService.GetByName(context.Background(), roles.RoleGatewayCreator)
+	Expect(roleErr).NotTo(HaveOccurred())
+
+	rbDao := roleBindings.NewRoleBindingDao(&environments.Environment().Database.SessionFactory)
+	_, bindErr := rbDao.Create(context.Background(), &roleBindings.RoleBinding{
+		RoleID: creatorRole.ID,
+		Scope:  roleBindings.ScopeGlobal,
+		UserID: &userID,
+	})
+	Expect(bindErr).NotTo(HaveOccurred())
 
 	_, resp, err := client.DefaultAPI.GetUserActivityStats(ctx).Execute()
 	Expect(err).To(HaveOccurred())

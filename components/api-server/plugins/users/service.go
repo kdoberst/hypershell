@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang/glog"
+
 	"github.com/openshift-online/rh-trex-ai/pkg/errors"
 	"github.com/openshift-online/rh-trex-ai/pkg/services"
 )
@@ -74,7 +76,7 @@ func (s *sqlUserService) UpsertByUsername(ctx context.Context, username string, 
 		return "", err
 	}
 	if recordErr := s.userDao.RecordLogin(ctx, user.ID, time.Now().UTC()); recordErr != nil {
-		return "", recordErr
+		glog.Warningf("record login failed for user %q: %v", user.ID, recordErr)
 	}
 	return user.ID, nil
 }

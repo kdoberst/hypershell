@@ -44,6 +44,14 @@ func TestRegistrationWindowStartsUseInclusiveUTCCalendarDays(t *testing.T) {
 	Expect(last7DayStart).To(Equal(last30DayStart.AddDate(0, 0, 23)))
 }
 
+func registeredIn7DayWindow(createdAt time.Time, evaluationTime time.Time) bool {
+	return !createdAt.Before(registration7DayWindowStart(evaluationTime))
+}
+
+func registeredIn30DayWindow(createdAt time.Time, evaluationTime time.Time) bool {
+	return !createdAt.Before(registration30DayWindowStart(evaluationTime))
+}
+
 func TestRegistrationWindowBoundaryCounts(t *testing.T) {
 	RegisterTestingT(t)
 
