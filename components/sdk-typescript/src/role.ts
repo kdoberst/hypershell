@@ -27,6 +27,7 @@ export type RoleCreateRequest = {
 export type RolePatchRequest = {
 };
 
+
 export class RoleBuilder {
   private data: Record<string, unknown> = {};
 
@@ -72,4 +73,3 @@ export class RolePatchBuilder {
     return this.data as RolePatchRequest;
   }
 }
-

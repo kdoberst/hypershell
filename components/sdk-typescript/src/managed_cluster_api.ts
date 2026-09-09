@@ -4,7 +4,7 @@
 
 import type { SDKClientConfig, ListOptions, RequestOptions } from './base.js';
 import { sdkFetch, buildQueryString } from './base.js';
-import type { ManagedCluster, ManagedClusterList, ManagedClusterCreateRequest, ManagedClusterPatchRequest } from './managed_cluster.js';
+import type { ManagedCluster, ManagedClusterList, ManagedClusterCreateRequest, ManagedClusterPatchRequest, ManagedClusterRegistrationResponse } from './managed_cluster.js';
 
 export class ManagedClusterAPI {
   constructor(private readonly config: SDKClientConfig) {}
@@ -29,6 +29,11 @@ export class ManagedClusterAPI {
 
   async delete(id: string, opts?: RequestOptions): Promise<void> {
     return sdkFetch<void>(this.config, 'DELETE', `/managed_clusters/${id}`, undefined, opts);
+  }
+
+
+  async registerManagedCluster(opts?: RequestOptions): Promise<ManagedClusterRegistrationResponse> {
+    return sdkFetch<ManagedClusterRegistrationResponse>(this.config, 'POST', '/managed_clusters/registration', undefined, opts);
   }
 
 

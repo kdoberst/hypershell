@@ -32,6 +32,7 @@ export type GatewayNetworkPatchRequest = {
   tunnel_mode?: string;
 };
 
+
 export class GatewayNetworkBuilder {
   private data: Record<string, unknown> = {};
 
@@ -102,4 +103,3 @@ export class GatewayNetworkPatchBuilder {
     return this.data as GatewayNetworkPatchRequest;
   }
 }
-

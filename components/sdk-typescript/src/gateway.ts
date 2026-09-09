@@ -67,6 +67,7 @@ export type GatewayPatchRequest = {
   tls_mode?: string;
 };
 
+
 export class GatewayBuilder {
   private data: Record<string, unknown> = {};
 
@@ -249,4 +250,3 @@ export class GatewayPatchBuilder {
     return this.data as GatewayPatchRequest;
   }
 }
-

@@ -25,6 +25,7 @@ export type RoleBindingCreateRequest = {
 export type RoleBindingPatchRequest = {
 };
 
+
 export class RoleBindingBuilder {
   private data: Record<string, unknown> = {};
 
@@ -68,4 +69,3 @@ export class RoleBindingPatchBuilder {
     return this.data as RoleBindingPatchRequest;
   }
 }
-

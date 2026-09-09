@@ -35,6 +35,7 @@ export type GatewayReleasePatchRequest = {
   status?: string;
 };
 
+
 export class GatewayReleaseBuilder {
   private data: Record<string, unknown> = {};
 
@@ -118,4 +119,3 @@ export class GatewayReleasePatchBuilder {
     return this.data as GatewayReleasePatchRequest;
   }
 }
-

@@ -25,7 +25,7 @@ export { GatewayReleaseAPI } from './gateway_release_api.js';
 
 
 
-export type { ManagedCluster, ManagedClusterList, ManagedClusterCreateRequest, ManagedClusterPatchRequest } from './managed_cluster.js';
+export type { ManagedCluster, ManagedClusterList, ManagedClusterCreateRequest, ManagedClusterPatchRequest, ManagedClusterRegistrationResponse } from './managed_cluster.js';
 export { ManagedClusterBuilder, ManagedClusterPatchBuilder } from './managed_cluster.js';
 export { ManagedClusterAPI } from './managed_cluster_api.js';
 
@@ -65,15 +65,6 @@ export { RoleBindingAPI } from './role_binding_api.js';
 
 
 
-export type {
-  User,
-  UserList,
-  UserCreateRequest,
-  UserPatchRequest,
-  UserActivityStats,
-  UserDailyCount,
-} from './user.js';
+export type { User, UserList, UserCreateRequest, UserPatchRequest, UserActivityStats, UserDailyCount } from './user.js';
 export { UserBuilder, UserPatchBuilder } from './user.js';
 export { UserAPI } from './user_api.js';
-
-

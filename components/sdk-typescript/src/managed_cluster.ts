@@ -37,6 +37,13 @@ export type ManagedClusterPatchRequest = {
   status?: string;
 };
 
+
+export type ManagedClusterRegistrationResponse = {
+  cluster_id: string;
+};
+
+
+
 export class ManagedClusterBuilder {
   private data: Record<string, unknown> = {};
 
@@ -123,4 +130,3 @@ export class ManagedClusterPatchBuilder {
     return this.data as ManagedClusterPatchRequest;
   }
 }
-

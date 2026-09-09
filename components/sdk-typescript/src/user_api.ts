@@ -4,12 +4,7 @@
 
 import type { SDKClientConfig, ListOptions, RequestOptions } from './base.js';
 import { sdkFetch, buildQueryString } from './base.js';
-import type {
-  User,
-  UserList,
-  UserCreateRequest,
-  UserActivityStats,
-} from './user.js';
+import type { User, UserList, UserCreateRequest, UserActivityStats } from './user.js';
 
 export class UserAPI {
   constructor(private readonly config: SDKClientConfig) {}
@@ -28,14 +23,9 @@ export class UserAPI {
   }
 
   async activityStats(opts?: RequestOptions): Promise<UserActivityStats> {
-    return sdkFetch<UserActivityStats>(
-      this.config,
-      'GET',
-      '/users/stats',
-      undefined,
-      opts,
-    );
+    return sdkFetch<UserActivityStats>(this.config, 'GET', '/users/stats', undefined, opts);
   }
+
 
   async *listAll(size: number = 100, opts?: RequestOptions): AsyncGenerator<User> {
     let page = 1;
