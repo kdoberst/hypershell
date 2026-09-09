@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm/clause"
@@ -121,18 +122,24 @@ func (d *sqlUserDao) RecordLogin(ctx context.Context, userID string, loginTime t
 	loginAt := loginTime.UTC()
 	loginDay := utcDayStart(loginAt)
 
-	if err := g2.Model(&User{}).Where("id = ?", userID).Update("last_login_at", loginAt).Error; err != nil {
-		db.MarkForRollback(ctx, err)
-		return err
-	}
-
 	loginRecord := UserLoginDay{
 		UserID:    userID,
 		LoginDate: loginDay,
 	}
-	if err := g2.Clauses(clause.OnConflict{DoNothing: true}).Create(&loginRecord).Error; err != nil {
-		db.MarkForRollback(ctx, err)
-		return err
+	result := g2.Clauses(clause.OnConflict{DoNothing: true}).Create(&loginRecord)
+	if result.Error != nil {
+		db.MarkForRollback(ctx, result.Error)
+		return fmt.Errorf("record login day: %w", result.Error)
+	}
+
+	// Bump last_login_at only on the first authenticated request of each UTC day.
+	// Daily activity metrics come from user_login_days; skipping repeat updates
+	// within the same day avoids an unconditional write on every request.
+	if result.RowsAffected > 0 {
+		if err := g2.Model(&User{}).Where("id = ?", userID).Update("last_login_at", loginAt).Error; err != nil {
+			db.MarkForRollback(ctx, err)
+			return fmt.Errorf("record login: %w", err)
+		}
 	}
 
 	return nil
@@ -158,33 +165,33 @@ func (d *sqlUserDao) GetActivityStats(ctx context.Context, evaluationTime time.T
 	stats := &ActivityStats{}
 
 	if err := g2.Model(&User{}).Count(&stats.TotalRegistered).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: count total registered: %w", err)
 	}
 
 	if err := g2.Model(&User{}).
 		Where("created_at >= ?", last7DayStart).
 		Count(&stats.RegisteredLast7Days).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: count registered last 7 days: %w", err)
 	}
 
 	if err := g2.Model(&User{}).
 		Where("created_at >= ?", last30DayStart).
 		Count(&stats.RegisteredLast30Days).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: count registered last 30 days: %w", err)
 	}
 
 	if err := g2.Raw(
 		"SELECT COUNT(DISTINCT user_id) FROM user_login_days WHERE login_date >= ?",
 		last7DayStart,
 	).Scan(&stats.ActiveLast7Days).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: count active last 7 days: %w", err)
 	}
 
 	if err := g2.Raw(
 		"SELECT COUNT(DISTINCT user_id) FROM user_login_days WHERE login_date >= ?",
 		last30DayStart,
 	).Scan(&stats.ActiveLast30Days).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: count active last 30 days: %w", err)
 	}
 
 	var registrationRows []registrationDailyRow
@@ -194,7 +201,7 @@ func (d *sqlUserDao) GetActivityStats(ctx context.Context, evaluationTime time.T
 		Group("DATE(created_at AT TIME ZONE 'UTC')").
 		Order("DATE(created_at AT TIME ZONE 'UTC') ASC").
 		Scan(&registrationRows).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: registration daily series: %w", err)
 	}
 
 	var activeRows []activeDailyRow
@@ -204,7 +211,7 @@ func (d *sqlUserDao) GetActivityStats(ctx context.Context, evaluationTime time.T
 		Group("login_date").
 		Order("login_date ASC").
 		Scan(&activeRows).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get activity stats: active daily series: %w", err)
 	}
 
 	registrationCounts := make(map[string]int64, len(registrationRows))

@@ -41,14 +41,6 @@ func registration30DayWindowStart(evaluationTime time.Time) time.Time {
 	return dailySeriesStart(evaluationTime)
 }
 
-func registeredIn7DayWindow(createdAt time.Time, evaluationTime time.Time) bool {
-	return !createdAt.Before(registration7DayWindowStart(evaluationTime))
-}
-
-func registeredIn30DayWindow(createdAt time.Time, evaluationTime time.Time) bool {
-	return !createdAt.Before(registration30DayWindowStart(evaluationTime))
-}
-
 func buildDailySeries(
 	startDay time.Time,
 	endDay time.Time,
