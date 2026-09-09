@@ -23,6 +23,26 @@ export type UserCreateRequest = {
 export type UserPatchRequest = {
 };
 
+
+export type UserActivityStats = {
+  active_daily: UserDailyCount[];
+  active_last_30_days: number;
+  active_last_7_days: number;
+  registered_last_30_days: number;
+  registered_last_7_days: number;
+  registration_daily: UserDailyCount[];
+  total_registered: number;
+};
+
+
+
+export type UserDailyCount = {
+  count: number;
+  date: string;
+};
+
+
+
 export class UserBuilder {
   private data: Record<string, unknown> = {};
 

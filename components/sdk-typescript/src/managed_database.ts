@@ -42,6 +42,7 @@ export type ManagedDatabasePatchRequest = {
   status?: string;
 };
 
+
 export class ManagedDatabaseBuilder {
   private data: Record<string, unknown> = {};
 

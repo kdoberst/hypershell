@@ -65,6 +65,6 @@ export { RoleBindingAPI } from './role_binding_api.js';
 
 
 
-export type { User, UserList, UserCreateRequest, UserPatchRequest } from './user.js';
+export type { User, UserList, UserCreateRequest, UserPatchRequest, UserActivityStats, UserDailyCount } from './user.js';
 export { UserBuilder, UserPatchBuilder } from './user.js';
 export { UserAPI } from './user_api.js';

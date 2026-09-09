@@ -35,6 +35,7 @@ export type ManagedClusterPatchRequest = {
   status?: string;
 };
 
+
 export class ManagedClusterBuilder {
   private data: Record<string, unknown> = {};
 
