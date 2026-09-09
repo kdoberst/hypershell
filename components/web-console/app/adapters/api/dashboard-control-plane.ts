@@ -16,6 +16,7 @@ import {
   platformInventoryMetricsResponseToMetrics,
   type PlatformInventoryMetricsResponse,
 } from "./platform-inventory-aggregation";
+import { userActivityStatsToMetric } from "./user-activity-stats";
 
 type DashboardApiFactory = (correlationId: string) => SDKClient;
 
@@ -60,10 +61,6 @@ interface GatewayProvisionDurationResponse {
 
 interface GatewaySandboxesResponse {
   active_sandboxes: number;
-}
-
-interface RegisteredUsersResponse {
-  total_registered: number;
 }
 
 function bytesToRoundedGib(bytes: number): string {
@@ -293,25 +290,14 @@ async function fetchGatewayPrometheusMetrics(
 
 async function fetchRegisteredUsersMetric(
   context: DashboardInvocationContext,
+  apiFactory: DashboardApiFactory,
 ): Promise<OperationalMetric[]> {
-  const response = await fetch("/api/metrics/registered-users", {
-    credentials: "same-origin",
+  const client = apiFactory(context.correlationId);
+  const stats = await client.users.activityStats({
     signal: context.signal,
   });
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch registered user metrics: ${String(response.status)}`,
-    );
-  }
 
-  const body = (await response.json()) as RegisteredUsersResponse;
-
-  return [
-    {
-      id: "registered-users",
-      value: String(body.total_registered),
-    },
-  ];
+  return [userActivityStatsToMetric(stats)];
 }
 
 async function fetchPlatformInventoryMetrics(
@@ -346,7 +332,8 @@ const metricSources: readonly MetricSourceDefinition[] = [
   },
   {
     id: "registered-users",
-    fetch: async (context) => fetchRegisteredUsersMetric(context),
+    fetch: async (context, factory) =>
+      fetchRegisteredUsersMetric(context, factory),
   },
   {
     id: "platform-inventory",

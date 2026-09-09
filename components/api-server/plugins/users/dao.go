@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm/clause"
 
@@ -19,6 +20,8 @@ type UserDao interface {
 	FindByIDs(ctx context.Context, ids []string) (UserList, error)
 	All(ctx context.Context) (UserList, error)
 	CountRegistered(ctx context.Context) (int64, error)
+	RecordLogin(ctx context.Context, userID string, loginTime time.Time) error
+	GetActivityStats(ctx context.Context, evaluationTime time.Time) (*ActivityStats, error)
 }
 
 var _ UserDao = &sqlUserDao{}
@@ -121,4 +124,111 @@ func (d *sqlUserDao) CountRegistered(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (d *sqlUserDao) RecordLogin(ctx context.Context, userID string, loginTime time.Time) error {
+	g2 := (*d.sessionFactory).New(ctx)
+	loginAt := loginTime.UTC()
+	loginDay := utcDayStart(loginAt)
+
+	if err := g2.Model(&User{}).Where("id = ?", userID).Update("last_login_at", loginAt).Error; err != nil {
+		db.MarkForRollback(ctx, err)
+		return err
+	}
+
+	loginRecord := UserLoginDay{
+		UserID:    userID,
+		LoginDate: loginDay,
+	}
+	if err := g2.Clauses(clause.OnConflict{DoNothing: true}).Create(&loginRecord).Error; err != nil {
+		db.MarkForRollback(ctx, err)
+		return err
+	}
+
+	return nil
+}
+
+type registrationDailyRow struct {
+	Date  string
+	Count int64
+}
+
+type activeDailyRow struct {
+	Date  string
+	Count int64
+}
+
+func (d *sqlUserDao) GetActivityStats(ctx context.Context, evaluationTime time.Time) (*ActivityStats, error) {
+	g2 := (*d.sessionFactory).New(ctx)
+	endDay := utcDayStart(evaluationTime)
+	startDay := dailySeriesStart(evaluationTime)
+	last7DayStart := registration7DayWindowStart(evaluationTime)
+	last30DayStart := registration30DayWindowStart(evaluationTime)
+
+	stats := &ActivityStats{}
+
+	if err := g2.Model(&User{}).Count(&stats.TotalRegistered).Error; err != nil {
+		return nil, err
+	}
+
+	if err := g2.Model(&User{}).
+		Where("created_at >= ?", last7DayStart).
+		Count(&stats.RegisteredLast7Days).Error; err != nil {
+		return nil, err
+	}
+
+	if err := g2.Model(&User{}).
+		Where("created_at >= ?", last30DayStart).
+		Count(&stats.RegisteredLast30Days).Error; err != nil {
+		return nil, err
+	}
+
+	if err := g2.Raw(
+		"SELECT COUNT(DISTINCT user_id) FROM user_login_days WHERE login_date >= ?",
+		last7DayStart,
+	).Scan(&stats.ActiveLast7Days).Error; err != nil {
+		return nil, err
+	}
+
+	if err := g2.Raw(
+		"SELECT COUNT(DISTINCT user_id) FROM user_login_days WHERE login_date >= ?",
+		last30DayStart,
+	).Scan(&stats.ActiveLast30Days).Error; err != nil {
+		return nil, err
+	}
+
+	var registrationRows []registrationDailyRow
+	if err := g2.Model(&User{}).
+		Select("TO_CHAR(DATE(created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS date, COUNT(*) AS count").
+		Where("created_at >= ?", last30DayStart).
+		Group("DATE(created_at AT TIME ZONE 'UTC')").
+		Order("DATE(created_at AT TIME ZONE 'UTC') ASC").
+		Scan(&registrationRows).Error; err != nil {
+		return nil, err
+	}
+
+	var activeRows []activeDailyRow
+	if err := g2.Model(&UserLoginDay{}).
+		Select("TO_CHAR(login_date, 'YYYY-MM-DD') AS date, COUNT(DISTINCT user_id) AS count").
+		Where("login_date >= ?", last30DayStart).
+		Group("login_date").
+		Order("login_date ASC").
+		Scan(&activeRows).Error; err != nil {
+		return nil, err
+	}
+
+	registrationCounts := make(map[string]int64, len(registrationRows))
+	for _, row := range registrationRows {
+		registrationCounts[row.Date] = row.Count
+	}
+
+	activeCounts := make(map[string]int64, len(activeRows))
+	for _, row := range activeRows {
+		activeCounts[row.Date] = row.Count
+	}
+
+	stats.RegistrationDaily = buildDailySeries(startDay, endDay, registrationCounts)
+	stats.ActiveDaily = buildDailySeries(startDay, endDay, activeCounts)
+
+	return stats, nil
 }

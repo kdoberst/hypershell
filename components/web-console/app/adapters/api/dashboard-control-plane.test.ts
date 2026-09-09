@@ -4,8 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDashboardControlPlaneAdapter } from "./dashboard-control-plane";
 import type { PlatformInventoryMetricsResponse } from "./platform-inventory-aggregation";
 
+const usersActivityStatsApi = vi.fn();
 const fetchMock = vi.fn();
-const apiFactory = vi.fn(() => ({}) as unknown as SDKClient);
+const apiFactory = vi.fn(
+  () =>
+    ({
+      users: {
+        activityStats: usersActivityStatsApi,
+      },
+    }) as unknown as SDKClient,
+);
 
 const adapter = createDashboardControlPlaneAdapter(apiFactory);
 const context = {
@@ -55,7 +63,6 @@ interface DashboardMetricsMockOptions {
   activeSandboxes?: number;
   omitProvisionDuration?: boolean;
   platformInventory?: PlatformInventoryMetricsResponse;
-  registeredUsers?: { total_registered: number };
 }
 
 function mockClusterMetricsResponses(
@@ -65,8 +72,6 @@ function mockClusterMetricsResponses(
   options: DashboardMetricsMockOptions = {},
 ): void {
   const activeSandboxes = options.activeSandboxes ?? 0;
-  const registeredUsers =
-    options.registeredUsers ?? defaultRegisteredUsersResponse(0);
   const platformInventory =
     options.platformInventory ?? defaultPlatformInventory();
 
@@ -80,12 +85,6 @@ function mockClusterMetricsResponses(
     if (url === "/api/metrics/gateway-sandboxes") {
       return Promise.resolve({
         json: () => Promise.resolve({ active_sandboxes: activeSandboxes }),
-        ok: true,
-      });
-    }
-    if (url === "/api/metrics/registered-users") {
-      return Promise.resolve({
-        json: () => Promise.resolve(registeredUsers),
         ok: true,
       });
     }
@@ -155,20 +154,12 @@ function resolveStandardPrometheusSupportRoutes(
   options: DashboardMetricsMockOptions = {},
 ) {
   const activeSandboxes = options.activeSandboxes ?? 0;
-  const registeredUsers =
-    options.registeredUsers ?? defaultRegisteredUsersResponse(0);
   const platformInventory =
     options.platformInventory ?? defaultPlatformInventory();
 
   if (url === "/api/metrics/gateway-sandboxes") {
     return Promise.resolve({
       json: () => Promise.resolve({ active_sandboxes: activeSandboxes }),
-      ok: true,
-    });
-  }
-  if (url === "/api/metrics/registered-users") {
-    return Promise.resolve({
-      json: () => Promise.resolve(registeredUsers),
       ok: true,
     });
   }
@@ -196,14 +187,24 @@ function resolveStandardPrometheusSupportRoutes(
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
+  usersActivityStatsApi.mockReset();
+  usersActivityStatsApi.mockResolvedValue(defaultUserActivityStats(0));
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function defaultRegisteredUsersResponse(total = 0) {
-  return { total_registered: total };
+function defaultUserActivityStats(total = 0) {
+  return {
+    active_daily: [],
+    active_last_7_days: 0,
+    active_last_30_days: 0,
+    registered_last_7_days: 0,
+    registered_last_30_days: 0,
+    registration_daily: [],
+    total_registered: total,
+  };
 }
 
 describe("createDashboardControlPlaneAdapter", () => {
@@ -214,9 +215,24 @@ describe("createDashboardControlPlaneAdapter", () => {
       { Provisioning: 50, Running: 100 },
       {
         activeSandboxes: 200,
-        registeredUsers: { total_registered: 42 },
       },
     );
+
+    usersActivityStatsApi.mockResolvedValueOnce({
+      active_daily: [
+        { count: 2, date: "2026-08-09" },
+        { count: 4, date: "2026-08-10" },
+      ],
+      active_last_7_days: 18,
+      active_last_30_days: 95,
+      registered_last_7_days: 5,
+      registered_last_30_days: 22,
+      registration_daily: [
+        { count: 1, date: "2026-08-09" },
+        { count: 3, date: "2026-08-10" },
+      ],
+      total_registered: 42,
+    });
 
     const metrics = await adapter.getOperationalMetrics(context);
 
@@ -248,7 +264,23 @@ describe("createDashboardControlPlaneAdapter", () => {
     });
     expect(sandboxesMetric?.value).toBe("200");
     expect(registeredUsersMetric).toEqual({
+      activeLast7Days: "18",
+      activeLast30Days: "95",
+      activeTrend: {
+        points: [
+          { label: "2026-08-09", value: 2 },
+          { label: "2026-08-10", value: 4 },
+        ],
+      },
+      createdLast7Days: "5",
+      createdLast30Days: "22",
       id: "registered-users",
+      trend: {
+        points: [
+          { label: "2026-08-09", value: 1 },
+          { label: "2026-08-10", value: 3 },
+        ],
+      },
       value: "42",
     });
     expect(memoryMetric).toEqual({
@@ -318,8 +350,7 @@ describe("createDashboardControlPlaneAdapter", () => {
       credentials: "same-origin",
       signal: undefined,
     });
-    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/registered-users", {
-      credentials: "same-origin",
+    expect(usersActivityStatsApi).toHaveBeenCalledWith({
       signal: undefined,
     });
   });
@@ -417,7 +448,6 @@ describe("createDashboardControlPlaneAdapter", () => {
     fetchMock.mockImplementation((url: string) => {
       const base = {
         activeSandboxes: 0,
-        registeredUsers: defaultRegisteredUsersResponse(0),
         platformInventory: defaultPlatformInventory(),
       };
       if (url === "/api/metrics/gateway-sandboxes") {
@@ -426,12 +456,6 @@ describe("createDashboardControlPlaneAdapter", () => {
       if (url === "/api/metrics/gateways") {
         return Promise.resolve({
           json: () => Promise.resolve({ counts: defaultGatewayPhaseCounts }),
-          ok: true,
-        });
-      }
-      if (url === "/api/metrics/registered-users") {
-        return Promise.resolve({
-          json: () => Promise.resolve(base.registeredUsers),
           ok: true,
         });
       }
@@ -534,8 +558,7 @@ describe("createDashboardControlPlaneAdapter", () => {
       credentials: "same-origin",
       signal: controller.signal,
     });
-    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/registered-users", {
-      credentials: "same-origin",
+    expect(usersActivityStatsApi).toHaveBeenCalledWith({
       signal: controller.signal,
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/platform-inventory", {
@@ -796,6 +819,7 @@ describe("createDashboardControlPlaneAdapter", () => {
 
   it("fails when every metric source is unavailable", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
+    usersActivityStatsApi.mockRejectedValue(new Error("users unavailable"));
 
     await expect(adapter.getOperationalMetrics(context)).rejects.toThrow(
       "All operational dashboard metric sources failed",
