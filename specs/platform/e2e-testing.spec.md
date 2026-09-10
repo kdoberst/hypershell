@@ -72,9 +72,16 @@ PR opened/updated
     │
     ├── Konflux builds changed component images (existing pipeline)
     │
-    ├── e2e workflow triggers (gates on Konflux build completion)
+    ├── checks.yml (own detect-changes) runs lint, repository policy, and SDK
+    │     drift concurrently with tests.yml -- no gating between the two
     │
-    ├── detect-changes (reuse .github/scripts/detect-components.sh)
+    ├── tests.yml detect-changes runs .github/scripts/detect-components.sh
+    │     (separately from checks.yml's own pass)
+    │
+    ├── unit stage runs (needs: detect-changes)
+    │
+    ├── e2e stage runs after unit succeeds (also gates on Konflux build
+    │     completion), receiving the changed-component flags as inputs
     │
     ├── [skip if no e2e-relevant components changed]
     │
@@ -518,16 +525,101 @@ The e2e test suite SHALL connect to the gateway over trusted TLS and SHALL NOT d
 - WHEN they establish a gateway connection
 - THEN they SHALL NOT set `OPENSHELL_GATEWAY_INSECURE=true`
 
+### Requirement: CI Checks Workflow
+
+The system SHALL provide an independently-triggered GitHub Actions workflow at `.github/workflows/checks.yml` (its own `pull_request`, `push` to `main`, `merge_group`, and `workflow_dispatch` triggers and concurrency group) that runs static and whole-repo checks: per-component lint jobs, repository policy (`make check`), and OpenAPI SDK drift detection. It SHALL be a top-level workflow rather than a stage called from `.github/workflows/tests.yml`, so it appears as its own entry in the PR checks list and runs fully concurrently with `tests.yml`. Because GitHub Actions `needs:` only orders jobs within one workflow file, `checks.yml` SHALL NOT be gated by, and SHALL NOT gate, any job in `tests.yml`; there SHALL be no cross-workflow polling job connecting the two.
+
+`checks.yml` SHALL run its own `detect-changes` job (invoking `.github/scripts/detect-components.sh`) rather than sharing the one in `tests.yml`, since the two workflows cannot pass job outputs to each other. Each lint job SHALL declare `needs: detect-changes` and gate on `needs.detect-changes.outputs.<component> == 'true'`. Repository policy and SDK drift SHALL be jobs in this workflow rather than independently-triggered workflows, so they share this single `detect-changes` pass instead of each re-detecting changes on their own trigger. Repository policy SHALL run unconditionally (it is a whole-repo check, not tied to a single component); the SDK drift job SHALL gate on `needs.detect-changes.outputs.sdk_go == 'true' || needs.detect-changes.outputs.sdk_typescript == 'true'`.
+
+`checks.yml` SHALL provide a `checks-gate` job (`Checks CI Gate`) that runs with `if: always()`, reads every other job's rolled-up `result` via `needs`, and fails unless `detect-changes` succeeded and no other job failed or was cancelled (a job skipped by path filtering SHALL pass the gate). Because it always runs, it is never left pending by path-filtered skips, so this is one of the two checks to mark required in branch protection (the other being `tests.yml`'s own `Tests CI Gate`). The two gate jobs SHALL be named distinctly (`Checks CI Gate` / `Tests CI Gate`) rather than both plain `CI Gate`, since this repo's branch protection is a ruleset whose `required_status_checks` match by `(context name, integration_id)` only, not by workflow file; both workflows' checks share the same "GitHub Actions" integration_id, so identically-named gates would be indistinguishable to the ruleset.
+
+#### Scenario: Checks And Tests Run Concurrently
+
+- GIVEN a pull request is opened or updated
+- WHEN `checks.yml` and `tests.yml` both trigger on the same event
+- THEN each SHALL run its own `detect-changes` job and proceed independently
+- AND a failure in `checks.yml` SHALL NOT prevent any job in `tests.yml` from running, nor vice versa
+
+#### Scenario: Repository Policy And SDK Drift Run As Checks Jobs
+
+- GIVEN a pull request is opened or updated
+- WHEN `checks.yml` runs
+- THEN the `repository-policy` job SHALL run `make check` unconditionally, regardless of which components changed
+- AND the `sdk-drift` job SHALL run only when `needs.detect-changes.outputs.sdk_go` or `needs.detect-changes.outputs.sdk_typescript` is `'true'`
+- AND neither job SHALL run change detection of its own
+
+#### Scenario: Checks Gate For Branch Protection
+
+- GIVEN branch protection requires `checks.yml`'s `Checks CI Gate`
+- WHEN a pull request runs `checks.yml`
+- THEN the `checks-gate` job SHALL run with `if: always()` so it is present even when every lint job is skipped by path filtering
+- AND the gate SHALL pass when `detect-changes` succeeded and every other job's result is `success` or `skipped`
+- AND the gate SHALL fail when `detect-changes` did not succeed or any other job's result is `failure` or `cancelled`
+
+### Requirement: CI Unit Test Workflow
+
+The unit-test and e2e stages SHALL be ordered by a single orchestrator workflow at `.github/workflows/tests.yml` rather than by cross-workflow status-check polling. `tests.yml` SHALL own the `pull_request`, `push` (to `main`), `merge_group`, and `workflow_dispatch` triggers, the concurrency group, and SHALL call `unit-tests.yml` and `e2e.yml` as reusable workflows (`on: workflow_call`) wired with native `needs:` edges. `unit` SHALL depend only on `detect-changes`, and `e2e` SHALL declare `needs: [detect-changes, unit]` so it starts only after the unit-test stage concludes successfully. Because GitHub Actions skips a job by default if any needed job failed OR was skipped, `e2e` SHALL also declare `if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.unit.result != 'failure' }}`, so a PR touching only e2e-owned paths (every job inside `unit` path-filtered away, making the `unit` caller job itself resolve to `skipped`) still runs `e2e` instead of silently skipping it. This gates only the expensive stage: the Kind-based e2e run SHALL NOT start for a SHA whose unit tests failed, and such a failure SHALL surface as a clean red `Tests CI Gate` check rather than a misleading e2e environment failure. There SHALL be no in-workflow job that polls for a preceding stage's status check. The stage workflows SHALL NOT declare their own event triggers (only `workflow_call`) so they never run as standalone duplicates. `tests.yml` SHALL NOT be gated by, and SHALL NOT gate, the separate `checks.yml` workflow (see the CI Checks Workflow requirement); the two run fully concurrently.
+
+Change detection SHALL run exactly once per workflow, in a `detect-changes` job in `tests.yml` (invoking `.github/scripts/detect-components.sh`), whose per-component outputs are passed into each stage as `with:` inputs; the stage workflows SHALL NOT detect changes internally and SHALL gate their jobs on `inputs.<component>`. Because each stage is a reusable-workflow call, its individual jobs surface as `Unit / <job>` and `E2E / <job>` checks rather than a single per-stage check. `tests.yml` SHALL therefore provide a `tests-gate` job (`Tests CI Gate`) covering the `unit` and `e2e` stages together, which SHALL run with `if: always()`, read both stages' rolled-up `result` via `needs`, and fail unless `detect-changes` succeeded and neither stage failed or cancelled (a fully skipped stage SHALL pass the gate). Because it always runs, it is never left pending by path-filtered skips, so this is one of the two checks to mark required in branch protection (the other being `checks.yml`'s own `Checks CI Gate`).
+
+The system SHALL provide a reusable GitHub Actions workflow at `.github/workflows/unit-tests.yml` (`on: workflow_call`) that runs unit tests as a cheap gate on the E2E stage. It SHALL receive the changed-component flags as `workflow_call` inputs and gate conditional jobs on those inputs rather than detecting changes itself; the `Tests CI Gate` job in `tests.yml` rolls its result (together with e2e's) up into the required check, so it has no summary or gate job of its own. Frontend, Go, and shell unit tests SHALL run in separate jobs and SHALL run only when their inputs changed. Shell unit tests SHALL be auto-discovered (`*_test.sh`) rather than listed in the workflow or Makefile. The Kind e2e stage SHALL NOT start until the unit-test stage succeeds.
+
+The root Makefile SHALL provide a `make unit-test-all` target that runs the same unit test suites as the CI jobs (API server, control plane, CLI/SDK generators, frontend packages, and shell tests) unconditionally -- without the per-component change detection the CI workflow uses -- so a developer can run the full suite locally before pushing. It SHALL provide a `make ci-test` target that runs only the auto-discovered `*_test.sh` shell tests, matching the CI shell-test job.
+
+#### Scenario: Local Unit Test Run Mirrors CI
+
+- GIVEN a developer has made changes across multiple components
+- WHEN they run `make unit-test-all`
+- THEN the API server, control plane, CLI/SDK generator, frontend, and shell unit test suites SHALL all run
+- AND a failure in any suite SHALL fail the `make unit-test-all` command
+
+#### Scenario: Path-Filtered Unit Test Jobs
+
+- GIVEN a pull request changes only files for one unit-test group (frontend, a Go module, or shell tests)
+- WHEN the unit-test stage evaluates its per-component inputs
+- THEN only the matching unit-test job SHALL run
+- AND skipped jobs SHALL NOT fail the `Tests CI Gate` check
+
+#### Scenario: Tests Gate For Branch Protection
+
+- GIVEN branch protection requires `tests.yml`'s `Tests CI Gate`
+- WHEN a pull request runs `tests.yml`
+- THEN the `tests-gate` job SHALL run with `if: always()` so it is present even when the unit and e2e stages' jobs are all skipped by path filtering
+- AND the gate SHALL pass when `detect-changes` succeeded and both stages' results are `success` or `skipped`
+- AND the gate SHALL fail when `detect-changes` did not succeed or either stage's result is `failure` or `cancelled`
+
+#### Scenario: Shell Unit Tests Auto-Discovered
+
+- GIVEN a new `*_test.sh` file is added next to the script it tests
+- WHEN `make ci-test` or the shell unit-test job runs
+- THEN that file SHALL be discovered and executed without updating a Makefile allowlist or workflow job list
+
+#### Scenario: E2E Runs After Unit Tests
+
+- GIVEN a pull request is opened or updated
+- WHEN the `tests.yml` orchestrator runs
+- THEN the `e2e` stage SHALL declare `needs: [detect-changes, unit]` so no e2e job (including image planning and Kind creation) starts until the `unit` stage concludes successfully
+- AND a failing `unit` stage SHALL leave the entire e2e stage un-started (skipped), so Kind is never created for a SHA with failing unit tests
+- AND a failure in the separate `checks.yml` workflow SHALL NOT prevent the `e2e` stage from starting
+
+#### Scenario: E2E Still Runs When Unit Is Entirely Path-Filtered Out
+
+- GIVEN a pull request changes only e2e-owned paths and no unit-tested component
+- WHEN the `tests.yml` orchestrator runs
+- THEN every job inside the `unit` stage SHALL be skipped by its own `inputs.<component>` condition, and the `unit` caller job's own result SHALL resolve to `skipped`
+- AND the `e2e` stage's `if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.unit.result != 'failure' }}` SHALL still evaluate true, so `e2e` runs rather than being skipped by GitHub Actions' default needs-propagation behavior
+
 ### Requirement: CI E2E Workflow
 
-The system SHALL provide a GitHub Actions workflow at `.github/workflows/e2e.yml` that runs the e2e test suite against a Kind cluster on every pull request, on every merge-queue entry (`merge_group`), and on push to `main`. The workflow SHALL follow the same structural patterns as `.github/workflows/lint.yml` (concurrency groups, component detection, conditional jobs, summary gate). The workflow SHALL gate on Konflux image builds completing and pull those images by digest -- it SHALL NOT rebuild component images itself.
+The system SHALL provide a reusable GitHub Actions workflow at `.github/workflows/e2e.yml` (`on: workflow_call`) that runs the e2e test suite against a Kind cluster. It SHALL run as the final stage of `tests.yml`, which triggers on every pull request, on every merge-queue entry (`merge_group`), and on push to `main`. Like the unit stage, it SHALL receive the changed-component flags as `workflow_call` inputs and gate its jobs on those inputs rather than detecting changes itself; the `Tests CI Gate` job in `tests.yml` rolls its result (together with unit's) up into the required check, so it has no summary or gate job of its own. The orchestrator's `needs: [detect-changes, unit]` edge (with the `if:` override described in the CI Unit Test Workflow requirement, so a `unit` skip does not also skip `e2e`) SHALL ensure Kind is never created until the unit-test stage succeeds; the e2e workflow itself SHALL NOT contain a job that polls for that gate, or for the separate `checks.yml` workflow. The workflow SHALL still gate on Konflux image builds completing (an external build system it cannot order with `needs:`) and pull those images by digest -- it SHALL NOT rebuild component images itself.
 
 #### Scenario: PR Triggers Workflow
 
 - GIVEN a pull request is opened or updated
+- AND the unit-test stage has succeeded (satisfying the orchestrator's `needs: [detect-changes, unit]` edge)
 - AND Konflux has built images for changed components
-- WHEN the `e2e` workflow triggers
-- THEN it SHALL: check out the repository, detect which components changed (using `.github/scripts/detect-components.sh`), create a Kind cluster via `make kind-up` with baseline images (overlapping cluster creation with the Konflux builds in progress), wait for each changed component's Konflux on-pull-request build to conclude, swap in the Konflux-built image digests via `scripts/kind/set-component-images.sh`, run `tests/e2e/e2e-openshell.sh` with `E2E_INFRA_DRIVER=kind`, and report the CI status
+- WHEN the `e2e` stage runs
+- THEN it SHALL: check out the repository, use the changed-component flags passed in as inputs, create a Kind cluster via `make kind-up` with baseline images (overlapping cluster creation with the Konflux builds in progress), wait for each changed component's Konflux on-pull-request build to conclude, swap in the Konflux-built image digests via `scripts/kind/set-component-images.sh`, run `tests/e2e/e2e-openshell.sh` with `E2E_INFRA_DRIVER=kind`, and report the CI status
 
 #### Scenario: Tests Pass
 
@@ -748,7 +840,18 @@ deploy/
       kustomization.yaml
       gatewayclass.yaml
 .github/workflows/
-  e2e.yml                  -- CI e2e workflow
+  checks.yml               -- independently-triggered Checks workflow:
+                              detects changes, then runs per-component lint,
+                              repository policy (`make check`), and OpenAPI
+                              SDK drift; runs fully concurrently with
+                              tests.yml, no cross-workflow gating between them
+  tests.yml                -- independently-triggered Tests orchestrator:
+                              detects changes, then runs unit and joins e2e
+                              on it (needs: unit) as reusable workflows
+                              (passing detection as inputs), gated with
+                              native `needs:`
+  unit-tests.yml           -- Tests unit-test stage (reusable, on: workflow_call)
+  e2e.yml                  -- Tests e2e stage (reusable, on: workflow_call)
 ```
 
 `components/pr-test/e2e-openshell.sh` SHALL be deprecated as `ephemeral-pr-environments.spec.md` specifies. Removal is deferred until manual usage migrates; the ROKS variant is out of that deprecation.

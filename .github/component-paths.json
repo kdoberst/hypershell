@@ -7,8 +7,11 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   },
   "control_plane": {
     "directory": "components/control-plane",
@@ -22,8 +25,11 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   },
   "sdk_typescript": {
     "directory": "components/sdk-typescript",
@@ -39,8 +45,12 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml",
+      "components/api-server/Dockerfile.openapi"
+    ],
+    "unit_tested": true
   },
   "gateway_management_ui": {
     "directory": "packages/gateway-management-ui",
@@ -54,8 +64,11 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   },
   "operational_dashboard_ui": {
     "directory": "packages/operational-dashboard-ui",
@@ -68,8 +81,11 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   },
   "e2e": {
     "directory": "tests/e2e",
@@ -80,7 +96,9 @@
       "scripts/kind/**",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/e2e.yml"
+      ".github/workflows/e2e.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
     ]
   },
   "pr_test": {
@@ -90,7 +108,8 @@
       "components/pr-test/**",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
+      ".github/workflows/checks.yml",
+      ".github/workflows/tests.yml"
     ]
   },
   "cli": {
@@ -105,8 +124,11 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   },
   "sdk_go": {
     "directory": "components/sdk-go",
@@ -117,8 +139,11 @@
       "scripts/sdk-generator/**",
       "scripts/openapi-ir/**",
       ".github/component-paths.json",
-      ".github/scripts/detect-components.sh"
-    ]
+      ".github/scripts/detect-components.sh",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   },
   "web_console": {
     "directory": "components/web-console",
@@ -134,7 +159,10 @@
       "Makefile",
       ".github/component-paths.json",
       ".github/scripts/detect-components.sh",
-      ".github/workflows/lint.yml"
-    ]
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
   }
 }

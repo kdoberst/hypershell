@@ -86,8 +86,8 @@ Support skills available at any point:
 cd components/api-server && make binary        # Build binary
 cd components/api-server && make run           # Migrate + serve (with auth)
 cd components/api-server && make run-no-auth   # Migrate + serve (no auth, dev mode)
-cd components/api-server && make test           # Run tests
-cd components/api-server && make test-integration  # Integration tests
+cd components/api-server && make test           # Go tests (spins up PostgreSQL via testcontainers-go; requires Docker/Podman)
+cd components/api-server && make test-integration  # Same, scoped to ./plugins/...
 cd components/api-server && make generate      # Regenerate OpenAPI client
 cd components/api-server && make proto         # Regenerate gRPC stubs
 cd components/api-server && make db/setup      # Start PostgreSQL
@@ -96,8 +96,11 @@ cd components/api-server && make db/teardown   # Stop PostgreSQL
 # Control Plane
 cd components/control-plane && go build ./...  # Build
 cd components/control-plane && go vet ./...    # Vet
+cd components/control-plane && go test ./...   # Unit tests
 
 # All Components
+make ci-test                                   # Run all *_test.sh shell unit tests
+make unit-test-all                             # Run Go, frontend, and shell unit tests
 make build-all                                 # Build all container images
 pnpm --filter @openshift-online/hypershell-gateway-management-ui check  # Verify reusable gateway UI
 pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check  # Verify operational dashboard UI

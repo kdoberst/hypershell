@@ -21,6 +21,7 @@ select.
   - [OpenShift per-component swap](#openshift-per-component-swap)
   - [OpenShift environment variables](#openshift-environment-variables)
 - [Gateway Access](#gateway-access)
+- [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
@@ -568,6 +569,100 @@ curl -s -X POST http://localhost:8000/api/hypershell/v1/gateways \
 ```
 
 Wait ~30s for the control plane to reconcile, then port-forward and register.
+
+## Testing
+
+### Unit tests
+
+Run the full local unit test suite (API server, control plane, CLI/SDK
+generators, frontend packages, and shell tests) before pushing:
+
+```bash
+make unit-test-all
+```
+
+| Target | Runs |
+|--------|------|
+| `make unit-test-all` | Every unit test suite: `install-js`, `make ci-test`, `components/api-server` (`make test`), `components/control-plane` (`go test ./...`), `components/cli`, `scripts/cli-generator`, `scripts/sdk-generator` (`go test ./...`), and `pnpm run test:web` (frontend packages) |
+| `make ci-test` | Only the auto-discovered `*_test.sh` shell unit tests (see below) |
+
+Component-scoped runs are also available:
+
+```bash
+cd components/api-server && make test              # Go tests (spins up PostgreSQL via testcontainers-go; requires Docker/Podman)
+cd components/api-server && make test-integration   # Same, scoped to ./plugins/...
+cd components/control-plane && go test ./...        # Go unit tests
+```
+
+Shell unit tests (`*_test.sh`, e.g. `scripts/kind/lib_test.sh`) are
+auto-discovered by `make ci-test` and `scripts/run-shell-unit-tests.sh` -
+adding a new `*_test.sh` file next to the script it tests is enough; no
+Makefile or CI allowlist update is needed.
+
+### CI
+
+Two independently-triggered, top-level workflows run on every pull request,
+push to `main`, and merge-queue entry: `.github/workflows/checks.yml`
+(static/whole-repo checks) and `.github/workflows/tests.yml` (unit tests and
+e2e). They each show as their own entry in the PR checks list and run fully
+concurrently - GitHub Actions `needs:` only orders jobs within one workflow
+file, so the two cannot gate each other without a cross-workflow poller,
+which this repo deliberately avoids. Each therefore runs its own
+`detect-changes` job rather than sharing one.
+
+`.github/workflows/checks.yml` covers per-component lint jobs, repository
+policy (`make check`, unconditional), and OpenAPI SDK drift (gated on the
+sdk_go/sdk_typescript detection outputs) - all sharing that workflow's single
+`detect-changes` pass instead of each re-detecting changes on their own
+trigger the way the old standalone `repository-policy.yml` and
+`sdk-drift-check.yml` did. Its `checks-gate` job (`Checks CI Gate`) runs
+with `if: always()`, reads every other job's rolled-up result, and fails
+unless `detect-changes` succeeded and no job failed or was cancelled (a
+path-filtered skip still passes the gate).
+
+`.github/workflows/tests.yml` detects changed components once (its
+`detect-changes` job) and calls unit and e2e as reusable workflows, passing
+the detection results in as inputs and wiring the stages with native
+`needs:` edges: `unit` depends only on `detect-changes`, and `e2e` joins on
+`unit` (`needs: [detect-changes, unit]`). GitHub Actions skips a job by
+default if any needed job failed *or was skipped*, so `e2e` also carries an
+explicit `if: ${{ !cancelled() && needs.detect-changes.result == 'success'
+&& needs.unit.result != 'failure' }}` - without it, a PR touching only
+e2e-owned paths (every `unit` job path-filtered away, so the `unit` caller
+job itself resolves to `skipped`) would silently skip `e2e` too. e2e is the
+expensive stage - it provisions Kind and runs the full test matrix - so
+gating it behind the cheap unit stage means Kind is never created for a SHA
+whose unit tests failed, and such a failure shows up as a clean red `Tests
+CI Gate` check instead of a misleading e2e environment failure. Nothing
+sits polling for a preceding gate. `.github/workflows/unit-tests.yml` runs
+the same suites as `make unit-test-all`, split into per-component jobs that
+only run when their inputs changed.
+
+`.github/workflows/tests.yml`'s `tests-gate` job (`Tests CI Gate`) covers
+the `unit` and `e2e` stages together, since they're both "running the code"
+stages as opposed to `checks.yml`'s static checks. Each stage's jobs appear
+as `Unit / <job>` and `E2E / <job>` checks, so there is no single check
+named just `Unit`/`E2E`; the gate rolls both up into one always-present
+required check the same way `checks.yml`'s gate does.
+
+The two gate jobs are named distinctly (`Checks CI Gate`, `Tests CI Gate`)
+rather than both plain `CI Gate`: this repo's branch protection is a
+ruleset whose `required_status_checks` match by `(context name,
+integration_id)` only, not by workflow file, and both workflows' checks
+share the same "GitHub Actions" integration_id - identically-named gates
+from the two workflows would be indistinguishable to the ruleset, and
+either one succeeding could satisfy the requirement while the other
+silently failed. Mark both `Checks CI Gate` and `Tests CI Gate` as required
+checks in branch protection. Note the trade-off of running the two
+workflows concurrently: a lint/policy/drift failure in `checks.yml` no
+longer blocks `tests.yml`'s e2e stage from spinning up Kind - only a
+unit-test failure does.
+
+### E2E tests
+
+See `specs/platform/e2e-testing.spec.md` for the e2e and performance test
+suites (`make e2e`, `make e2e-performance`), which run against Kind or an
+existing OpenShift cluster.
 
 ## Troubleshooting
 

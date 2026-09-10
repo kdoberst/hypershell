@@ -1,5 +1,38 @@
-name: Lint
+name: Checks
 
+# Independently-triggered workflow (sibling to .github/workflows/tests.yml)
+# covering static and whole-repo checks: per-component lint jobs, repository
+# policy (`make check`), and OpenAPI SDK drift. It is its own top-level
+# workflow, not a stage called by Tests, so it shows as its own entry in the
+# PR checks list and runs fully concurrently with Tests -- GitHub Actions
+# `needs:` only works within a single workflow file, so this workflow cannot
+# gate (or be gated by) Tests without a cross-workflow poller, which this
+# repo deliberately avoids. The cost of that split: this workflow runs its
+# own `detect-changes` job rather than sharing the one in tests.yml, and
+# Tests' e2e stage no longer waits on Checks passing -- only on Unit (see
+# tests.yml).
+#
+# Repository policy and OpenAPI SDK drift used to be their own
+# independently-triggered workflows (repository-policy.yml,
+# sdk-drift-check.yml). They are jobs here instead so they share this
+# workflow's single detect-changes pass rather than each re-detecting
+# changes on their own trigger. Repository policy runs unconditionally (a
+# whole-repo check, not tied to a single component); SDK drift gates on the
+# sdk_go/sdk_typescript detection outputs.
+#
+# The `checks-gate` job below runs with `if: always()`, reads every other
+# job's result via `needs`, and fails unless detect-changes succeeded and no
+# job failed or was cancelled (a job skipped by path filtering still passes
+# the gate). Because it always runs, it is never left pending by
+# path-filtered skips, so THIS is the check to mark required in branch
+# protection alongside tests.yml's own gate job. The two are named distinctly
+# (`Checks CI Gate` here, `Tests CI Gate` there) rather than both plain
+# `CI Gate`: this repo's branch protection is a ruleset whose
+# required_status_checks match by (context name, integration_id) only, not
+# by workflow file, and both workflows' checks share the same "GitHub
+# Actions" integration_id -- so two identically-named gates from different
+# workflows would be indistinguishable to the ruleset, and either one
+# succeeding could satisfy the requirement while the other silently failed.
 on:
   pull_request:
   push:
@@ -14,7 +47,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: lint-${{ github.event.pull_request.number || github.ref }}
+  group: checks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,6 +61,7 @@ jobs:
       gateway_management_ui: ${{ steps.detect.outputs.gateway_management_ui }}
       operational_dashboard_ui: ${{ steps.detect.outputs.operational_dashboard_ui }}
       pr_test: ${{ steps.detect.outputs.pr_test }}
+      sdk_go: ${{ steps.detect.outputs.sdk_go }}
       sdk_typescript: ${{ steps.detect.outputs.sdk_typescript }}
       web_console: ${{ steps.detect.outputs.web_console }}
     steps:
@@ -39,8 +73,55 @@ jobs:
         id: detect
         run: bash .github/scripts/detect-components.sh
 
+  repository-policy:
+    name: Repository policy
+    needs: detect-changes
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run repository policy checks
+        run: make check
+
+  sdk-drift:
+    name: OpenAPI SDK drift
+    needs: detect-changes
+    if: needs.detect-changes.outputs.sdk_go == 'true' || needs.detect-changes.outputs.sdk_typescript == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: scripts/sdk-generator/go.mod
+          cache-dependency-path: scripts/sdk-generator/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .node-version
+      - name: Install pinned pnpm
+        run: bash scripts/bootstrap_pnpm.sh
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Regenerate OpenAPI SDK
+        working-directory: components/api-server
+        run: make generate generate-sdk
+      - name: Check for drift
+        run: |
+          drift="$(git status --porcelain --untracked-files=all -- components/api-server/pkg/api/openapi components/sdk-typescript/src)"
+          if [[ -n "${drift}" ]]; then
+            echo "Generated OpenAPI SDK files are out of date."
+            echo "Run 'cd components/api-server && make generate generate-sdk' and commit the result."
+            echo "Changed files:"
+            echo "${drift}"
+            git diff -- components/api-server/pkg/api/openapi components/sdk-typescript/src
+            exit 1
+          fi
+          echo "Generated OpenAPI SDK files are up to date."
+
   lint-api-server:
-    name: Go lint - API server
+    name: Go - API server
     needs: detect-changes
     if: needs.detect-changes.outputs.api_server == 'true'
     runs-on: ubuntu-24.04
@@ -83,7 +164,7 @@ jobs:
           args: --timeout=5m
 
   lint-cli:
-    name: Go lint - CLI
+    name: Go - CLI
     needs: detect-changes
     if: needs.detect-changes.outputs.cli == 'true'
     runs-on: ubuntu-24.04
@@ -117,7 +198,7 @@ jobs:
           args: --timeout=5m
 
   lint-control-plane:
-    name: Go lint - control plane
+    name: Go - control plane
     needs: detect-changes
     if: needs.detect-changes.outputs.control_plane == 'true'
     runs-on: ubuntu-24.04
@@ -151,7 +232,7 @@ jobs:
           args: --timeout=5m
 
   lint-sdk-typescript:
-    name: TypeScript check - SDK
+    name: TypeScript - SDK
     needs: detect-changes
     if: needs.detect-changes.outputs.sdk_typescript == 'true'
     runs-on: ubuntu-24.04
@@ -187,8 +268,11 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build domain-probe contracts
         run: pnpm --filter @openshift-online/hypershell-domain-probes build
-      - name: Run gateway management UI package quality gates
-        run: pnpm --filter @openshift-online/hypershell-gateway-management-ui check
+      - name: Run gateway management UI static quality gates
+        run: |
+          pnpm --filter @openshift-online/hypershell-gateway-management-ui run format:check
+          pnpm --filter @openshift-online/hypershell-gateway-management-ui run lint
+          pnpm --filter @openshift-online/hypershell-gateway-management-ui run typecheck
 
   lint-operational-dashboard-ui:
     name: Operational dashboard UI package quality gates
@@ -206,8 +290,11 @@ jobs:
         run: bash scripts/bootstrap_pnpm.sh
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run operational dashboard UI package quality gates
-        run: pnpm --filter @openshift-online/hypershell-operational-dashboard-ui check
+      - name: Run operational dashboard UI static quality gates
+        run: |
+          pnpm --filter @openshift-online/hypershell-operational-dashboard-ui run format:check
+          pnpm --filter @openshift-online/hypershell-operational-dashboard-ui run lint
+          pnpm --filter @openshift-online/hypershell-operational-dashboard-ui run typecheck
 
   lint-pr-test:
     name: PR test script validation
@@ -236,8 +323,8 @@ jobs:
         run: bash scripts/bootstrap_pnpm.sh
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run static, unit, Storybook, and production build gates
-        run: pnpm check:web
+      - name: Run static, Storybook, and production build gates
+        run: pnpm check:web:lint
       - name: Get Playwright version
         id: playwright-version
         run: echo "version=$(pnpm --filter @openshift-online/hypershell-web-console exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
@@ -265,37 +352,40 @@ jobs:
       - name: Run critical Chromium journey
         run: pnpm test:e2e:chromium
 
-  summary:
-    name: Lint CI gate
-    if: ${{ always() && !cancelled() }}
+  # Stable rollup check for branch protection. Always runs, so a
+  # path-filtered job that is skipped never leaves a required check pending.
+  # A job that was skipped passes the gate; only an actual failure/cancel --
+  # or a detect-changes that did not succeed -- fails it.
+  checks-gate:
+    name: Checks CI Gate
     needs:
       - detect-changes
+      - repository-policy
+      - sdk-drift
       - lint-api-server
       - lint-cli
       - lint-control-plane
+      - lint-sdk-typescript
       - lint-gateway-management-ui
       - lint-operational-dashboard-ui
       - lint-pr-test
-      - lint-sdk-typescript
       - lint-web-console
+    if: always()
     runs-on: ubuntu-24.04
     steps:
-      - name: Check lint results
+      - name: Verify all checks passed
         env:
-          DETECTION_RESULT: ${{ needs.detect-changes.result }}
-          API_SERVER_RESULT: ${{ needs.lint-api-server.result }}
-          CLI_RESULT: ${{ needs.lint-cli.result }}
-          CONTROL_PLANE_RESULT: ${{ needs.lint-control-plane.result }}
-          GATEWAY_MANAGEMENT_UI_RESULT: ${{ needs.lint-gateway-management-ui.result }}
-          OPERATIONAL_DASHBOARD_UI_RESULT: ${{ needs.lint-operational-dashboard-ui.result }}
-          PR_TEST_RESULT: ${{ needs.lint-pr-test.result }}
-          SDK_TYPESCRIPT_RESULT: ${{ needs.lint-sdk-typescript.result }}
-          WEB_CONSOLE_RESULT: ${{ needs.lint-web-console.result }}
+          DETECT_RESULT: ${{ needs.detect-changes.result }}
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          for result in "${DETECTION_RESULT}" "${API_SERVER_RESULT}" "${CLI_RESULT}" "${CONTROL_PLANE_RESULT}" "${GATEWAY_MANAGEMENT_UI_RESULT}" "${OPERATIONAL_DASHBOARD_UI_RESULT}" "${PR_TEST_RESULT}" "${SDK_TYPESCRIPT_RESULT}" "${WEB_CONSOLE_RESULT}"; do
-            if [[ "${result}" == failure || "${result}" == cancelled ]]; then
-              echo "One or more lint jobs failed or were cancelled."
+          if [[ "${DETECT_RESULT}" != "success" ]]; then
+            echo "detect-changes did not succeed (result: ${DETECT_RESULT})"
+            exit 1
+          fi
+          for result in ${RESULTS}; do
+            if [[ "${result}" == "failure" || "${result}" == "cancelled" ]]; then
+              echo "At least one checks job did not pass (result: ${result})"
               exit 1
             fi
           done
-          echo "All relevant lint jobs passed or were skipped."
+          echo "Checks stage OK"
