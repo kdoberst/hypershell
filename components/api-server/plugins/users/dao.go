@@ -138,7 +138,9 @@ func (d *sqlUserDao) RecordLogin(ctx context.Context, userID string, loginTime t
 	}
 	result := g2.Clauses(clause.OnConflict{DoNothing: true}).Create(&loginRecord)
 	if result.Error != nil {
-		db.MarkForRollback(ctx, result.Error)
+		// Best-effort telemetry: UpsertByUsername logs and continues on failure.
+		// Do not MarkForRollback here or a tracking write failure would undo the
+		// user upsert and other writes in the same request transaction.
 		return fmt.Errorf("record login day: %w", result.Error)
 	}
 
@@ -147,7 +149,6 @@ func (d *sqlUserDao) RecordLogin(ctx context.Context, userID string, loginTime t
 	// within the same day avoids an unconditional write on every request.
 	if result.RowsAffected > 0 {
 		if err := g2.Model(&User{}).Where("id = ?", userID).Update("last_login_at", loginAt).Error; err != nil {
-			db.MarkForRollback(ctx, err)
 			return fmt.Errorf("record login: %w", err)
 		}
 	}
