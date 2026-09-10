@@ -221,8 +221,15 @@ func DeleteGatewayResources(
 		log.Printf("INFO deleted ClusterRoleBinding %s", crbName)
 	}
 
-	if opts.KeycloakClient != nil && opts.GatewayName != "" && opts.GatewayID != "" {
-		kcClientID := fmt.Sprintf("%s-%s", opts.GatewayName, opts.GatewayID)
+	if opts.KeycloakClient != nil && opts.GatewayID != "" {
+		kcClientID := opts.GatewayClientID
+		// Defensive for other callers; GatewayReconciler already passes the validated stored identity, including name-id fallback.
+		if kcClientID == "" && opts.GatewayName != "" {
+			kcClientID = fmt.Sprintf("%s-%s", opts.GatewayName, opts.GatewayID)
+		}
+		if kcClientID == "" {
+			return fmt.Errorf("gateway identity is required for cleanup")
+		}
 		if err := opts.KeycloakClient.DeleteGatewayServiceAccountClients(ctx, opts.GatewayID); err != nil {
 			// Do not delete the parent clients while an OpenShell gateway service
 			// account may still be enabled. Returning an error makes teardown retry.
