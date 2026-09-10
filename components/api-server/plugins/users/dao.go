@@ -118,7 +118,12 @@ func (d *sqlUserDao) All(ctx context.Context) (UserList, error) {
 }
 
 func (d *sqlUserDao) RecordLogin(ctx context.Context, userID string, loginTime time.Time) error {
-	g2 := (*d.sessionFactory).New(ctx)
+	_ = ctx
+	// Best-effort telemetry on an independent session (see seedUserWithCreatedAt).
+	// Request-scoped transactions abort on any statement error in PostgreSQL, so
+	// tracking must not share the provisioning transaction even when the service
+	// logs and continues on failure.
+	g2 := (*d.sessionFactory).New(context.Background())
 	loginAt := loginTime.UTC()
 	loginDay := utcDayStart(loginAt)
 
@@ -128,9 +133,6 @@ func (d *sqlUserDao) RecordLogin(ctx context.Context, userID string, loginTime t
 	}
 	result := g2.Clauses(clause.OnConflict{DoNothing: true}).Create(&loginRecord)
 	if result.Error != nil {
-		// Best-effort telemetry: UpsertByUsername logs and continues on failure.
-		// Do not MarkForRollback here or a tracking write failure would undo the
-		// user upsert and other writes in the same request transaction.
 		return fmt.Errorf("record login day: %w", result.Error)
 	}
 
