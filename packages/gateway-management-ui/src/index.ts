@@ -61,6 +61,7 @@ export {
   aggregateGatewayDisplayStatusCounts,
   gatewayCanonicalPhaseStrings,
   gatewayCanonicalPhases,
+  gatewayPhaseCountsToDisplayStatusCounts,
   gatewayListQueryKey,
   gatewayListQueryRoot,
   gatewayPlacementBatchQueryKey,

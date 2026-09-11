@@ -19,6 +19,7 @@ type ManagedDatabaseDao interface {
 	FindByIDs(ctx context.Context, ids []string) (ManagedDatabaseList, error)
 	All(ctx context.Context) (ManagedDatabaseList, error)
 	ExistsByDatabaseID(ctx context.Context, databaseID string) (bool, error)
+	InventorySnapshot(ctx context.Context) (*DatabaseInventorySnapshot, error)
 }
 
 var _ ManagedDatabaseDao = &sqlManagedDatabaseDao{}
@@ -115,4 +116,12 @@ func (d *sqlManagedDatabaseDao) ExistsByDatabaseID(ctx context.Context, database
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (d *sqlManagedDatabaseDao) InventorySnapshot(ctx context.Context) (*DatabaseInventorySnapshot, error) {
+	databases, err := d.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return buildDatabaseInventorySnapshot(databases), nil
 }

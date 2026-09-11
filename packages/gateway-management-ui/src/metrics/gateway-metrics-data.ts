@@ -22,7 +22,7 @@ export function emptyGatewayPhaseCounts(): GatewayPhaseCounts {
 export async function fetchGatewayMetrics(
   signal?: AbortSignal,
 ): Promise<GatewayPhaseCounts> {
-  const response = await fetch("/api/hypershell/v1/metrics/gateways", {
+  const response = await fetch("/api/metrics/gateways", {
     credentials: "same-origin",
     signal,
   });

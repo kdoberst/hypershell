@@ -59,3 +59,7 @@ func (d *managedDatabaseDaoMock) All(ctx context.Context) (ManagedDatabaseList, 
 func (d *managedDatabaseDaoMock) ExistsByDatabaseID(ctx context.Context, databaseID string) (bool, error) {
 	return false, nil
 }
+
+func (d *managedDatabaseDaoMock) InventorySnapshot(ctx context.Context) (*DatabaseInventorySnapshot, error) {
+	return buildDatabaseInventorySnapshot(d.managedDatabases), nil
+}

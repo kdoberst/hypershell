@@ -4,6 +4,7 @@ import { normalizeGatewayPlacementClusterIds } from "../application/gateway-plac
 import type { GatewayRecord } from "../application/gateway-types";
 import {
   aggregateGatewayDisplayStatusCounts,
+  gatewayPhaseCountsToDisplayStatusCounts,
   gatewayConsoleReadyDeadlineMilliseconds,
   gatewayConsoleUnavailable,
   gatewayNeedsStatusPolling,
@@ -333,6 +334,23 @@ describe("gateway presentation data", () => {
       failed: 1,
       healthy: 2,
       provisioning: 1,
+    });
+  });
+
+  it("maps Prometheus phase counts into dashboard status buckets", () => {
+    expect(
+      gatewayPhaseCountsToDisplayStatusCounts({
+        Pending: 2,
+        Provisioning: 3,
+        Running: 10,
+        Degraded: 1,
+        Failed: 4,
+      }),
+    ).toEqual({
+      degraded: 1,
+      failed: 4,
+      healthy: 10,
+      provisioning: 5,
     });
   });
 

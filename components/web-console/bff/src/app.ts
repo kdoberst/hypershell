@@ -23,6 +23,9 @@ import { queryGatewayPhaseCounts } from "./metrics-gateways.js";
 import { queryClusterCpu } from "./metrics-cluster-cpu.js";
 import { queryClusterMemory } from "./metrics-cluster-memory.js";
 import { queryGatewayProvisionDuration } from "./metrics-gateway-provision-duration.js";
+import { queryGatewaySandboxes } from "./metrics-gateway-sandboxes.js";
+import { queryPlatformInventory } from "./metrics-platform-inventory.js";
+import { queryRegisteredUsers } from "./metrics-registered-users.js";
 import { queryClusterPods } from "./metrics-cluster-pods.js";
 import { queryClusterNodes } from "./metrics-cluster-nodes.js";
 import { tokenExpired } from "./tokens.js";
@@ -574,6 +577,69 @@ export async function buildApp(
         request.log.warn(
           { err: error },
           "gateway provision duration metrics query failed",
+        );
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
+
+  app.get(
+    "/api/metrics/gateway-sandboxes",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryGatewaySandboxes(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+          config.prometheusNamespace,
+        );
+      } catch (error) {
+        request.log.warn(
+          { err: error },
+          "gateway sandbox metrics query failed",
+        );
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
+
+  app.get(
+    "/api/metrics/platform-inventory",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryPlatformInventory(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+          config.prometheusNamespace,
+        );
+      } catch (error) {
+        request.log.warn(
+          { err: error },
+          "platform inventory metrics query failed",
+        );
+        reply.code(502);
+        return { error: "Metrics unavailable", statusCode: 502 };
+      }
+    },
+  );
+
+  app.get(
+    "/api/metrics/registered-users",
+    { preHandler: requireDashboardMetricsAccess },
+    async (request, reply) => {
+      try {
+        return await queryRegisteredUsers(
+          config.prometheusUrl,
+          config.prometheusQueryTimeoutMs,
+          config.prometheusNamespace,
+        );
+      } catch (error) {
+        request.log.warn(
+          { err: error },
+          "registered user metrics query failed",
         );
         reply.code(502);
         return { error: "Metrics unavailable", statusCode: 502 };

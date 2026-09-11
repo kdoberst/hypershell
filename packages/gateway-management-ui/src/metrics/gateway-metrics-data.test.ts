@@ -29,7 +29,7 @@ describe("fetchGatewayMetrics", () => {
       Degraded: 1,
       Failed: 0,
     });
-    expect(fetch).toHaveBeenCalledWith("/api/hypershell/v1/metrics/gateways", {
+    expect(fetch).toHaveBeenCalledWith("/api/metrics/gateways", {
       credentials: "same-origin",
       signal: undefined,
     });
@@ -80,7 +80,7 @@ describe("fetchGatewayMetrics", () => {
 
     await fetchGatewayMetrics(controller.signal);
 
-    expect(fetch).toHaveBeenCalledWith("/api/hypershell/v1/metrics/gateways", {
+    expect(fetch).toHaveBeenCalledWith("/api/metrics/gateways", {
       credentials: "same-origin",
       signal: controller.signal,
     });

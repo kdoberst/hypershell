@@ -51,6 +51,7 @@ func RegisterGatewayMetrics(dao GatewayDao) {
 		}
 
 		prometheus.MustRegister(newGatewayCollector(dao))
+		prometheus.MustRegister(newGatewayActiveSandboxesCollector(dao))
 	})
 }
 
@@ -100,4 +101,36 @@ func (c *gatewayCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, other, gatewayPhaseOther)
+}
+
+const activeSandboxesHelp = "Total active agent sandboxes across all gateways."
+
+type gatewayActiveSandboxesCollector struct {
+	dao  GatewayDao
+	desc *prometheus.Desc
+}
+
+func newGatewayActiveSandboxesCollector(dao GatewayDao) *gatewayActiveSandboxesCollector {
+	return &gatewayActiveSandboxesCollector{
+		dao: dao,
+		desc: prometheus.NewDesc(
+			prometheus.BuildFQName(metricsNamespace, metricsSubsystem, "active_sandboxes_total"),
+			activeSandboxesHelp,
+			nil,
+			nil,
+		),
+	}
+}
+
+func (c *gatewayActiveSandboxesCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.desc
+}
+
+func (c *gatewayActiveSandboxesCollector) Collect(ch chan<- prometheus.Metric) {
+	total, err := c.dao.SumActiveSandboxCount(context.Background())
+	if err != nil {
+		ch <- prometheus.NewInvalidMetric(c.desc, err)
+		return
+	}
+	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, float64(total))
 }

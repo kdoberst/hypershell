@@ -53,7 +53,7 @@ export type DashboardMetricSourceId =
   | "cluster-memory"
   | "cluster-nodes"
   | "cluster-pods"
-  | "gateway-list"
+  | "gateway-metrics"
   | "platform-inventory"
   | "registered-users";
 

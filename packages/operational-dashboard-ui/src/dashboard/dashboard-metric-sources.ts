@@ -5,14 +5,14 @@ export type DashboardMetricSourceId =
   | "cluster-memory"
   | "cluster-nodes"
   | "cluster-pods"
-  | "gateway-list"
+  | "gateway-metrics"
   | "platform-inventory"
   | "registered-users";
 
 export const DASHBOARD_METRIC_SOURCE_METRIC_IDS: Readonly<
   Record<DashboardMetricSourceId, readonly string[]>
 > = {
-  "gateway-list": [
+  "gateway-metrics": [
     "provisioned-gateways",
     "provisioned-sandboxes",
     "provision-time",
