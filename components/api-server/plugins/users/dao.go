@@ -23,6 +23,7 @@ type UserDao interface {
 	CountRegistered(ctx context.Context) (int64, error)
 	RecordLogin(ctx context.Context, userID string, loginTime time.Time) error
 	GetActivityStats(ctx context.Context, evaluationTime time.Time) (*ActivityStats, error)
+	CountDistinctLoginsByDate(ctx context.Context, evaluationTime time.Time) (map[string]int64, error)
 }
 
 var _ UserDao = &sqlUserDao{}
@@ -163,7 +164,7 @@ type registrationDailyRow struct {
 	Count int64
 }
 
-type activeDailyRow struct {
+type loginDailyRow struct {
 	Date  string
 	Count int64
 }
@@ -193,20 +194,6 @@ func (d *sqlUserDao) GetActivityStats(ctx context.Context, evaluationTime time.T
 		return nil, fmt.Errorf("get activity stats: count registered last 30 days: %w", err)
 	}
 
-	if err := g2.Raw(
-		"SELECT COUNT(DISTINCT user_id) FROM user_login_days WHERE login_date >= ?",
-		last7DayStart,
-	).Scan(&stats.ActiveLast7Days).Error; err != nil {
-		return nil, fmt.Errorf("get activity stats: count active last 7 days: %w", err)
-	}
-
-	if err := g2.Raw(
-		"SELECT COUNT(DISTINCT user_id) FROM user_login_days WHERE login_date >= ?",
-		last30DayStart,
-	).Scan(&stats.ActiveLast30Days).Error; err != nil {
-		return nil, fmt.Errorf("get activity stats: count active last 30 days: %w", err)
-	}
-
 	var registrationRows []registrationDailyRow
 	if err := g2.Model(&User{}).
 		Select("TO_CHAR(DATE(created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS date, COUNT(*) AS count").
@@ -217,28 +204,48 @@ func (d *sqlUserDao) GetActivityStats(ctx context.Context, evaluationTime time.T
 		return nil, fmt.Errorf("get activity stats: registration daily series: %w", err)
 	}
 
-	var activeRows []activeDailyRow
-	if err := g2.Model(&UserLoginDay{}).
-		Select("TO_CHAR(login_date, 'YYYY-MM-DD') AS date, COUNT(DISTINCT user_id) AS count").
-		Where("login_date >= ?", last30DayStart).
-		Group("login_date").
-		Order("login_date ASC").
-		Scan(&activeRows).Error; err != nil {
-		return nil, fmt.Errorf("get activity stats: active daily series: %w", err)
-	}
-
 	registrationCounts := make(map[string]int64, len(registrationRows))
 	for _, row := range registrationRows {
 		registrationCounts[row.Date] = row.Count
 	}
 
-	activeCounts := make(map[string]int64, len(activeRows))
-	for _, row := range activeRows {
-		activeCounts[row.Date] = row.Count
-	}
-
 	stats.RegistrationDaily = buildDailySeries(startDay, endDay, registrationCounts)
-	stats.ActiveDaily = buildDailySeries(startDay, endDay, activeCounts)
 
 	return stats, nil
+}
+
+func (d *sqlUserDao) CountDistinctLoginsByDate(ctx context.Context, evaluationTime time.Time) (map[string]int64, error) {
+	g2 := (*d.sessionFactory).New(ctx)
+	endDay := utcDayStart(evaluationTime)
+	startDay := dailySeriesStart(evaluationTime)
+
+	var loginRows []loginDailyRow
+	if err := g2.Model(&UserLoginDay{}).
+		Select("TO_CHAR(login_date, 'YYYY-MM-DD') AS date, COUNT(DISTINCT user_id) AS count").
+		Where("login_date >= ? AND login_date <= ?", startDay, endDay).
+		Group("login_date").
+		Order("login_date ASC").
+		Scan(&loginRows).Error; err != nil {
+		return nil, fmt.Errorf("count distinct logins by date: %w", err)
+	}
+
+	counts := make(map[string]int64, len(loginRows))
+	for _, row := range loginRows {
+		counts[row.Date] = row.Count
+	}
+
+	return buildDailySeriesMap(startDay, endDay, counts), nil
+}
+
+func buildDailySeriesMap(
+	startDay time.Time,
+	endDay time.Time,
+	counts map[string]int64,
+) map[string]int64 {
+	series := make(map[string]int64, activityLookbackDays)
+	for day := startDay; !day.After(endDay); day = day.AddDate(0, 0, 1) {
+		date := formatUTCDate(day)
+		series[date] = counts[date]
+	}
+	return series
 }

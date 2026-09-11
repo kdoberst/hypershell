@@ -19,6 +19,7 @@ type ServiceLocator func() UserService
 func NewServiceLocator(env *environments.Env) ServiceLocator {
 	dao := NewUserDao(&env.Database.SessionFactory)
 	RegisterUserMetrics(dao)
+	RegisterUserLoginMetrics(dao)
 
 	return func() UserService {
 		return NewUserService(dao)

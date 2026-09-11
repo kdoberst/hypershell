@@ -1,13 +1,8 @@
-import type { OperationalDashboardMetrics } from "../application/dashboard-types";
-
-export type DashboardMetricSourceId =
-  | "cluster-cpu"
-  | "cluster-memory"
-  | "cluster-nodes"
-  | "cluster-pods"
-  | "gateway-metrics"
-  | "platform-inventory"
-  | "registered-users";
+import type {
+  DashboardMetricSourceId,
+  OperationalDashboardMetrics,
+  OperationalMetric,
+} from "../application/dashboard-types";
 
 export const DASHBOARD_METRIC_SOURCE_METRIC_IDS: Readonly<
   Record<DashboardMetricSourceId, readonly string[]>
@@ -17,13 +12,26 @@ export const DASHBOARD_METRIC_SOURCE_METRIC_IDS: Readonly<
     "provisioned-sandboxes",
     "provision-time",
   ],
-  "registered-users": ["registered-users"],
+  "user-registration-stats": ["registered-users"],
+  "user-logins": ["registered-users"],
   "platform-inventory": ["managed-clusters", "managed-databases"],
   "cluster-memory": ["memory"],
   "cluster-cpu": ["cpu"],
   "cluster-pods": ["pods"],
   "cluster-nodes": ["nodes"],
 };
+
+function preserveRegisteredUsersLoginFields(
+  previous: OperationalMetric,
+  next: OperationalMetric,
+): OperationalMetric {
+  return {
+    ...next,
+    activeLast7Days: next.activeLast7Days ?? previous.activeLast7Days,
+    activeLast30Days: next.activeLast30Days ?? previous.activeLast30Days,
+    activeTrend: next.activeTrend ?? previous.activeTrend,
+  };
+}
 
 export function mergeOperationalDashboardMetrics(
   previous: OperationalDashboardMetrics | undefined,
@@ -47,6 +55,20 @@ export function mergeOperationalDashboardMetrics(
   for (const metric of previous.metrics) {
     if (staleMetricIds.has(metric.id) && !mergedById.has(metric.id)) {
       mergedById.set(metric.id, metric);
+      continue;
+    }
+
+    if (
+      metric.id === "registered-users" &&
+      next.failedSources.includes("user-logins")
+    ) {
+      const refreshed = mergedById.get("registered-users");
+      if (refreshed !== undefined) {
+        mergedById.set(
+          "registered-users",
+          preserveRegisteredUsersLoginFields(metric, refreshed),
+        );
+      }
     }
   }
 

@@ -28,21 +28,10 @@ func PresentActivityStats(stats *ActivityStats) openapi.UserActivityStats {
 		})
 	}
 
-	activeDaily := make([]openapi.UserDailyCount, 0, len(stats.ActiveDaily))
-	for _, point := range stats.ActiveDaily {
-		activeDaily = append(activeDaily, openapi.UserDailyCount{
-			Date:  point.Date,
-			Count: point.Count,
-		})
-	}
-
 	return openapi.UserActivityStats{
 		TotalRegistered:      stats.TotalRegistered,
 		RegisteredLast7Days:  stats.RegisteredLast7Days,
 		RegisteredLast30Days: stats.RegisteredLast30Days,
-		ActiveLast7Days:      stats.ActiveLast7Days,
-		ActiveLast30Days:     stats.ActiveLast30Days,
 		RegistrationDaily:    registrationDaily,
-		ActiveDaily:          activeDaily,
 	}
 }

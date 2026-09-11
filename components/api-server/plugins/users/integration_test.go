@@ -152,7 +152,6 @@ func TestUserActivityStats_AllowedForHypershellAdmin(t *testing.T) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	Expect(stats.TotalRegistered).To(BeNumerically(">=", 3))
 	Expect(len(stats.RegistrationDaily)).To(Equal(30))
-	Expect(len(stats.ActiveDaily)).To(Equal(30))
 }
 
 func TestUserActivityStats_ForbiddenForGatewayCreator(t *testing.T) {
@@ -239,8 +238,16 @@ func TestUserActivityStats_RecordsLoginOnProvisioning(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	stats, statsResp, statsErr := client.DefaultAPI.GetUserActivityStats(ctx).Execute()
-	Expect(statsErr).NotTo(HaveOccurred())
-	Expect(statsResp.StatusCode).To(Equal(http.StatusOK))
-	Expect(stats.ActiveLast7Days).To(BeNumerically(">=", 1))
+	dao := users.NewUserDao(&environments.Environment().Database.SessionFactory)
+	counts, countErr := dao.CountDistinctLoginsByDate(context.Background(), time.Now().UTC())
+	Expect(countErr).NotTo(HaveOccurred())
+
+	var todayTotal int64
+	today := time.Now().UTC().Format("2006-01-02")
+	for date, count := range counts {
+		if date == today {
+			todayTotal = count
+		}
+	}
+	Expect(todayTotal).To(BeNumerically(">=", 1))
 }

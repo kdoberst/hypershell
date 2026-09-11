@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
-
 	"github.com/openshift-online/rh-trex-ai/pkg/errors"
 	"github.com/openshift-online/rh-trex-ai/pkg/services"
 )
@@ -16,6 +14,7 @@ type UserService interface {
 	Create(ctx context.Context, user *User) (*User, *errors.ServiceError)
 	Upsert(ctx context.Context, user *User) (*User, *errors.ServiceError)
 	UpsertByUsername(ctx context.Context, username string, email *string, name *string) (string, error)
+	RecordLogin(ctx context.Context, userID string) error
 	All(ctx context.Context) (UserList, *errors.ServiceError)
 	FindByIDs(ctx context.Context, ids []string) (UserList, *errors.ServiceError)
 	GetActivityStats(ctx context.Context) (*ActivityStats, *errors.ServiceError)
@@ -75,10 +74,14 @@ func (s *sqlUserService) UpsertByUsername(ctx context.Context, username string, 
 	if err != nil {
 		return "", err
 	}
-	if recordErr := s.userDao.RecordLogin(ctx, user.ID, time.Now().UTC()); recordErr != nil {
-		glog.Warningf("record login failed for user %q: %v", user.ID, recordErr)
-	}
 	return user.ID, nil
+}
+
+func (s *sqlUserService) RecordLogin(ctx context.Context, userID string) error {
+	if recordErr := s.userDao.RecordLogin(ctx, userID, time.Now().UTC()); recordErr != nil {
+		return recordErr
+	}
+	return nil
 }
 
 func (s *sqlUserService) All(ctx context.Context) (UserList, *errors.ServiceError) {

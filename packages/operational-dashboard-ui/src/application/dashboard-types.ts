@@ -59,7 +59,8 @@ export type DashboardMetricSourceId =
   | "cluster-pods"
   | "gateway-metrics"
   | "platform-inventory"
-  | "registered-users";
+  | "user-logins"
+  | "user-registration-stats";
 
 export interface OperationalDashboardMetrics {
   failedSources?: readonly DashboardMetricSourceId[];

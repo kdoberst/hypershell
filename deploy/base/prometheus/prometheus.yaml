@@ -24,7 +24,7 @@ spec:
     limits:
       cpu: 500m
       memory: 512Mi
-  retention: 7d
+  retention: 30d
   storage:
     volumeClaimTemplate:
       spec:

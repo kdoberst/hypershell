@@ -847,9 +847,7 @@ describe("web-console BFF with OIDC enabled", () => {
       "/api/metrics/cluster-pods",
       "/api/metrics/cluster-nodes",
       "/api/metrics/gateway-provision-duration",
-      "/api/metrics/gateway-sandboxes",
-      "/api/metrics/platform-inventory",
-      "/api/metrics/registered-users",
+      "/api/metrics/user-logins",
     ]) {
       const response = await app.inject({
         headers: { cookie },
@@ -865,7 +863,7 @@ describe("web-console BFF with OIDC enabled", () => {
     }
   });
 
-  it("redirects hypershell-admins away from /dashboard", async () => {
+  it("serves /dashboard to hypershell-admins", async () => {
     const session = app.createSecureSession({
       accessToken: "test-access-token",
       expiresAt: Math.floor(Date.now() / 1000) + 3600,
@@ -878,8 +876,8 @@ describe("web-console BFF with OIDC enabled", () => {
       url: "/dashboard",
     });
 
-    expect(response.statusCode).toBe(302);
-    expect(response.headers.location).toBe("/");
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/html");
   });
 
   it("serves /dashboard to platform:admin", async () => {
@@ -899,7 +897,7 @@ describe("web-console BFF with OIDC enabled", () => {
     expect(response.headers["content-type"]).toContain("text/html");
   });
 
-  it("redirects hypershell-admins away from /metrics", async () => {
+  it("serves /metrics to hypershell-admins", async () => {
     const session = app.createSecureSession({
       accessToken: "test-access-token",
       expiresAt: Math.floor(Date.now() / 1000) + 3600,
@@ -912,8 +910,8 @@ describe("web-console BFF with OIDC enabled", () => {
       url: "/metrics",
     });
 
-    expect(response.statusCode).toBe(302);
-    expect(response.headers.location).toBe("/");
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/html");
   });
 
   it("serves application routes when authenticated", async () => {

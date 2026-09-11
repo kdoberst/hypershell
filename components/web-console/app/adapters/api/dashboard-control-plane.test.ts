@@ -94,6 +94,12 @@ function mockClusterMetricsResponses(
         ok: true,
       });
     }
+    if (url === "/api/metrics/user-logins") {
+      return Promise.resolve({
+        json: () => Promise.resolve(mockUserLoginsResponse),
+        ok: true,
+      });
+    }
     if (url === "/api/metrics/cluster-memory") {
       return Promise.resolve({
         json: () =>
@@ -169,6 +175,12 @@ function resolveStandardPrometheusSupportRoutes(
       ok: true,
     });
   }
+  if (url === "/api/metrics/user-logins") {
+    return Promise.resolve({
+      json: () => Promise.resolve(mockUserLoginsResponse),
+      ok: true,
+    });
+  }
   if (url === "/api/metrics/gateway-provision-duration") {
     if (options.omitProvisionDuration) {
       return Promise.resolve({
@@ -197,15 +209,21 @@ afterEach(() => {
 
 function defaultUserActivityStats(total = 0) {
   return {
-    active_daily: [],
-    active_last_7_days: 0,
-    active_last_30_days: 0,
     registered_last_7_days: 0,
     registered_last_30_days: 0,
     registration_daily: [],
     total_registered: total,
   };
 }
+
+const mockUserLoginsResponse = {
+  active_daily: [
+    { count: 2, date: "2026-08-09" },
+    { count: 4, date: "2026-08-10" },
+  ],
+  active_last_7_days: 18,
+  active_last_30_days: 95,
+};
 
 describe("createDashboardControlPlaneAdapter", () => {
   it("aggregates Prometheus dashboard metrics into operational metrics", async () => {
@@ -219,12 +237,6 @@ describe("createDashboardControlPlaneAdapter", () => {
     );
 
     usersActivityStatsApi.mockResolvedValueOnce({
-      active_daily: [
-        { count: 2, date: "2026-08-09" },
-        { count: 4, date: "2026-08-10" },
-      ],
-      active_last_7_days: 18,
-      active_last_30_days: 95,
       registered_last_7_days: 5,
       registered_last_30_days: 22,
       registration_daily: [
@@ -351,6 +363,10 @@ describe("createDashboardControlPlaneAdapter", () => {
       signal: undefined,
     });
     expect(usersActivityStatsApi).toHaveBeenCalledWith({
+      signal: undefined,
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/user-logins", {
+      credentials: "same-origin",
       signal: undefined,
     });
   });
@@ -559,6 +575,10 @@ describe("createDashboardControlPlaneAdapter", () => {
       signal: controller.signal,
     });
     expect(usersActivityStatsApi).toHaveBeenCalledWith({
+      signal: controller.signal,
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/metrics/user-logins", {
+      credentials: "same-origin",
       signal: controller.signal,
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/platform-inventory", {
@@ -992,6 +1012,61 @@ describe("createDashboardControlPlaneAdapter", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/metrics/platform-inventory", {
       credentials: "same-origin",
       signal: controller.signal,
+    });
+  });
+
+  it("omits registered-users login fields when the BFF user-logins route fails", async () => {
+    mockClusterMetricsResponses(1024 ** 3, 512 * 1024 ** 2);
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/metrics/user-logins") {
+        return Promise.resolve({ ok: false, status: 502 });
+      }
+      if (url === "/api/metrics/gateways") {
+        return Promise.resolve({
+          json: () => Promise.resolve({ counts: defaultGatewayPhaseCounts }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/gateway-sandboxes") {
+        return Promise.resolve({
+          json: () => Promise.resolve({ active_sandboxes: 0 }),
+          ok: true,
+        });
+      }
+      if (url === "/api/metrics/platform-inventory") {
+        return Promise.resolve({
+          json: () => Promise.resolve(defaultPlatformInventory()),
+          ok: true,
+        });
+      }
+      const support = resolveStandardPrometheusSupportRoutes(url);
+      if (support !== undefined) {
+        return support;
+      }
+      return Promise.reject(new Error(`unexpected fetch url: ${url}`));
+    });
+
+    usersActivityStatsApi.mockResolvedValueOnce({
+      registered_last_7_days: 12,
+      registered_last_30_days: 48,
+      registration_daily: [],
+      total_registered: 450,
+    });
+
+    const metrics = await adapter.getOperationalMetrics(context);
+    const registeredUsersMetric = metrics.metrics.find(
+      (metric) => metric.id === "registered-users",
+    );
+
+    expect(metrics.failedSources).toEqual(["user-logins"]);
+    expect(registeredUsersMetric).toEqual({
+      createdLast7Days: "12",
+      createdLast30Days: "48",
+      id: "registered-users",
+      trend: {
+        points: [],
+      },
+      value: "450",
     });
   });
 });

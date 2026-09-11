@@ -37,11 +37,6 @@ func (l *lazyRBACInterceptor) init(ctx context.Context) {
 			l.syncer = rbService
 		}
 
-		userService := users.Service(envServices)
-		if userService != nil {
-			l.provisioner = pkgrbac.NewUserProvisioner(userService)
-		}
-
 		var serviceAccounts []string
 		if sa := os.Getenv("RBAC_SERVICE_ACCOUNTS"); sa != "" {
 			for _, s := range strings.Split(sa, ",") {
@@ -49,6 +44,15 @@ func (l *lazyRBACInterceptor) init(ctx context.Context) {
 					serviceAccounts = append(serviceAccounts, trimmed)
 				}
 			}
+		}
+
+		userService := users.Service(envServices)
+		if userService != nil {
+			l.provisioner = pkgrbac.NewUserProvisioner(
+				userService,
+				userService,
+				serviceAccounts,
+			)
 		}
 
 		l.config = pkgrbac.AuthzConfig{

@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"os"
+	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -13,6 +14,20 @@ import (
 	pkgserver "github.com/openshift-online/rh-trex-ai/pkg/server"
 )
 
+func parseServiceAccountsFromEnv() []string {
+	raw := os.Getenv("RBAC_SERVICE_ACCOUNTS")
+	if raw == "" {
+		return nil
+	}
+	var serviceAccounts []string
+	for _, entry := range strings.Split(raw, ",") {
+		if trimmed := strings.TrimSpace(entry); trimmed != "" {
+			serviceAccounts = append(serviceAccounts, trimmed)
+		}
+	}
+	return serviceAccounts
+}
+
 func init() {
 	pkgserver.RegisterRoutes("rbac", func(apiV1Router *mux.Router, services pkgserver.ServicesInterface, authMiddleware environments.JWTMiddleware, authzMiddleware auth.AuthorizationMiddleware) {
 		envServices := services.(*environments.Services)
@@ -21,7 +36,11 @@ func init() {
 		rbService := roleBindings.Service(envServices)
 
 		if userService != nil {
-			provisioner := rbac.NewUserProvisioner(userService)
+			provisioner := rbac.NewUserProvisioner(
+				userService,
+				userService,
+				parseServiceAccountsFromEnv(),
+			)
 			var syncer rbac.JWTRoleSyncer
 			if rbService != nil {
 				syncer = rbService

@@ -16,7 +16,13 @@ import {
   platformInventoryMetricsResponseToMetrics,
   type PlatformInventoryMetricsResponse,
 } from "./platform-inventory-aggregation";
-import { userActivityStatsToMetric } from "./user-activity-stats";
+import {
+  mergeRegisteredUsersMetrics,
+  userActivityStatsToRegistrationMetric,
+  userLoginsToMetricFields,
+  type RegisteredUsersLoginMetricFields,
+  type UserLoginsMetricsResponse,
+} from "./user-activity-stats";
 
 type DashboardApiFactory = (correlationId: string) => SDKClient;
 
@@ -57,10 +63,6 @@ interface GatewayProvisionDurationResponse {
   observation_count: number;
   p50_seconds: number;
   p95_seconds: number;
-}
-
-interface GatewaySandboxesResponse {
-  active_sandboxes: number;
 }
 
 function bytesToRoundedGib(bytes: number): string {
@@ -224,6 +226,19 @@ function gatewayDisplayCountsToMetric(
   };
 }
 
+interface GatewaySandboxesResponse {
+  active_sandboxes: number;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "AbortError"
+  );
+}
+
 async function fetchGatewaySandboxesMetric(
   signal?: AbortSignal,
 ): Promise<OperationalMetric> {
@@ -243,15 +258,6 @@ async function fetchGatewaySandboxesMetric(
     id: "provisioned-sandboxes",
     value: String(body.active_sandboxes),
   };
-}
-
-function isAbortError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "name" in error &&
-    error.name === "AbortError"
-  );
 }
 
 async function fetchGatewayPrometheusMetric(
@@ -288,7 +294,7 @@ async function fetchGatewayPrometheusMetrics(
   return metrics;
 }
 
-async function fetchRegisteredUsersMetric(
+async function fetchUserRegistrationStatsMetric(
   context: DashboardInvocationContext,
   apiFactory: DashboardApiFactory,
 ): Promise<OperationalMetric[]> {
@@ -297,7 +303,73 @@ async function fetchRegisteredUsersMetric(
     signal: context.signal,
   });
 
-  return [userActivityStatsToMetric(stats)];
+  return [userActivityStatsToRegistrationMetric(stats)];
+}
+
+async function fetchUserLoginsMetric(
+  signal?: AbortSignal,
+): Promise<RegisteredUsersLoginMetricFields[]> {
+  const response = await fetch("/api/metrics/user-logins", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch user login metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as UserLoginsMetricsResponse;
+  return [userLoginsToMetricFields(body)];
+}
+
+function isRegisteredUsersLoginFields(
+  metric: OperationalMetric | RegisteredUsersLoginMetricFields,
+): metric is RegisteredUsersLoginMetricFields {
+  return (
+    metric.id === "registered-users" &&
+    !("value" in metric && typeof metric.value === "string")
+  );
+}
+
+function mergeMetricsById(
+  metrics: (OperationalMetric | RegisteredUsersLoginMetricFields)[],
+): OperationalMetric[] {
+  const byId = new Map<string, OperationalMetric>();
+  for (const metric of metrics) {
+    if (metric.id !== "registered-users") {
+      byId.set(metric.id, metric as OperationalMetric);
+      continue;
+    }
+
+    if (isRegisteredUsersLoginFields(metric)) {
+      const existing = byId.get("registered-users");
+      if (existing !== undefined) {
+        byId.set(
+          "registered-users",
+          mergeRegisteredUsersMetrics(existing, metric),
+        );
+      }
+      continue;
+    }
+
+    const existing = byId.get("registered-users");
+    if (existing === undefined) {
+      byId.set("registered-users", metric);
+      continue;
+    }
+
+    if (isRegisteredUsersLoginFields(existing)) {
+      byId.set(
+        "registered-users",
+        mergeRegisteredUsersMetrics(metric, existing),
+      );
+      continue;
+    }
+
+    byId.set("registered-users", metric);
+  }
+  return [...byId.values()];
 }
 
 async function fetchPlatformInventoryMetrics(
@@ -321,7 +393,7 @@ interface MetricSourceDefinition {
   fetch: (
     context: DashboardInvocationContext,
     apiFactory: DashboardApiFactory,
-  ) => Promise<OperationalMetric[]>;
+  ) => Promise<(OperationalMetric | RegisteredUsersLoginMetricFields)[]>;
   id: DashboardMetricSourceId;
 }
 
@@ -331,9 +403,12 @@ const metricSources: readonly MetricSourceDefinition[] = [
     fetch: async (context) => fetchGatewayPrometheusMetrics(context),
   },
   {
-    id: "registered-users",
-    fetch: async (context, factory) =>
-      fetchRegisteredUsersMetric(context, factory),
+    id: "user-registration-stats",
+    fetch: fetchUserRegistrationStatsMetric,
+  },
+  {
+    id: "user-logins",
+    fetch: async (context) => fetchUserLoginsMetric(context.signal),
   },
   {
     id: "platform-inventory",
@@ -375,7 +450,8 @@ export function createDashboardControlPlaneAdapter(
         ),
       );
 
-      const metrics: OperationalMetric[] = [];
+      const metrics: (OperationalMetric | RegisteredUsersLoginMetricFields)[] =
+        [];
       const failedSources: DashboardMetricSourceId[] = [];
 
       for (const [index, result] of settled.entries()) {
@@ -403,7 +479,7 @@ export function createDashboardControlPlaneAdapter(
       return {
         ...(failedSources.length > 0 ? { failedSources } : {}),
         lastSuccessfulRefresh: new Date(),
-        metrics,
+        metrics: mergeMetricsById(metrics),
       };
     },
   };

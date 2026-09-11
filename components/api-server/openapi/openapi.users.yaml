@@ -115,10 +115,7 @@ components:
         - total_registered
         - registered_last_7_days
         - registered_last_30_days
-        - active_last_7_days
-        - active_last_30_days
         - registration_daily
-        - active_daily
       properties:
         total_registered:
           type: integer
@@ -132,24 +129,11 @@ components:
           type: integer
           format: int64
           minimum: 0
-        active_last_7_days:
-          type: integer
-          format: int64
-          minimum: 0
-        active_last_30_days:
-          type: integer
-          format: int64
-          minimum: 0
         registration_daily:
           type: array
           items:
             $ref: '#/components/schemas/UserDailyCount'
           description: New registrations per UTC day for the last 30 calendar days (inclusive)
-        active_daily:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserDailyCount'
-          description: Distinct active users per UTC day for the last 30 calendar days (inclusive)
     # NEW SCHEMA END
   parameters:
     id:

@@ -24,12 +24,8 @@ type UserActivityStats struct {
 	TotalRegistered      int64 `json:"total_registered"`
 	RegisteredLast7Days  int64 `json:"registered_last_7_days"`
 	RegisteredLast30Days int64 `json:"registered_last_30_days"`
-	ActiveLast7Days      int64 `json:"active_last_7_days"`
-	ActiveLast30Days     int64 `json:"active_last_30_days"`
 	// New registrations per UTC day for the last 30 calendar days (inclusive)
 	RegistrationDaily []UserDailyCount `json:"registration_daily"`
-	// Distinct active users per UTC day for the last 30 calendar days (inclusive)
-	ActiveDaily []UserDailyCount `json:"active_daily"`
 }
 
 type _UserActivityStats UserActivityStats
@@ -38,15 +34,12 @@ type _UserActivityStats UserActivityStats
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserActivityStats(totalRegistered int64, registeredLast7Days int64, registeredLast30Days int64, activeLast7Days int64, activeLast30Days int64, registrationDaily []UserDailyCount, activeDaily []UserDailyCount) *UserActivityStats {
+func NewUserActivityStats(totalRegistered int64, registeredLast7Days int64, registeredLast30Days int64, registrationDaily []UserDailyCount) *UserActivityStats {
 	this := UserActivityStats{}
 	this.TotalRegistered = totalRegistered
 	this.RegisteredLast7Days = registeredLast7Days
 	this.RegisteredLast30Days = registeredLast30Days
-	this.ActiveLast7Days = activeLast7Days
-	this.ActiveLast30Days = activeLast30Days
 	this.RegistrationDaily = registrationDaily
-	this.ActiveDaily = activeDaily
 	return &this
 }
 
@@ -130,54 +123,6 @@ func (o *UserActivityStats) SetRegisteredLast30Days(v int64) {
 	o.RegisteredLast30Days = v
 }
 
-// GetActiveLast7Days returns the ActiveLast7Days field value
-func (o *UserActivityStats) GetActiveLast7Days() int64 {
-	if o == nil {
-		var ret int64
-		return ret
-	}
-
-	return o.ActiveLast7Days
-}
-
-// GetActiveLast7DaysOk returns a tuple with the ActiveLast7Days field value
-// and a boolean to check if the value has been set.
-func (o *UserActivityStats) GetActiveLast7DaysOk() (*int64, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.ActiveLast7Days, true
-}
-
-// SetActiveLast7Days sets field value
-func (o *UserActivityStats) SetActiveLast7Days(v int64) {
-	o.ActiveLast7Days = v
-}
-
-// GetActiveLast30Days returns the ActiveLast30Days field value
-func (o *UserActivityStats) GetActiveLast30Days() int64 {
-	if o == nil {
-		var ret int64
-		return ret
-	}
-
-	return o.ActiveLast30Days
-}
-
-// GetActiveLast30DaysOk returns a tuple with the ActiveLast30Days field value
-// and a boolean to check if the value has been set.
-func (o *UserActivityStats) GetActiveLast30DaysOk() (*int64, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.ActiveLast30Days, true
-}
-
-// SetActiveLast30Days sets field value
-func (o *UserActivityStats) SetActiveLast30Days(v int64) {
-	o.ActiveLast30Days = v
-}
-
 // GetRegistrationDaily returns the RegistrationDaily field value
 func (o *UserActivityStats) GetRegistrationDaily() []UserDailyCount {
 	if o == nil {
@@ -202,30 +147,6 @@ func (o *UserActivityStats) SetRegistrationDaily(v []UserDailyCount) {
 	o.RegistrationDaily = v
 }
 
-// GetActiveDaily returns the ActiveDaily field value
-func (o *UserActivityStats) GetActiveDaily() []UserDailyCount {
-	if o == nil {
-		var ret []UserDailyCount
-		return ret
-	}
-
-	return o.ActiveDaily
-}
-
-// GetActiveDailyOk returns a tuple with the ActiveDaily field value
-// and a boolean to check if the value has been set.
-func (o *UserActivityStats) GetActiveDailyOk() ([]UserDailyCount, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return o.ActiveDaily, true
-}
-
-// SetActiveDaily sets field value
-func (o *UserActivityStats) SetActiveDaily(v []UserDailyCount) {
-	o.ActiveDaily = v
-}
-
 func (o UserActivityStats) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
@@ -239,10 +160,7 @@ func (o UserActivityStats) ToMap() (map[string]interface{}, error) {
 	toSerialize["total_registered"] = o.TotalRegistered
 	toSerialize["registered_last_7_days"] = o.RegisteredLast7Days
 	toSerialize["registered_last_30_days"] = o.RegisteredLast30Days
-	toSerialize["active_last_7_days"] = o.ActiveLast7Days
-	toSerialize["active_last_30_days"] = o.ActiveLast30Days
 	toSerialize["registration_daily"] = o.RegistrationDaily
-	toSerialize["active_daily"] = o.ActiveDaily
 	return toSerialize, nil
 }
 
@@ -254,10 +172,7 @@ func (o *UserActivityStats) UnmarshalJSON(data []byte) (err error) {
 		"total_registered",
 		"registered_last_7_days",
 		"registered_last_30_days",
-		"active_last_7_days",
-		"active_last_30_days",
 		"registration_daily",
-		"active_daily",
 	}
 
 	allProperties := make(map[string]interface{})

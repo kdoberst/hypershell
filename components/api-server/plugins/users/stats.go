@@ -13,10 +13,7 @@ type ActivityStats struct {
 	TotalRegistered      int64
 	RegisteredLast7Days  int64
 	RegisteredLast30Days int64
-	ActiveLast7Days      int64
-	ActiveLast30Days     int64
 	RegistrationDaily    []DailyCount
-	ActiveDaily          []DailyCount
 }
 
 func utcDayStart(value time.Time) time.Time {
