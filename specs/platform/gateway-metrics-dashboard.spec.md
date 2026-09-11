@@ -11,9 +11,9 @@ This specification covers the metrics pipeline end to end: the API server collec
 
 ### Relationship to the operational dashboard
 
-The widgetized **operational dashboard** at `/dashboard` is specified separately in `web-console/operational-dashboard.spec.md`. That surface loads RBAC-scoped gateway counts from the HyperShell REST API and uses display-status buckets (`healthy`, `provisioning`, `degraded`, `failed`). It does **not** consume `GET /api/metrics/gateways` or `hypershell_gateways_total`.
+The widgetized **operational dashboard** at `/dashboard` is specified separately in `web-console/operational-dashboard.spec.md`. That surface loads fleet-wide gateway phase counts from the same BFF route (`GET /api/metrics/gateways`, Prometheus `hypershell_gateways_total`) and maps phases to display-status buckets (`healthy`, `provisioning`, `degraded`, `failed`).
 
-`GatewayMetricsDashboard` remains the canonical component for Prometheus-sourced phase counts. Hosts MAY embed it on any route; the `/dashboard` route is owned by the operational dashboard spec and renders `OperationalDashboardPage` instead. The web console exposes Prometheus phase counts at `/metrics`.
+`GatewayMetricsDashboard` remains the canonical embeddable component for raw phase counts. The web console exposes Prometheus phase counts at `/metrics`. The operational dashboard and `GatewayMetricsDashboard` share the Prometheus pipeline but present different widgets and layouts.
 
 ## Requirements
 
@@ -136,7 +136,7 @@ The `/api/metrics/gateways` route SHALL be exempt from the general `/api/*` prox
 
 When OIDC is enabled, the route SHALL require **dashboard-operator authorization** matching `web-console/operational-dashboard.spec.md` OP-DASH-04 (`hypershell-admins` or `platform:admin`). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled, no session or role is required.
 
-Fleet-wide phase counts from Prometheus are intentionally **not** filtered by per-gateway RoleBindings; this route is restricted to dashboard administrators who are authorized to view platform-wide operational data. Per-user gateway visibility for the operational dashboard gateway-status widget remains on the RBAC-scoped HyperShell REST list API (`operational-dashboard.spec.md` OP-DASH-06).
+Fleet-wide phase counts from Prometheus are intentionally **not** filtered by per-gateway RoleBindings; this route is restricted to dashboard administrators who are authorized to view platform-wide operational data. The operational dashboard gateway-status widget consumes this same route (`operational-dashboard.spec.md` OP-DASH-23). Per-user gateway visibility for the gateway collection table remains on the RBAC-scoped HyperShell REST list API (`web-console/architecture.spec.md` WEB-DATA-01).
 
 #### Scenario: Successful metrics fetch
 

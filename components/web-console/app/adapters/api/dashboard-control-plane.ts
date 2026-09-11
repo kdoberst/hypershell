@@ -1,5 +1,6 @@
 import {
-  aggregateGatewayDisplayStatusCounts,
+  fetchGatewayMetrics,
+  gatewayPhaseCountsToDisplayStatusCounts,
   type GatewayDisplayStatusCounts,
 } from "@openshift-online/hypershell-gateway-management-ui";
 import type {
@@ -12,15 +13,12 @@ import type {
 import type { SDKClient } from "@openshift-online/hypershell-sdk";
 
 import {
-  aggregateManagedClusterList,
-  aggregateManagedDatabaseList,
-  buildManagedClustersMetric,
-  buildManagedDatabasesMetric,
+  platformInventoryMetricsResponseToMetrics,
+  type PlatformInventoryMetricsResponse,
 } from "./platform-inventory-aggregation";
 
 type DashboardApiFactory = (correlationId: string) => SDKClient;
 
-const gatewayListPageSize = 100;
 const gibibyteDivisor = 1024 ** 3;
 const secondsPerMinute = 60;
 
@@ -58,6 +56,14 @@ interface GatewayProvisionDurationResponse {
   observation_count: number;
   p50_seconds: number;
   p95_seconds: number;
+}
+
+interface GatewaySandboxesResponse {
+  active_sandboxes: number;
+}
+
+interface RegisteredUsersResponse {
+  total_registered: number;
 }
 
 function bytesToRoundedGib(bytes: number): string {
@@ -221,10 +227,25 @@ function gatewayDisplayCountsToMetric(
   };
 }
 
-interface GatewayListAggregate {
-  activeSandboxCount: number;
-  displayStatusCounts: GatewayDisplayStatusCounts;
-  total: number;
+async function fetchGatewaySandboxesMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const response = await fetch("/api/metrics/gateway-sandboxes", {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch gateway sandbox metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as GatewaySandboxesResponse;
+
+  return {
+    id: "provisioned-sandboxes",
+    value: String(body.active_sandboxes),
+  };
 }
 
 function isAbortError(error: unknown): boolean {
@@ -236,76 +257,29 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
-async function aggregateGatewayList(
-  context: DashboardInvocationContext,
-  apiFactory: DashboardApiFactory,
-): Promise<GatewayListAggregate> {
-  const client = apiFactory(context.correlationId);
-  let page = 1;
-  let total = 0;
-  let activeSandboxCount = 0;
-  const lifecycleRecords: { phase?: string; status?: string }[] = [];
+async function fetchGatewayPrometheusMetric(
+  signal?: AbortSignal,
+): Promise<OperationalMetric> {
+  const phaseCounts = await fetchGatewayMetrics(signal);
+  const displayStatusCounts =
+    gatewayPhaseCountsToDisplayStatusCounts(phaseCounts);
+  const total = Object.values(phaseCounts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
-  do {
-    const result = await client.gateways.list(
-      {
-        orderBy: "name asc",
-        page,
-        size: gatewayListPageSize,
-      },
-      { signal: context.signal },
-    );
-
-    if (
-      result.page !== page ||
-      result.total < 0 ||
-      result.items.length >
-        Math.max(
-          0,
-          Math.min(
-            gatewayListPageSize,
-            result.total - (page - 1) * gatewayListPageSize,
-          ),
-        )
-    ) {
-      throw new Error("Gateway list response was inconsistent");
-    }
-
-    for (const gateway of result.items) {
-      const sandboxCount = gateway.active_sandbox_count;
-      activeSandboxCount += typeof sandboxCount === "number" ? sandboxCount : 0;
-      lifecycleRecords.push({
-        phase: gateway.phase,
-        status: gateway.status,
-      });
-    }
-
-    total = result.total;
-    page += 1;
-  } while ((page - 1) * gatewayListPageSize < total);
-
-  return {
-    activeSandboxCount,
-    displayStatusCounts: aggregateGatewayDisplayStatusCounts(lifecycleRecords),
-    total,
-  };
+  return gatewayDisplayCountsToMetric(total, displayStatusCounts);
 }
 
-async function fetchGatewayListMetrics(
+async function fetchGatewayPrometheusMetrics(
   context: DashboardInvocationContext,
-  apiFactory: DashboardApiFactory,
 ): Promise<OperationalMetric[]> {
-  const aggregate = await aggregateGatewayList(context, apiFactory);
-  const metrics: OperationalMetric[] = [
-    gatewayDisplayCountsToMetric(
-      aggregate.total,
-      aggregate.displayStatusCounts,
-    ),
-    {
-      id: "provisioned-sandboxes",
-      value: String(aggregate.activeSandboxCount),
-    },
-  ];
+  const [gatewayMetric, sandboxMetric] = await Promise.all([
+    fetchGatewayPrometheusMetric(context.signal),
+    fetchGatewaySandboxesMetric(context.signal),
+  ]);
+
+  const metrics: OperationalMetric[] = [gatewayMetric, sandboxMetric];
 
   const provisionTimeMetric = await fetchGatewayProvisionDurationMetric(
     context.signal,
@@ -319,36 +293,42 @@ async function fetchGatewayListMetrics(
 
 async function fetchRegisteredUsersMetric(
   context: DashboardInvocationContext,
-  apiFactory: DashboardApiFactory,
 ): Promise<OperationalMetric[]> {
-  const client = apiFactory(context.correlationId);
-  const userList = await client.users.list(
-    { orderBy: "username asc", page: 1, size: 1 },
-    { signal: context.signal },
-  );
+  const response = await fetch("/api/metrics/registered-users", {
+    credentials: "same-origin",
+    signal: context.signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch registered user metrics: ${String(response.status)}`,
+    );
+  }
+
+  const body = (await response.json()) as RegisteredUsersResponse;
 
   return [
     {
       id: "registered-users",
-      value: String(userList.total),
+      value: String(body.total_registered),
     },
   ];
 }
 
 async function fetchPlatformInventoryMetrics(
   context: DashboardInvocationContext,
-  apiFactory: DashboardApiFactory,
 ): Promise<OperationalMetric[]> {
-  const client = apiFactory(context.correlationId);
-  const [clusterAggregate, databaseAggregate] = await Promise.all([
-    aggregateManagedClusterList(client, context.signal),
-    aggregateManagedDatabaseList(client, context.signal),
-  ]);
+  const response = await fetch("/api/metrics/platform-inventory", {
+    credentials: "same-origin",
+    signal: context.signal,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch platform inventory metrics: ${String(response.status)}`,
+    );
+  }
 
-  return [
-    buildManagedClustersMetric(clusterAggregate),
-    buildManagedDatabasesMetric(databaseAggregate),
-  ];
+  const body = (await response.json()) as PlatformInventoryMetricsResponse;
+  return platformInventoryMetricsResponseToMetrics(body);
 }
 
 interface MetricSourceDefinition {
@@ -361,16 +341,16 @@ interface MetricSourceDefinition {
 
 const metricSources: readonly MetricSourceDefinition[] = [
   {
-    id: "gateway-list",
-    fetch: fetchGatewayListMetrics,
+    id: "gateway-metrics",
+    fetch: async (context) => fetchGatewayPrometheusMetrics(context),
   },
   {
     id: "registered-users",
-    fetch: fetchRegisteredUsersMetric,
+    fetch: async (context) => fetchRegisteredUsersMetric(context),
   },
   {
     id: "platform-inventory",
-    fetch: fetchPlatformInventoryMetrics,
+    fetch: async (context) => fetchPlatformInventoryMetrics(context),
   },
   {
     id: "cluster-memory",

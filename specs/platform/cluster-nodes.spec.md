@@ -25,7 +25,7 @@ The operational dashboard `system-summary` row and `nodes` widget render node in
 - **Cluster memory**, **cluster CPU**, and **cluster pods** (`platform/cluster-memory.spec.md`, `platform/cluster-cpu.spec.md`, `platform/cluster-pods.spec.md`) follow the same Prometheus/BFF/adapter pattern but expose **utilization** metrics with `unit` and `total`. Cluster nodes exposes **inventory + health buckets** (`value` + `status`), not utilization.
 - **Provisioned gateways** (`web-console/operational-dashboard.spec.md` OP-DASH-07) is the presentation reference: total in `value`, per-bucket counts in `status`, exception icons in summary rows when `failed` or `degraded` counts are non-zero.
 - **Cluster pods** (`platform/cluster-pods.spec.md`) reuses the same kube-state-metrics scrape target deployed for pod capacity series.
-- **Registered users** (`platform/registered-users.spec.md`) sources HyperShell REST APIs instead of Prometheus.
+- **Registered users** (`platform/registered-users.spec.md`) sources Prometheus via BFF `GET /api/metrics/registered-users`.
 - **Gateway metrics dashboard** (`platform/gateway-metrics-dashboard.spec.md`) is unrelated to hub-cluster node inventory.
 
 Provision-time metrics and per-node CPU/memory breakdown are out of scope for this spec (see Non-Goals).

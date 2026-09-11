@@ -23,7 +23,7 @@ The operational dashboard `cpu` widget and `system-summary` row already exist as
 
 - **Operational dashboard** (`web-console/operational-dashboard.spec.md`) owns the `cpu` widget, `UtilizationChart` presentation (OP-DASH-13), refresh policy (OP-DASH-09), and dashboard-operator access (OP-DASH-04).
 - **Cluster memory** (`platform/cluster-memory.spec.md`) follows the same Prometheus/BFF/adapter pattern for the `memory` widget. Cluster CPU reuses the same node-exporter scrape targets but exposes a separate BFF route and `cpu` metric mapping.
-- **Registered users** (`platform/registered-users.spec.md`) sources HyperShell REST APIs instead of Prometheus.
+- **Registered users** (`platform/registered-users.spec.md`) sources Prometheus via BFF `GET /api/metrics/registered-users`.
 - **Gateway metrics dashboard** (`platform/gateway-metrics-dashboard.spec.md`) uses a different BFF route (`GET /api/metrics/gateways`) for gateway phase counts and is unrelated to hub-cluster CPU.
 
 Pod capacity and provision-time metrics are out of scope for this spec (see Non-Goals).

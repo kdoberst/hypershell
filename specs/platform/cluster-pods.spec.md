@@ -24,7 +24,7 @@ The operational dashboard `pods` widget and `system-summary` row already exist a
 - **Operational dashboard** (`web-console/operational-dashboard.spec.md`) owns the `pods` widget, `UtilizationChart` presentation (OP-DASH-13), refresh policy (OP-DASH-09), and dashboard-operator access (OP-DASH-04).
 - **Cluster memory** and **cluster CPU** (`platform/cluster-memory.spec.md`, `platform/cluster-cpu.spec.md`) follow the same Prometheus/BFF/adapter pattern for utilization widgets. Cluster pods uses **kube-state-metrics** (not node-exporter) and exposes a separate BFF route and `pods` metric mapping.
 - **Provisioned sandboxes** (`platform/openshell-gateway-sandbox-count.spec.md`) counts gateway sandbox pods for product telemetry. Cluster pods counts **all** hub-cluster pods and is unrelated to sandbox lifecycle.
-- **Registered users** (`platform/registered-users.spec.md`) sources HyperShell REST APIs instead of Prometheus.
+- **Registered users** (`platform/registered-users.spec.md`) sources Prometheus via BFF `GET /api/metrics/registered-users`.
 - **Gateway metrics dashboard** (`platform/gateway-metrics-dashboard.spec.md`) uses a different BFF route (`GET /api/metrics/gateways`) and is unrelated to hub-cluster pod capacity.
 
 Node inventory and provision-time metrics are out of scope for this spec (see Non-Goals).

@@ -323,7 +323,7 @@ describe("GET /api/metrics/cluster-pods", () => {
       expiresAt: Math.floor(Date.now() / 1000) + 3600,
       name: "Test User",
       preferredUsername: "testuser",
-      roles: ["hypershell-admins"],
+      roles: ["platform:admin"],
       sub: "user-123",
     });
 

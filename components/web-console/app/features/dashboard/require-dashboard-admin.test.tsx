@@ -63,7 +63,7 @@ describe("RequireDashboardAdmin", () => {
     expect(screen.queryByTestId("dashboard-content")).toBeNull();
   });
 
-  it("renders children for hypershell-admins", async () => {
+  it("shows access denied for hypershell-admins without platform:admin", async () => {
     getSessionMock.mockResolvedValue({
       authenticated: true,
       authEnabled: true,
@@ -72,7 +72,10 @@ describe("RequireDashboardAdmin", () => {
 
     renderGuard();
 
-    expect(await screen.findByTestId("dashboard-content")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "Access denied" }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-content")).toBeNull();
   });
 
   it("renders children for platform:admin", async () => {

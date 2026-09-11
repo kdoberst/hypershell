@@ -13,9 +13,9 @@ User creation remains middleware-driven (see `security/rbac-enforcement.spec.md`
 
 ### Relationship to the operational dashboard
 
-The operational dashboard widget currently labeled "Active users" (`active-users`) is a placeholder. This spec introduces the metric ID `registered-users`, connects it to the users List API, and renames user-facing copy to **Registered users** so the UI matches the data semantics.
+The operational dashboard widget currently labeled "Active users" (`active-users`) is a placeholder. This spec introduces the metric ID `registered-users`, connects it to Prometheus `hypershell_users_registered_total` via BFF `GET /api/metrics/registered-users`, and renames user-facing copy to **Registered users** so the UI matches the data semantics.
 
-Prometheus gateway metrics (`platform/gateway-metrics-dashboard.spec.md`) are unrelated.
+The users List API remains available for future collection workflows but is not the preferred source for the operational dashboard total count.
 
 ## Requirements
 
@@ -125,9 +125,9 @@ The List response SHALL include accurate `page`, `size`, `total`, and `items` fi
 
 ### Requirement: RU-05 -- Operational Dashboard Metric
 
-The operational dashboard host adapter SHALL populate an `OperationalMetric` with `id: "registered-users"` and `value` set to the decimal string of the user List `total`.
+The operational dashboard host adapter SHALL populate an `OperationalMetric` with `id: "registered-users"` and `value` set to the decimal string of the registered user total.
 
-The adapter SHALL obtain `total` from the HyperShell REST API through the browser TypeScript SDK. It SHOULD use a single List request with `page=1` and `size=1` to minimize payload size; it SHALL NOT paginate through all user records when only the count is required.
+The adapter SHALL obtain the total from BFF `GET /api/metrics/registered-users`, which queries Prometheus for `hypershell_users_registered_total` emitted by the API server users metrics collector on each scrape. The adapter SHALL NOT paginate the users List API when only the count is required.
 
 The metric SHALL NOT include `trend`, `status`, `unit`, or `total` fields in version 1.
 
@@ -141,14 +141,34 @@ The operational dashboard package SHALL rename the widget and summary labels fro
 - THEN the `registered-users` metric SHALL have `value: "42"`
 - AND the usage summary row SHALL display `42` under **Registered users**
 
-#### Scenario: Unauthorized adapter call omits registered-users metric
+#### Scenario: Unauthorized BFF call omits registered-users metric
 
-- GIVEN the signed-in user lacks dashboard-operator API authorization
+- GIVEN the signed-in user lacks dashboard-operator BFF authorization
 - AND at least one other metric source succeeds
-- WHEN the host adapter calls `GET /api/hypershell/v1/users`
+- WHEN the host adapter calls `GET /api/metrics/registered-users`
 - THEN the `registered-users` metric SHALL be omitted from the adapter response
 - AND the dashboard SHALL show its localized partial-load warning (OP-DASH-09)
 - AND the registered-users widget and usage-summary row SHALL render the localized metric-unavailable state (not a silent zero count)
+
+---
+
+### Requirement: RU-09 -- Registered Users Prometheus Collector and BFF Route
+
+The API server SHALL register a Prometheus collector that emits `hypershell_users_registered_total`, querying `CountRegistered` from the users DAO on each scrape. When the database query fails, the collector SHALL emit `prometheus.NewInvalidMetric`.
+
+The web-console BFF SHALL expose `GET /api/metrics/registered-users` as a same-origin proxy route that queries Prometheus and returns `{ "total_registered": N }`. Dashboard-operator authorization SHALL match `web-console/operational-dashboard.spec.md` OP-DASH-04. When Prometheus is unreachable, the BFF SHALL respond with HTTP `502`.
+
+#### Scenario: Collector emits registered user gauge on scrape
+
+- GIVEN 42 registered users exist in the database
+- WHEN Prometheus scrapes the API server `/metrics` endpoint
+- THEN a sample for `hypershell_users_registered_total` with value `42` SHALL be present
+
+#### Scenario: BFF returns registered user total
+
+- GIVEN Prometheus returns `hypershell_users_registered_total` with value `42`
+- WHEN an authorized caller sends `GET /api/metrics/registered-users`
+- THEN the BFF SHALL respond with HTTP `200` and `{ "total_registered": 42 }`
 
 ---
 
@@ -173,7 +193,7 @@ All user-visible strings SHALL use `defineMessages` in `operational-dashboard-ui
 
 Registered user counts SHALL load through the existing operational dashboard metrics query (`useGetMetricsData`) and SHALL inherit its refresh policy (`operationalDashboardRefreshMilliseconds`, currently 15 minutes) and manual refresh behavior defined in `web-console/operational-dashboard.spec.md` OP-DASH-09.
 
-A failed users List request SHALL fail only the registered-users metric source (OP-DASH-19); the dashboard SHALL NOT display `0` as a fallback count.
+A failed `GET /api/metrics/registered-users` request SHALL fail only the registered-users metric source (OP-DASH-19); the dashboard SHALL NOT display `0` as a fallback count.
 
 #### Scenario: Refresh updates the displayed total
 
@@ -193,7 +213,7 @@ The API server SHALL include integration tests for:
 - Opaque 404 on unauthorized singleton Get
 - Accurate `total` with `size=1`
 
-The web console SHALL include unit tests for the dashboard adapter mapping `UserList.total` into `registered-users`.
+The web console SHALL include unit tests for the dashboard adapter mapping BFF `GET /api/metrics/registered-users` response into `registered-users`.
 
 The operational dashboard package SHALL update Storybook fixtures and `mockOperationalDashboardMetrics` to use `registered-users` instead of `active-users`.
 

@@ -541,7 +541,7 @@ data:
           "emailVerified": true,
           "enabled": true,
           "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
-          "realmRoles": ["hypershell-admins", "hypershell-users", "gateway:creator"]
+          "realmRoles": ["hypershell-admins", "hypershell-users", "gateway:creator", "platform:admin"]
         },
         {
           "username": "developer",

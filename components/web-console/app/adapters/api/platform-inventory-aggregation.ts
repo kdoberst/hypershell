@@ -209,3 +209,37 @@ export function buildManagedDatabasesMetric(
     value: String(aggregate.total),
   };
 }
+
+export interface PlatformInventoryMetricsResponse {
+  managed_clusters: {
+    by_provider: Record<string, number>;
+    by_region: Record<string, number>;
+    by_status: Record<string, number>;
+    created_last_30_days: number;
+    total: number;
+  };
+  managed_databases: {
+    by_status: Record<string, number>;
+    total: number;
+  };
+}
+
+export function platformInventoryMetricsResponseToMetrics(
+  response: PlatformInventoryMetricsResponse,
+): OperationalMetric[] {
+  return [
+    {
+      createdLast30Days: String(response.managed_clusters.created_last_30_days),
+      id: "managed-clusters",
+      inventoryProviders: response.managed_clusters.by_provider,
+      inventoryRegions: response.managed_clusters.by_region,
+      inventoryStatus: response.managed_clusters.by_status,
+      value: String(response.managed_clusters.total),
+    },
+    {
+      id: "managed-databases",
+      inventoryStatus: response.managed_databases.by_status,
+      value: String(response.managed_databases.total),
+    },
+  ];
+}

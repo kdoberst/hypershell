@@ -2,6 +2,7 @@ package managedClusters
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm/clause"
 
@@ -17,6 +18,7 @@ type ManagedClusterDao interface {
 	FindByIDs(ctx context.Context, ids []string) (ManagedClusterList, error)
 	All(ctx context.Context) (ManagedClusterList, error)
 	FindByOIDCSubject(ctx context.Context, subject string) (*ManagedCluster, error)
+	InventorySnapshot(ctx context.Context, evaluationTime time.Time) (*ClusterInventorySnapshot, error)
 }
 
 var _ ManagedClusterDao = &sqlManagedClusterDao{}
@@ -90,4 +92,12 @@ func (d *sqlManagedClusterDao) FindByOIDCSubject(ctx context.Context, subject st
 		return nil, err
 	}
 	return &managedCluster, nil
+}
+
+func (d *sqlManagedClusterDao) InventorySnapshot(ctx context.Context, evaluationTime time.Time) (*ClusterInventorySnapshot, error) {
+	clusters, err := d.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return buildClusterInventorySnapshot(clusters, evaluationTime), nil
 }

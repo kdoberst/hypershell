@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { hasDashboardAdminRole } from "./session-roles";
 
 describe("hasDashboardAdminRole", () => {
-  it("returns true when hypershell-admins is present", () => {
+  it("returns false when only hypershell-admins is present", () => {
     expect(
       hasDashboardAdminRole(["hypershell-users", "hypershell-admins"]),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("returns true when platform:admin is present", () => {

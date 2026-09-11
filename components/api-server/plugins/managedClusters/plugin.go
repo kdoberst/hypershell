@@ -22,10 +22,13 @@ import (
 type ServiceLocator func() ManagedClusterService
 
 func NewServiceLocator(env *environments.Env) ServiceLocator {
+	dao := NewManagedClusterDao(&env.Database.SessionFactory)
+	RegisterManagedClusterMetrics(dao)
+
 	return func() ManagedClusterService {
 		return NewManagedClusterService(
 			db.NewAdvisoryLockFactory(env.Database.SessionFactory),
-			NewManagedClusterDao(&env.Database.SessionFactory),
+			dao,
 			events.Service(&env.Services),
 		)
 	}

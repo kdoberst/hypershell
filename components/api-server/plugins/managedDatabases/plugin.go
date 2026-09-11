@@ -22,10 +22,13 @@ import (
 type ServiceLocator func() ManagedDatabaseService
 
 func NewServiceLocator(env *environments.Env) ServiceLocator {
+	dao := NewManagedDatabaseDao(&env.Database.SessionFactory)
+	RegisterManagedDatabaseMetrics(dao)
+
 	return func() ManagedDatabaseService {
 		return NewManagedDatabaseService(
 			db.NewAdvisoryLockFactory(env.Database.SessionFactory),
-			NewManagedDatabaseDao(&env.Database.SessionFactory),
+			dao,
 			events.Service(&env.Services),
 		)
 	}

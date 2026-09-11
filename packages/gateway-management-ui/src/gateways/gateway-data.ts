@@ -165,6 +165,27 @@ export function aggregateGatewayDisplayStatusCounts(
   return counts;
 }
 
+/** Maps fleet-wide Prometheus phase counts into dashboard display buckets. */
+export function gatewayPhaseCountsToDisplayStatusCounts(
+  counts: Record<GatewayCanonicalPhase, number>,
+): GatewayDisplayStatusCounts {
+  const displayCounts: GatewayDisplayStatusCounts = {
+    degraded: 0,
+    failed: 0,
+    healthy: 0,
+    provisioning: 0,
+  };
+
+  for (const phase of gatewayCanonicalPhaseStrings) {
+    const bucket = gatewayDisplayStatusBucket(
+      resolveGatewayDisplayStatus(phase, undefined),
+    );
+    displayCounts[bucket] += counts[phase];
+  }
+
+  return displayCounts;
+}
+
 type GatewayConsoleRecord = Pick<
   GatewayRecord,
   "phase" | "status" | "externalDns" | "consoleUrl"

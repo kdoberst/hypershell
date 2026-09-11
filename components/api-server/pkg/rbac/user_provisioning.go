@@ -99,15 +99,7 @@ func HasPlatformAdminRole(ctx context.Context, userID string) bool {
 	if userID == "" {
 		return false
 	}
-	v := ctx.Value(ContextJWTRolesKey)
-	if v == nil {
-		return false
-	}
-	jwtRoles, ok := v.([]string)
-	if !ok {
-		return false
-	}
-	for _, role := range jwtRoles {
+	for _, role := range GetJWTRolesFromContext(ctx) {
 		if role == "platform:admin" {
 			return true
 		}

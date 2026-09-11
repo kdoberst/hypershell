@@ -17,10 +17,11 @@ import (
 type ServiceLocator func() UserService
 
 func NewServiceLocator(env *environments.Env) ServiceLocator {
+	dao := NewUserDao(&env.Database.SessionFactory)
+	RegisterUserMetrics(dao)
+
 	return func() UserService {
-		return NewUserService(
-			NewUserDao(&env.Database.SessionFactory),
-		)
+		return NewUserService(dao)
 	}
 }
 

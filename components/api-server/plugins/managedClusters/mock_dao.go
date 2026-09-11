@@ -2,6 +2,7 @@ package managedClusters
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -61,4 +62,8 @@ func (d *managedClusterDaoMock) FindByOIDCSubject(ctx context.Context, subject s
 		}
 	}
 	return nil, gorm.ErrRecordNotFound
+}
+
+func (d *managedClusterDaoMock) InventorySnapshot(ctx context.Context, evaluationTime time.Time) (*ClusterInventorySnapshot, error) {
+	return buildClusterInventorySnapshot(d.managedClusters, evaluationTime), nil
 }
