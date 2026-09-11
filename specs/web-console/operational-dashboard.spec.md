@@ -1,24 +1,26 @@
 # Operational Dashboard
 
 **Status:** Active
-**Applies to:** `packages/operational-dashboard-ui`, `components/web-console` SPA and BFF, `packages/gateway-management-ui` (display-status aggregation), `components/sdk-typescript` (gateway list client)
+**Applies to:** `packages/operational-dashboard-ui`, `components/web-console` SPA and BFF, `packages/gateway-management-ui` (display-status aggregation)
 
 ## Purpose
 
 Provide a widgetized operational dashboard in the HyperShell web console where administrators can assess fleet health at a glance. The dashboard composes summary and detail widgets in a customizable grid layout. Live data is loaded through a narrow application port (`DashboardControlPlane`) implemented by the web-console host; widgets without a connected source remain on the page and render a localized unavailable state rather than being hidden.
 
-This specification covers the reusable `operational-dashboard-ui` package, the host adapter that aggregates gateway list data, admin-only access controls, SPA and BFF route surfaces, layout persistence, and the widget catalog. Platform inventory metrics (managed clusters and managed databases) are defined in `platform/platform-inventory.spec.md`. It does **not** cover the Prometheus metrics pipeline (`hypershell_gateways_total`, BFF `GET /api/metrics/gateways`, or `GatewayMetricsDashboard`); those are defined in `platform/gateway-metrics-dashboard.spec.md`.
+This specification covers the reusable `operational-dashboard-ui` package, the host adapter that loads operational metrics from BFF Prometheus proxy routes, admin-only access controls, SPA and BFF route surfaces, layout persistence, and the widget catalog. Platform inventory metrics (managed clusters and managed databases) are defined in `platform/platform-inventory.spec.md`. Prometheus gateway phase counts (`hypershell_gateways_total`, BFF `GET /api/metrics/gateways`) are defined in `platform/gateway-metrics-dashboard.spec.md` and consumed by this dashboard for `provisioned-gateways` and `gateway-status`. The embeddable `GatewayMetricsDashboard` component remains a separate surface.
+
+**Data-source direction:** Aggregate operational dashboard widgets SHALL prefer Prometheus-backed BFF routes over direct HyperShell REST list pagination. The API server exposes fleet-wide gauges from database state on its `/metrics` scrape; the BFF queries Prometheus and returns JSON to the browser adapter. HyperShell REST List APIs remain authoritative for resource collection pages (for example, the gateway table) but are not the preferred source for dashboard totals.
 
 ### Relationship to gateway metrics
 
 | Concern | Operational dashboard (this spec) | Gateway metrics dashboard |
 | --- | --- | --- |
 | Primary route | `/dashboard` and `dashboard.*` host root (`/`) | `GatewayMetricsDashboard` component (embeddable) |
-| Gateway counts source | Paginated HyperShell REST `GET /api/hypershell/v1/gateways` | Prometheus `hypershell_gateways_total` via BFF proxy |
-| Scope | RBAC-filtered: counts reflect gateways visible to the signed-in caller | Fleet-wide database aggregate |
-| Status model | Display buckets: `healthy`, `provisioning`, `degraded`, `failed` | Lifecycle phases: `Running`, `Provisioning`, `Degraded`, `Failed` |
+| Gateway counts source | BFF `GET /api/metrics/gateways` (Prometheus `hypershell_gateways_total`) | Same BFF route |
+| Scope | Fleet-wide database aggregate (dashboard-operator access only) | Fleet-wide database aggregate (dashboard-operator access only) |
+| Status model | Display buckets: `healthy`, `provisioning`, `degraded`, `failed` (mapped from phase labels) | Lifecycle phases: `Pending`, `Provisioning`, `Running`, `Degraded`, `Failed` |
 
-The two surfaces MAY coexist. The operational dashboard SHALL NOT be required to consume the Prometheus BFF route.
+The two surfaces MAY coexist. They share the same Prometheus-backed gateway count route but present different widgets and layouts.
 
 ## Requirements
 
@@ -90,7 +92,7 @@ The SPA route modules for `/dashboard` and the dashboard-host root (`/`) SHALL w
 
 When OIDC is enabled, the BFF SHALL enforce the same role requirement for browser navigations to `/dashboard` and for `/` on hosts whose hostname starts with `dashboard.`. Non-admin users SHALL be redirected away (to `/` on the console host, or to the console host when the request arrived on a dashboard subdomain).
 
-When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes`, and `gateway-provision-duration` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
+When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes`, `gateways`, `gateway-sandboxes`, `gateway-provision-duration`, `platform-inventory`, and `registered-users` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
 
 #### Scenario: Non-admin is turned away from /dashboard
 
@@ -144,63 +146,84 @@ When the browser hostname is `dashboard.hypershell.localhost`, the SPA root rout
 
 ---
 
-### Requirement: OP-DASH-06 -- Gateway List Metrics Adapter
+### Requirement: OP-DASH-06 -- Gateway Sandbox Metrics Adapter
 
-The host `DashboardControlPlane` adapter SHALL load operational metrics by paginating `GET /api/hypershell/v1/gateways` through the browser TypeScript SDK with page size `100`, ordered by `name asc`, until all pages are retrieved.
+The host `DashboardControlPlane` adapter SHALL load `provisioned-sandboxes` from BFF `GET /api/metrics/gateway-sandboxes` in the `gateway-metrics` metric source (OP-DASH-23).
 
-The adapter SHALL validate each list response for internal consistency (page number, total count, and item count). An inconsistent response SHALL fail only the gateway-list metric source; other metric sources SHALL still be attempted (OP-DASH-19).
+The BFF route SHALL query Prometheus for `hypershell_gateways_active_sandboxes_total`, a fleet-wide gauge emitted by the API server metrics collector that sums `active_sandbox_count` across all gateways on each scrape (see `openshell-gateway-sandbox-count.spec.md` for field semantics).
 
-The adapter SHALL return `OperationalDashboardMetrics` containing:
+The adapter SHALL emit a `provisioned-sandboxes` metric whose `value` is the stringified `active_sandboxes` count from the BFF response. The value SHALL NOT be a non-finite number.
 
-- `lastSuccessfulRefresh` set to the current time
-- A `provisioned-gateways` metric (see OP-DASH-07)
-- A `provisioned-sandboxes` metric whose `value` is the stringified sum of `active_sandbox_count` across all gateways in the aggregated list
+A non-success BFF response for gateway sandboxes SHALL fail the entire `gateway-metrics` source (including `provisioned-gateways` and `provision-time`). Access control is enforced at the BFF route (dashboard-operator roles per OP-DASH-04).
 
-When summing `active_sandbox_count`, the adapter SHALL treat an omitted or null field on a gateway as `0` (matching database `COALESCE` semantics in `openshell-gateway-sandbox-count.spec.md`). The sum SHALL NOT produce a non-finite numeric result.
+#### Scenario: Prometheus sandbox count populates provisioned-sandboxes
 
-Gateway list results SHALL reflect the caller's RBAC visibility (the API applies gateway visibility filtering; the dashboard does not bypass it).
-
-#### Scenario: Omitted sandbox counts do not break the aggregate
-
-- GIVEN the aggregated list contains gateways where some omit `active_sandbox_count` and others report `2` and `3`
-- WHEN the adapter computes `provisioned-sandboxes`
-- THEN the metric `value` SHALL be `"5"`
+- GIVEN `GET /api/metrics/gateway-sandboxes` returns `{ "active_sandboxes": 5 }`
+- WHEN `getOperationalMetrics` runs
+- THEN the adapter SHALL emit `provisioned-sandboxes` with `value: "5"`
 - AND the dashboard SHALL NOT display `NaN`
 
-#### Scenario: Multiple pages are aggregated
+#### Scenario: Gateway sandboxes failure omits gateway-metrics source
 
-- GIVEN the caller can see 150 gateways
+- GIVEN `GET /api/metrics/gateway-sandboxes` fails
+- WHEN the adapter processes the `gateway-metrics` source
+- THEN the `gateway-metrics` source SHALL be treated as failed
+- AND `provisioned-sandboxes`, `provisioned-gateways`, and `provision-time` SHALL be omitted
+- AND the dashboard SHALL NOT synthesize a zero sandbox count
+
+---
+
+### Requirement: OP-DASH-23 -- Gateway Prometheus Metrics Adapter
+
+The host `DashboardControlPlane` adapter SHALL load `provisioned-gateways` (see OP-DASH-07), `provisioned-sandboxes` (OP-DASH-06), and optionally `provision-time` from BFF Prometheus proxy routes in the `gateway-metrics` metric source:
+
+- `GET /api/metrics/gateways` - fleet-wide phase counts from `hypershell_gateways_total` (see `platform/gateway-metrics-dashboard.spec.md` DASH-05)
+- `GET /api/metrics/gateway-sandboxes` - fleet-wide active sandbox sum from `hypershell_gateways_active_sandboxes_total` (OP-DASH-06)
+- `GET /api/metrics/gateway-provision-duration` - provision duration histogram (see `platform/gateway-provision-time.spec.md`)
+
+The adapter SHALL call `fetchGatewayMetrics` from `@openshift-online/hypershell-gateway-management-ui` for phase counts. A non-success BFF response for gateways or gateway sandboxes SHALL fail the entire `gateway-metrics` source.
+
+`provision-time` SHALL be appended to the same source only when the provision-duration BFF route succeeds. When the route fails or returns no qualifying samples, `provision-time` SHALL be omitted while `provisioned-gateways` and `provisioned-sandboxes` MAY still be emitted.
+
+Gateway phase counts SHALL be fleet-wide and SHALL NOT be filtered by per-gateway RoleBindings. Access control is enforced at the BFF route (dashboard-operator roles per OP-DASH-04).
+
+#### Scenario: Prometheus gateway counts populate provisioned-gateways
+
+- GIVEN `GET /api/metrics/gateways` returns `{ "counts": { "Running": 10, "Provisioning": 3, "Degraded": 1, "Failed": 4, "Pending": 2 } }`
 - WHEN `getOperationalMetrics` runs
-- THEN the adapter SHALL issue two paginated list requests
-- AND the `provisioned-gateways` metric `value` SHALL be `"150"`
+- THEN the adapter SHALL emit `provisioned-gateways` with `value: "20"`
+- AND `status` SHALL map phases to display buckets per OP-DASH-07
 
-#### Scenario: Inconsistent pagination omits gateway-derived metrics
+#### Scenario: Prometheus gateway failure omits gateway-derived Prometheus metrics
 
-- GIVEN a list response reports `page: 2` when page `1` was requested
-- WHEN the adapter processes the response
-- THEN the gateway list source SHALL be treated as failed
-- AND `provisioned-gateways`, `provisioned-sandboxes`, and `provision-time` SHALL be omitted from the adapter response
-- AND the dashboard SHALL NOT synthesize zero counts for those metrics
+- GIVEN `GET /api/metrics/gateways` fails
+- WHEN the adapter processes the `gateway-metrics` source
+- THEN the `gateway-metrics` source SHALL be treated as failed
+- AND `provisioned-gateways`, `provisioned-sandboxes`, and `provision-time` SHALL be omitted
 
 ---
 
 ### Requirement: OP-DASH-07 -- Gateway Display Status Aggregation
 
-Gateway status widgets SHALL use the same display-status presentation rules as the gateway list. The host adapter SHALL pass each gateway's `phase` and `status` to `aggregateGatewayDisplayStatusCounts` from `@openshift-online/hypershell-gateway-management-ui`.
+Gateway status widgets SHALL present display buckets (`healthy`, `provisioning`, `degraded`, `failed`) aligned with the gateway list vocabulary. The host adapter SHALL map Prometheus phase counts to display buckets using `gatewayPhaseCountsToDisplayStatusCounts` from `@openshift-online/hypershell-gateway-management-ui`.
+
+Phase-to-bucket mapping SHALL treat `Pending` and `Provisioning` as `provisioning`, `Running` as `healthy`, `Degraded` as `degraded`, and `Failed` as `failed`.
 
 The `provisioned-gateways` metric SHALL include:
 
-- `value` - total gateway count as a decimal string
+- `value` - total gateway count as a decimal string (sum of all phase counts)
 - `status` - counts for `healthy`, `provisioning`, `degraded`, and `failed` display buckets
 
-Display buckets SHALL NOT be confused with raw lifecycle `phase` values. Mapping from phase/status to display buckets SHALL remain owned by the gateway-management-ui package so the dashboard and gateway list stay aligned.
+Display buckets SHALL NOT be confused with raw lifecycle `phase` values. Mapping logic SHALL remain owned by the gateway-management-ui package.
 
-#### Scenario: Gateway status widget reflects list presentation
+**Trade-off:** Prometheus exposes `phase` labels only. The gateway list combines `phase` and `status` (for example, `Running` with an unhealthy status resolves to `degraded`). Phase-only mapping MAY under-count `degraded` when phase is still `Running`. Finer-grained status alignment would require a Prometheus metric with both dimensions or a REST list aggregate.
 
-- GIVEN the aggregated list contains gateways whose resolved display statuses are 5 healthy, 2 provisioning, 1 degraded, and 0 failed
+#### Scenario: Gateway status widget reflects phase-mapped buckets
+
+- GIVEN Prometheus returns phase counts equivalent to 10 healthy, 5 provisioning, 1 degraded, and 4 failed after mapping
 - WHEN the gateway status widget renders
-- THEN the donut chart SHALL show segments for healthy, provisioning, and degraded with those counts
-- AND the chart center title SHALL show `8`
+- THEN the donut chart SHALL show segments for healthy, provisioning, degraded, and failed with those counts
+- AND the chart center title SHALL show `20`
 
 ---
 
@@ -210,16 +233,16 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 
 | Metric ID | Connected in v1 | Source when connected |
 | --- | --- | --- |
-| `provisioned-gateways` | Yes | Gateway list aggregate (OP-DASH-06, OP-DASH-07) |
-| `provisioned-sandboxes` | Yes | Sum of `active_sandbox_count` from gateway list |
-| `registered-users` | Yes | See `platform/registered-users.spec.md` |
+| `provisioned-gateways` | Yes | BFF `GET /api/metrics/gateways` (Prometheus); OP-DASH-23, OP-DASH-07 |
+| `provisioned-sandboxes` | Yes | BFF `GET /api/metrics/gateway-sandboxes` (Prometheus); OP-DASH-06 |
+| `registered-users` | Yes | BFF `GET /api/metrics/registered-users` (Prometheus); see `platform/registered-users.spec.md` |
 | `memory` | Yes | BFF `GET /api/metrics/cluster-memory` (Prometheus node-exporter); see `platform/cluster-memory.spec.md` |
 | `nodes` | Yes | BFF `GET /api/metrics/cluster-nodes` (Prometheus kube-state-metrics); see `platform/cluster-nodes.spec.md` |
 | `cpu` | Yes | BFF `GET /api/metrics/cluster-cpu` (Prometheus node-exporter); see `platform/cluster-cpu.spec.md` |
 | `pods` | Yes | BFF `GET /api/metrics/cluster-pods` (Prometheus kube-state-metrics); see `platform/cluster-pods.spec.md` |
 | `provision-time` | Yes | BFF `GET /api/metrics/gateway-provision-duration` (Prometheus control-plane histogram); see `platform/gateway-provision-time.spec.md` |
-| `managed-clusters` | Yes | Paginated `GET /api/hypershell/v1/managed_clusters`; see `platform/platform-inventory.spec.md` |
-| `managed-databases` | Yes | Paginated `GET /api/hypershell/v1/managed_databases`; see `platform/platform-inventory.spec.md` |
+| `managed-clusters` | Yes | BFF `GET /api/metrics/platform-inventory` (Prometheus); see `platform/platform-inventory.spec.md` |
+| `managed-databases` | Yes | BFF `GET /api/metrics/platform-inventory` (Prometheus); see `platform/platform-inventory.spec.md` |
 
 Widgets for placeholder metrics SHALL remain in the default layout and in the add-widgets drawer. When a metric ID is missing from the adapter response - whether because the metric is not yet connected or because its data source failed (OP-DASH-19) - the widget body SHALL render a localized "Metric unavailable" empty state (title and recovery guidance) instead of failing the entire dashboard.
 
@@ -286,13 +309,13 @@ The host `DashboardControlPlane` adapter SHALL load operational metrics from ind
 
 | Source | Metric IDs affected |
 | --- | --- |
-| Paginated gateway list (`GET /api/hypershell/v1/gateways`) | `provisioned-gateways`, `provisioned-sandboxes`, `provision-time` |
-| Users list (`GET /api/hypershell/v1/users`, `page=1`, `size=1`) | `registered-users` |
+| BFF `GET /api/metrics/gateways`, `GET /api/metrics/gateway-sandboxes`, and `GET /api/metrics/gateway-provision-duration` (`gateway-metrics`) | `provisioned-gateways`, `provisioned-sandboxes`, `provision-time` |
+| BFF `GET /api/metrics/registered-users` (`registered-users`) | `registered-users` |
 | BFF `GET /api/metrics/cluster-memory` | `memory` |
 | BFF `GET /api/metrics/cluster-cpu` | `cpu` |
 | BFF `GET /api/metrics/cluster-pods` | `pods` |
 | BFF `GET /api/metrics/cluster-nodes` | `nodes` |
-| Paginated managed cluster and managed database lists (`GET /api/hypershell/v1/managed_clusters`, `GET /api/hypershell/v1/managed_databases`) | `managed-clusters`, `managed-databases` |
+| BFF `GET /api/metrics/platform-inventory` (`platform-inventory`) | `managed-clusters`, `managed-databases` |
 
 The adapter SHALL fetch these sources concurrently. When a source fails (network error, non-success HTTP status, inconsistent pagination, or other adapter validation error for that source), the adapter SHALL:
 
@@ -311,19 +334,19 @@ Workflow probes for `get-operational-metrics` SHALL record outcome `succeeded` w
 
 The dashboard page SHALL derive partial-failure warnings from the adapter result (omitted expected metrics and/or explicit failure metadata) rather than treating a partial response as a query error that blocks the grid.
 
-#### Scenario: Prometheus down does not hide gateway metrics
+#### Scenario: Prometheus down does not hide unrelated metric sources
 
-- GIVEN the gateway list and users list requests succeed
-- AND every BFF cluster-metrics request fails
+- GIVEN `GET /api/metrics/registered-users` succeeds
+- AND every other BFF metrics request fails (gateway metrics, platform inventory, and cluster metrics)
 - WHEN the operator opens `/dashboard`
-- THEN gateway, sandbox, and registered-user widgets SHALL display loaded values
-- AND cluster metric widgets SHALL render the localized metric-unavailable state
+- THEN the registered-user widget SHALL display loaded values
+- AND gateway, sandbox, inventory, provision-time, and cluster metric widgets SHALL render the localized metric-unavailable state
 - AND a warning `Alert` SHALL explain that some metrics could not be loaded
 
-#### Scenario: Gateway list failure does not hide cluster metrics
+#### Scenario: Gateway metrics failure does not hide cluster metrics
 
 - GIVEN every BFF cluster-metrics request succeeds
-- AND the gateway list request fails
+- AND the `gateway-metrics` source fails (for example, `GET /api/metrics/gateways` returns HTTP `502`)
 - WHEN the operator opens `/dashboard`
 - THEN cluster metric widgets SHALL display loaded values
 - AND gateway, sandbox, and provision-time widgets or summary rows SHALL render the localized metric-unavailable state
@@ -332,7 +355,7 @@ The dashboard page SHALL derive partial-failure warnings from the adapter result
 #### Scenario: Platform inventory failure does not hide other metrics
 
 - GIVEN every other metric source succeeds
-- AND the managed cluster or managed database list request fails
+- AND `GET /api/metrics/platform-inventory` fails
 - WHEN the operator opens `/dashboard`
 - THEN gateway, sandbox, registered-user, and cluster metric widgets SHALL display loaded values
 - AND inventory widgets and summary rows SHALL render the localized metric-unavailable state
@@ -340,7 +363,8 @@ The dashboard page SHALL derive partial-failure warnings from the adapter result
 
 #### Scenario: No qualifying provision-time samples omit only provision time
 
-- GIVEN the gateway list succeeds but contains no qualifying `Running` gateway duration samples
+- GIVEN `GET /api/metrics/gateways` and `GET /api/metrics/gateway-sandboxes` succeed
+- AND `GET /api/metrics/gateway-provision-duration` returns no qualifying histogram observations
 - WHEN `getOperationalMetrics` runs
 - THEN `provisioned-gateways` and `provisioned-sandboxes` SHALL still be emitted
 - AND `provision-time` SHALL be omitted

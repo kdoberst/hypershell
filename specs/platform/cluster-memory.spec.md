@@ -22,9 +22,9 @@ The operational dashboard `memory` widget and `system-summary` row already exist
 ### Relationship to other specifications
 
 - **Operational dashboard** (`web-console/operational-dashboard.spec.md`) owns the `memory` widget, `UtilizationChart` presentation (OP-DASH-13), refresh policy (OP-DASH-09), and dashboard-operator access (OP-DASH-04).
-- **Registered users** (`platform/registered-users.spec.md`) follows the same dashboard-adapter pattern but sources HyperShell REST APIs. Cluster memory sources **Prometheus** through a BFF proxy because there is no durable HyperShell `Memory` resource in the API server database.
-- **Gateway metrics dashboard** (`platform/gateway-metrics-dashboard.spec.md`) also uses a BFF Prometheus proxy (`GET /api/metrics/gateways`) for a different UI (`GatewayMetricsDashboard`). The operational dashboard does **not** reuse that route; it needs aggregate used/capacity bytes, not gateway phase counts.
-- **Gateway list metrics** on `/dashboard` (`provisioned-gateways`, etc.) remain REST-driven and are unrelated.
+- **Registered users** (`platform/registered-users.spec.md`) follows the same Prometheus-first dashboard pattern via BFF `GET /api/metrics/registered-users`. Cluster memory sources **Prometheus** through a BFF proxy because there is no durable HyperShell `Memory` resource in the API server database.
+- **Gateway metrics dashboard** (`platform/gateway-metrics-dashboard.spec.md`) also uses a BFF Prometheus proxy (`GET /api/metrics/gateways`) for a different UI (`GatewayMetricsDashboard`). The operational dashboard reuses that route for gateway phase counts and adds separate routes for sandboxes, inventory, and registered users.
+- **Gateway collection table** on `/gateways` remains REST-driven and is unrelated to cluster memory metrics.
 
 CPU, pod capacity, and node inventory are out of scope for this spec (see Non-Goals).
 

@@ -212,13 +212,13 @@ When `provisionDuration` is absent but `value` and `unit` are present, the UI MA
 
 Provision-time collection SHALL NOT depend on the paginated gateway list (`GET /api/hypershell/v1/gateways`).
 
-Gateway list pagination failure SHALL omit `provisioned-gateways` and `provisioned-sandboxes` only. It SHALL NOT omit `provision-time` when the BFF provision-duration route succeeds.
+Gateway metrics source failure (BFF `GET /api/metrics/gateways` or `GET /api/metrics/gateway-sandboxes`) SHALL omit `provisioned-gateways` and `provisioned-sandboxes` only. It SHALL NOT omit `provision-time` when the BFF provision-duration route succeeds.
 
-Conversely, provision-duration BFF failure SHALL omit only `provision-time`. It SHALL NOT affect gateway-list-derived metrics (OP-DASH-19).
+Conversely, provision-duration BFF failure SHALL omit only `provision-time`. It SHALL NOT affect other gateway-metrics-derived counts (OP-DASH-19).
 
-#### Scenario: Gateway list down does not hide provision time
+#### Scenario: Gateway metrics down does not hide provision time
 
-- GIVEN the gateway list request fails
+- GIVEN the `gateway-metrics` source fails (for example, `GET /api/metrics/gateways` returns HTTP `502`)
 - AND `GET /api/metrics/gateway-provision-duration` succeeds
 - WHEN the operator opens `/dashboard`
 - THEN `provision-time` SHALL appear in the adapter response with mean, P50, and P95
@@ -237,7 +237,7 @@ When provision-duration collection fails (BFF `502`, zero observations, non-fini
 - GIVEN every other metric source succeeds
 - AND `gateway_provision_duration_seconds_count` is zero
 - WHEN the operator opens `/dashboard`
-- THEN cluster and gateway-list metrics SHALL still load
+- THEN gateway-metrics and cluster metrics SHALL still load
 - AND the provision-time summary rows SHALL render the localized metric-unavailable state
 - AND the dashboard SHALL NOT enter the total load-error state
 
@@ -250,7 +250,7 @@ The web console SHALL include unit tests for:
 - BFF route PromQL mapping and JSON response formatting (including `observation_count`)
 - BFF `502` on zero count, Prometheus errors, and non-finite quantiles
 - Adapter mapping from BFF JSON to `provision-time` with `provisionDuration.mean`, `.p50`, and `.p95`
-- Independent source behavior: gateway list failure does not block provision time and vice versa (GPT-06)
+- Independent source behavior: gateway-metrics source failure does not block provision time and vice versa (GPT-06)
 
 The operational dashboard package SHALL include unit tests or Storybook fixtures for the three-row system-summary presentation when `provisionDuration` is present.
 
