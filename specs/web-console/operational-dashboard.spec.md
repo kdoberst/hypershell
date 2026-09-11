@@ -92,7 +92,7 @@ The SPA route modules for `/dashboard` and the dashboard-host root (`/`) SHALL w
 
 When OIDC is enabled, the BFF SHALL enforce the same role requirement for browser navigations to `/dashboard` and for `/` on hosts whose hostname starts with `dashboard.`. Non-admin users SHALL be redirected away (to `/` on the console host, or to the console host when the request arrived on a dashboard subdomain).
 
-When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes`, `gateways`, `gateway-sandboxes`, `gateway-provision-duration`, `platform-inventory`, and `registered-users` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
+When OIDC is enabled, the BFF SHALL enforce the same dashboard-admin role requirement on every `GET /api/metrics/*` route consumed by the operational dashboard host adapter (`cluster-memory`, `cluster-cpu`, `cluster-pods`, `cluster-nodes`, `gateways`, `gateway-sandboxes`, `gateway-provision-duration`, `platform-inventory`, and `user-logins` per OP-DASH-08). Authenticated callers without a dashboard-admin role SHALL receive HTTP `403`. Unauthenticated callers SHALL receive HTTP `401` or the standard BFF re-authentication response. When OIDC is disabled (no-auth dev mode), these routes SHALL remain open to unauthenticated callers, matching page behavior.
 
 #### Scenario: Non-admin is turned away from /dashboard
 
@@ -235,7 +235,7 @@ Version 1 of the operational dashboard SHALL distinguish **connected** metrics (
 | --- | --- | --- |
 | `provisioned-gateways` | Yes | BFF `GET /api/metrics/gateways` (Prometheus); OP-DASH-23, OP-DASH-07 |
 | `provisioned-sandboxes` | Yes | BFF `GET /api/metrics/gateway-sandboxes` (Prometheus); OP-DASH-06 |
-| `registered-users` | Yes | BFF `GET /api/metrics/registered-users` (Prometheus); see `platform/registered-users.spec.md` |
+| `registered-users` | Yes | Registration: `GET /api/hypershell/v1/users/stats`; login activity: BFF `GET /api/metrics/user-logins` (Prometheus); see `platform/registered-users.spec.md` and `platform/user-login-metrics.spec.md` |
 | `memory` | Yes | BFF `GET /api/metrics/cluster-memory` (Prometheus node-exporter); see `platform/cluster-memory.spec.md` |
 | `nodes` | Yes | BFF `GET /api/metrics/cluster-nodes` (Prometheus kube-state-metrics); see `platform/cluster-nodes.spec.md` |
 | `cpu` | Yes | BFF `GET /api/metrics/cluster-cpu` (Prometheus node-exporter); see `platform/cluster-cpu.spec.md` |
@@ -310,7 +310,8 @@ The host `DashboardControlPlane` adapter SHALL load operational metrics from ind
 | Source | Metric IDs affected |
 | --- | --- |
 | BFF `GET /api/metrics/gateways`, `GET /api/metrics/gateway-sandboxes`, and `GET /api/metrics/gateway-provision-duration` (`gateway-metrics`) | `provisioned-gateways`, `provisioned-sandboxes`, `provision-time` |
-| User activity stats (`GET /api/hypershell/v1/users/stats`) (`registered-users`) | `registered-users` |
+| User registration stats (`GET /api/hypershell/v1/users/stats`) | `registered-users` (registration fields only; RU-11) |
+| BFF `GET /api/metrics/user-logins` | `registered-users` (login fields only; RU-11) |
 | BFF `GET /api/metrics/cluster-memory` | `memory` |
 | BFF `GET /api/metrics/cluster-cpu` | `cpu` |
 | BFF `GET /api/metrics/cluster-pods` | `pods` |
@@ -336,10 +337,11 @@ The dashboard page SHALL derive partial-failure warnings from the adapter result
 
 #### Scenario: Prometheus down does not hide unrelated metric sources
 
-- GIVEN user activity stats (`GET /api/hypershell/v1/users/stats`) succeeds
-- AND every BFF metrics request fails (gateway metrics, platform inventory, and cluster metrics)
+- GIVEN user registration stats (`GET /api/hypershell/v1/users/stats`) succeeds
+- AND every BFF metrics request fails (gateway metrics, platform inventory, cluster metrics, and `user-logins`)
 - WHEN the operator opens `/dashboard`
-- THEN the registered-user widget SHALL display loaded values
+- THEN the registered-users widget SHALL show registration total and Added rows
+- AND unique-login rows, sparkline, and usage-summary trend SHALL use the metric-unavailable state (RU-11)
 - AND gateway, sandbox, inventory, provision-time, and cluster metric widgets SHALL render the localized metric-unavailable state
 - AND a warning `Alert` SHALL explain that some metrics could not be loaded
 

@@ -1,7 +1,7 @@
 # Registered Users
 
 **Status:** Active
-**Applies to:** `components/api-server` users plugin and RBAC middleware, `components/sdk-typescript`, `components/web-console` dashboard adapter, `packages/operational-dashboard-ui`
+**Applies to:** `components/api-server` users plugin and RBAC middleware, `components/sdk-typescript`, `components/web-console` BFF and dashboard adapter, `packages/operational-dashboard-ui`
 
 ## Purpose
 
@@ -13,9 +13,9 @@ User creation remains middleware-driven (see `security/rbac-enforcement.spec.md`
 
 ### Relationship to the operational dashboard
 
-The operational dashboard widget currently labeled "Active users" (`active-users`) is a placeholder. This spec introduces the metric ID `registered-users`, connects it to Prometheus `hypershell_users_registered_total` via BFF `GET /api/metrics/registered-users`, and renames user-facing copy to **Registered users** so the UI matches the data semantics.
+The operational dashboard widget currently labeled "Active users" (`active-users`) is a placeholder. This spec introduces the metric ID `registered-users`, connects it to the users List API, and renames user-facing copy to **Registered users** so the UI matches the data semantics.
 
-The users List API remains available for future collection workflows but is not the preferred source for the operational dashboard total count.
+Login activity (unique logins, sparkline, usage-summary trend arrow) is defined in `platform/user-login-metrics.spec.md` and SHALL be sourced from Prometheus via BFF `GET /api/metrics/user-logins`. Prometheus gateway phase metrics (`platform/gateway-metrics-dashboard.spec.md`) are unrelated.
 
 ## Requirements
 
@@ -123,31 +123,31 @@ The List response SHALL include accurate `page`, `size`, `total`, and `items` fi
 
 ---
 
-### Requirement: RU-09 -- User Activity Statistics API
+### Requirement: RU-09 -- User Registration Statistics API
 
-The API server SHALL expose `GET /api/hypershell/v1/users/stats` returning a `UserActivityStats` document with:
+The API server SHALL expose `GET /api/hypershell/v1/users/stats` returning a `UserActivityStats` document with **registration fields only**:
 
 | Field | Meaning |
 | --- | --- |
 | `total_registered` | Count of all registered users |
 | `registered_last_7_days` | Users whose `created_at` is on or after the UTC midnight at the start of the 7th calendar day before the evaluation day (`created_at >= evaluation_day - 6 days`) |
 | `registered_last_30_days` | Users whose `created_at` is on or after the UTC midnight at the start of the 30th calendar day before the evaluation day (`created_at >= evaluation_day - 29 days`) |
-| `active_last_7_days` | Distinct users with at least one authenticated API access on any of the last 7 UTC calendar days |
-| `active_last_30_days` | Distinct users with at least one authenticated API access on any of the last 30 UTC calendar days |
 | `registration_daily` | 30-element histogram of new registrations per UTC day (zeros for days with no signups) |
-| `active_daily` | 30-element histogram of distinct active users per UTC day (zeros for days with no logins) |
 
 The endpoint SHALL use the same dashboard-operator authorization as user inventory (RU-03).
 
-Authenticated API access SHALL record the caller's user ID in a `user_login_days` table (one row per user per UTC day) and update `last_login_at` on the `User` record. Recording SHALL occur during JWT auto-provisioning on each authenticated request.
+The endpoint SHALL NOT return login-activity fields (`active_last_7_days`, `active_last_30_days`, `active_daily`). Those SHALL be supplied by Prometheus per `platform/user-login-metrics.spec.md`.
 
-#### Scenario: Dashboard operator loads user activity stats
+Human-user login recording for Prometheus (`user_login_days`, service-account exclusion) is defined in ULM-01 and ULM-02.
 
-- GIVEN 42 registered users exist and 18 logged in during the last 7 UTC days
+#### Scenario: Dashboard operator loads registration stats
+
+- GIVEN 42 registered users exist
 - AND an authorized dashboard operator opens `/dashboard`
 - WHEN the adapter calls `GET /api/hypershell/v1/users/stats`
-- THEN the response SHALL include `total_registered: 42` and `active_last_7_days: 18`
-- AND `registration_daily` and `active_daily` SHALL each contain 30 dated buckets
+- THEN the response SHALL include `total_registered: 42`
+- AND `registration_daily` SHALL contain 30 dated buckets
+- AND the response SHALL NOT include `active_last_7_days`, `active_last_30_days`, or `active_daily`
 
 #### Scenario: Registration windows use inclusive UTC midnight boundaries
 
@@ -165,10 +165,10 @@ The `registered-users` widget SHALL render through `RegisteredUsersCard` with th
 
 - Total registered users as the primary heading (`value`), labeled **Registered users** (for example, `42 Registered users`)
 - Rows for users added during the last 7 and 30 UTC days (`createdLast7Days`, `createdLast30Days`)
-- Rows for users who logged in during the last 7 and 30 UTC days (`activeLast7Days`, `activeLast30Days`)
-- A sparkline of `active_daily` (`activeTrend`) for the last 30 UTC days (30 data points)
+- Rows for **unique logins (7 days)** and **unique logins (30 days)** (`activeLast7Days`, `activeLast30Days`), each equal to the sum of daily unique-login counts over the window (not deduplicated headcount across days)
+- A sparkline titled **Unique logins per day** from `activeTrend` for the last 30 UTC days (30 data points)
 
-The usage summary card SHALL show only the total registered user count under **Users**. It MAY also show a trend direction indicator derived from `activeTrend` when daily unique logins changed by at least 5% between the first and last points in the 30-day window.
+The usage summary card SHALL show only the total registered user count under **Users**. It MAY also show a trend direction indicator derived from `activeTrend` when daily unique logins changed by at least 5% between the first and last points in the 30-day window (ULM-07).
 
 #### Scenario: Widget shows total, additions, and login activity
 
@@ -180,19 +180,19 @@ The usage summary card SHALL show only the total registered user count under **U
 
 ### Requirement: RU-05 -- Operational Dashboard Metric
 
-The operational dashboard host adapter SHALL populate an `OperationalMetric` with `id: "registered-users"` and fields mapped from `UserActivityStats`:
+The operational dashboard host adapter SHALL populate an `OperationalMetric` with `id: "registered-users"` by merging two independent sources (RU-11):
 
-| Metric field | API field |
-| --- | --- |
-| `value` | `total_registered` |
-| `createdLast7Days` | `registered_last_7_days` |
-| `createdLast30Days` | `registered_last_30_days` |
-| `activeLast7Days` | `active_last_7_days` |
-| `activeLast30Days` | `active_last_30_days` |
-| `trend` | `registration_daily` |
-| `activeTrend` | `active_daily` |
+| Metric field | Source | Source field |
+| --- | --- | --- |
+| `value` | `GET /api/hypershell/v1/users/stats` | `total_registered` |
+| `createdLast7Days` | `GET /api/hypershell/v1/users/stats` | `registered_last_7_days` |
+| `createdLast30Days` | `GET /api/hypershell/v1/users/stats` | `registered_last_30_days` |
+| `trend` | `GET /api/hypershell/v1/users/stats` | `registration_daily` |
+| `activeLast7Days` | BFF `GET /api/metrics/user-logins` | `active_last_7_days` |
+| `activeLast30Days` | BFF `GET /api/metrics/user-logins` | `active_last_30_days` |
+| `activeTrend` | BFF `GET /api/metrics/user-logins` | `active_daily` |
 
-The adapter SHALL obtain stats from `GET /api/hypershell/v1/users/stats` through the browser TypeScript SDK.
+Registration fields SHALL be loaded through the browser TypeScript SDK. Login fields SHALL be loaded from the same-origin BFF route (ULM-05).
 
 #### Scenario: Dashboard shows registered user total
 
@@ -202,9 +202,9 @@ The adapter SHALL obtain stats from `GET /api/hypershell/v1/users/stats` through
 - THEN the `registered-users` metric SHALL have `value: "42"`
 - AND the usage summary row SHALL display `42` under **Users**
 
-#### Scenario: Unauthorized BFF call omits registered-users metric
+#### Scenario: Unauthorized adapter call omits registered-users metric
 
-- GIVEN the signed-in user lacks dashboard-operator BFF authorization
+- GIVEN the signed-in user lacks dashboard-operator API authorization
 - AND at least one other metric source succeeds
 - WHEN the host adapter calls `GET /api/hypershell/v1/users/stats`
 - THEN the `registered-users` metric SHALL be omitted from the adapter response
@@ -213,23 +213,34 @@ The adapter SHALL obtain stats from `GET /api/hypershell/v1/users/stats` through
 
 ---
 
-### Requirement: RU-09 -- Registered Users Prometheus Collector and BFF Route
+### Requirement: RU-11 -- Split Source Assembly and Partial Failure
 
-The API server SHALL register a Prometheus collector that emits `hypershell_users_registered_total`, querying `CountRegistered` from the users DAO on each scrape. When the database query fails, the collector SHALL emit `prometheus.NewInvalidMetric`.
+The `registered-users` metric SHALL be assembled from two independent sources per OP-DASH-19:
 
-The web-console BFF SHALL expose `GET /api/metrics/registered-users` as a same-origin proxy route that queries Prometheus and returns `{ "total_registered": N }`. Dashboard-operator authorization SHALL match `web-console/operational-dashboard.spec.md` OP-DASH-04. When Prometheus is unreachable, the BFF SHALL respond with HTTP `502`.
+| Source | Fields owned |
+| --- | --- |
+| `GET /api/hypershell/v1/users/stats` | `value`, `createdLast7Days`, `createdLast30Days`, `trend` |
+| BFF `GET /api/metrics/user-logins` | `activeLast7Days`, `activeLast30Days`, `activeTrend` |
 
-#### Scenario: Collector emits registered user gauge on scrape
+When the registration stats request fails or the caller is unauthorized, the adapter SHALL omit the entire `registered-users` metric.
 
-- GIVEN 42 registered users exist in the database
-- WHEN Prometheus scrapes the API server `/metrics` endpoint
-- THEN a sample for `hypershell_users_registered_total` with value `42` SHALL be present
+When registration stats succeed but the BFF login-metrics request fails, the adapter SHALL emit a `registered-users` metric with registration fields populated and login fields (`activeLast7Days`, `activeLast30Days`, `activeTrend`) omitted. The Users widget SHALL render the metric-unavailable state for login rows and the sparkline while still showing the registration total and Added rows.
 
-#### Scenario: BFF returns registered user total
+When both sources succeed, the adapter SHALL emit one fully populated `registered-users` metric.
 
-- GIVEN Prometheus returns `hypershell_users_registered_total` with value `42`
-- WHEN an authorized caller sends `GET /api/metrics/registered-users`
-- THEN the BFF SHALL respond with HTTP `200` and `{ "total_registered": 42 }`
+#### Scenario: Registration succeeds and Prometheus fails
+
+- GIVEN `GET /api/hypershell/v1/users/stats` returns `total_registered: 450`
+- AND `GET /api/metrics/user-logins` returns HTTP `502`
+- WHEN operational metrics load
+- THEN the `registered-users` metric SHALL include `value: "450"` and `createdLast7Days` / `createdLast30Days`
+- AND the widget SHALL show metric-unavailable for unique-login rows and the sparkline
+
+#### Scenario: Both sources succeed
+
+- GIVEN registration stats and BFF login metrics both return HTTP `200`
+- WHEN the adapter merges results
+- THEN the `registered-users` metric SHALL include all fields in RU-05
 
 ---
 
@@ -253,9 +264,9 @@ All user-visible strings SHALL use `defineMessages` in `operational-dashboard-ui
 
 ### Requirement: RU-07 -- Refresh and Error Semantics
 
-Registered user stats SHALL load through the existing operational dashboard metrics query (`useGetMetricsData`) and SHALL inherit its refresh policy (`operationalDashboardRefreshMilliseconds`, currently 15 minutes) and manual refresh behavior defined in `web-console/operational-dashboard.spec.md` OP-DASH-09.
+Registered user stats and login metrics SHALL load through the existing operational dashboard metrics query (`useGetMetricsData`) and SHALL inherit its refresh policy (`operationalDashboardRefreshMilliseconds`, currently 15 minutes) and manual refresh behavior defined in `web-console/operational-dashboard.spec.md` OP-DASH-09.
 
-A failed `GET /api/hypershell/v1/users/stats` request SHALL fail only the registered-users metric source (OP-DASH-19); the dashboard SHALL NOT display `0` as a fallback count.
+A failed `GET /api/hypershell/v1/users/stats` request SHALL omit the entire `registered-users` metric (RU-11). A failed `GET /api/metrics/user-logins` request SHALL omit only login fields on an otherwise successful registration merge (ULM-08). The dashboard SHALL NOT display `0` as a fallback count for unavailable fields.
 
 #### Scenario: Refresh updates the displayed total
 
@@ -275,12 +286,13 @@ The API server SHALL include integration tests for:
 - Opaque 404 on unauthorized singleton Get
 - Accurate `total` with `size=1`
 - Authorized and forbidden `GET /users/stats`
-- Login recording on authenticated API access
 - Registration window boundary counting (`registered_last_7_days` and `registered_last_30_days` at inclusive UTC midnight edges)
 
-The web console SHALL include unit tests for the dashboard adapter mapping `UserActivityStats` into `registered-users`.
+Login recording, Prometheus emission, BFF route, and login-field adapter mapping SHALL be verified per `platform/user-login-metrics.spec.md` ULM-09.
 
-The operational dashboard package SHALL update Storybook fixtures and `mockOperationalDashboardMetrics` with extended registered-user fields.
+The web console SHALL include unit tests for the dashboard adapter merging registration stats and BFF login metrics into `registered-users` (including RU-11 partial-failure behavior).
+
+The operational dashboard package SHALL update Storybook fixtures and `mockOperationalDashboardMetrics` with extended registered-user fields. Mock login totals SHALL reflect sum-of-daily semantics.
 
 #### Scenario: CI exercises authorization and mapping
 
