@@ -103,7 +103,7 @@ The BFF SHALL query Prometheus `GET {PROMETHEUS_URL}/api/v1/query_range` (via `f
 
 | Parameter | Value |
 | --- | --- |
-| PromQL | `sum(hypershell_gateways_total)` |
+| PromQL | `sum(hypershell_gateways_total)` when no namespace is configured; `sum(hypershell_gateways_total{namespace="<namespace>"})` when `PROMETHEUS_NAMESPACE` is set (same `namespaceSelector` label as the instant gateway query in DASH-05) |
 | Lookback | 7 UTC calendar days inclusive of today |
 | Step | `86400s` (one sample per day) |
 | End timestamp | Current time (UTC) |
