@@ -3,6 +3,8 @@ package helm
 import (
 	"fmt"
 	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // GatewayConfig represents the configuration for a gateway deployment.
@@ -66,6 +68,9 @@ type ValuesBuilder struct {
 	ExternalCAIssuerKind string
 	// HasTrustedCA indicates whether the gateway-trusted-ca ConfigMap exists
 	HasTrustedCA bool
+	// Resources overrides the gateway container requests and limits
+	// (GATEWAY_RESOURCES). Nil uses DefaultGatewayResources.
+	Resources *corev1.ResourceRequirements
 }
 
 // Build computes Helm chart values from the Gateway configuration.
@@ -124,6 +129,14 @@ func (b *ValuesBuilder) buildCoreValues(values map[string]interface{}) error {
 	// Workload configuration
 	setNestedValue(values, "deployment", "workload", "kind")
 	setNestedValue(values, 1, "replicaCount")
+
+	// Gateway container resources. Always set: the upstream chart defaults to
+	// `resources: {}`, which would run the gateway BestEffort.
+	resources := DefaultGatewayResources()
+	if b.Resources != nil {
+		resources = *b.Resources
+	}
+	setNestedValue(values, resourcesValue(resources), "resources")
 
 	// Sandbox configuration
 	setNestedValue(values, b.Namespace, "server", "sandboxNamespace")
