@@ -534,8 +534,15 @@ fi
 # conditions and that every condition completed successfully.
 
 show_cmd "api_curl ${API_HOST}/api/hypershell/v1/gateways/${GW_ID}  # verify provisioning_conditions"
-GW_COND_JSON=$(api_curl "${API_HOST}/api/hypershell/v1/gateways/${GW_ID}" 2>/dev/null || true)
-GW_COND_CHECK=$(echo "$GW_COND_JSON" | python3 -c "
+# A re-reconcile (watch resync, controller reconnect) re-initializes the
+# conditions to Pending and walks them again while the gateway is already
+# Running, so a single read can observe InProgress/Pending that settles
+# seconds later. Retry within a bounded window; only a settled incomplete
+# state is a failure.
+GW_COND_DEADLINE=$(($(date +%s) + ${E2E_CONDITIONS_SETTLE_TIMEOUT:-60}))
+while true; do
+  GW_COND_JSON=$(api_curl "${API_HOST}/api/hypershell/v1/gateways/${GW_ID}" 2>/dev/null || true)
+  GW_COND_CHECK=$(echo "$GW_COND_JSON" | python3 -c "
 import json, sys
 try:
     gw = json.load(sys.stdin)
@@ -564,6 +571,18 @@ if incomplete:
     print('INCOMPLETE:%s' % '; '.join(incomplete)); sys.exit(0)
 print('OK:%d' % len(conditions))
 " 2>/dev/null || echo "SCRIPT_ERROR")
+  case "$GW_COND_CHECK" in
+    OK:*) break ;;
+    INCOMPLETE:*)
+      if [[ $(date +%s) -lt $GW_COND_DEADLINE ]]; then
+        dim "    conditions not yet settled (${GW_COND_CHECK#INCOMPLETE:}); retrying"
+        sleep 5
+        continue
+      fi
+      ;;
+  esac
+  break
+done
 
 case "$GW_COND_CHECK" in
   OK:*)
