@@ -152,12 +152,17 @@ discover_gateway_endpoint() {
   # Route ingress mode (GATEWAY_INGRESS_MODE=route, e.g. IBM Cloud ROKS): the
   # control plane emits an OpenShift Route instead of Gateway API resources, so
   # fall back to the per-tenant Route's host. The Route is passthrough; the
-  # gateway pod terminates TLS with its own CA, and the openshell CLI dials with
-  # InsecureSkipVerify, so no router CA trust is needed for gRPC.
+  # gateway pod terminates TLS with its own CA, which no public trust store
+  # knows, so the openshell CLI must dial with InsecureSkipVerify -- the same
+  # policy the kind driver uses for its local CA. OPENSHELL_GATEWAY_INSECURE
+  # is what writes gateway_insecure into the CLI's gateway metadata.json, and
+  # this driver's top-level `unset` (kept for edge-mode trusted certificates)
+  # must not apply here.
   local route_host
   route_host=$(_gateway_route_host "$gw_namespace")
   if [[ -n "$route_host" ]]; then
     _DISCOVER_GW_ENDPOINT="https://${route_host}:443"
+    export OPENSHELL_GATEWAY_INSECURE=true
     return 0
   fi
   dim "  No programmed Gateway route found for ${gw_name}"
