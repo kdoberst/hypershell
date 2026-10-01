@@ -35,6 +35,7 @@ import {
   deployedFor,
   seedForBundle,
 } from "../../../domain/map/bundles";
+import { otherGateways } from "../../../domain/fleet";
 import { identiName } from "../../../domain/map/identiname";
 import type { MapModel, MapNode } from "../../../domain/map/model";
 import type {
@@ -42,11 +43,112 @@ import type {
   PullRequest,
   ReleaseBundle,
 } from "../../../domain/promotion";
-import { gatePhaseBadge, healthBadge, syncBadge } from "../../../domain/status";
+import { healthBadge, syncBadge } from "../../../domain/status";
 import { messages } from "../../../messages";
 import { StatusLabel } from "../status-label";
 import { TEXT_COLOR } from "./colors";
 import { GatewayDonut } from "./gateway-donut";
+import { Identicon } from "./identicon";
+
+/**
+ * The release-bundle identicon, inline. A release bundle is always identified by
+ * its identicon (+ identiname) wherever it appears, matching the node cards and
+ * freight bar, so a bundle is recognisable at a glance across every view. When
+ * `onSelect` is given, the identicon is clickable and opens that bundle's details.
+ */
+function BundleIdenticon({
+  seed,
+  size = 28,
+  onSelect,
+}: {
+  seed: string;
+  size?: number;
+  onSelect?: (seed: string) => void;
+}): React.ReactElement {
+  const icon = (
+    <svg
+      width={size}
+      height={size}
+      aria-hidden="true"
+      style={{ flexShrink: 0, display: "block" }}
+    >
+      <Identicon seed={seed} x={0} y={0} size={size} />
+    </svg>
+  );
+  if (!onSelect) {
+    return icon;
+  }
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={identiName(seed)}
+      onClick={() => {
+        onSelect(seed);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(seed);
+        }
+      }}
+      style={{
+        cursor: "pointer",
+        display: "inline-flex",
+        borderRadius: 4,
+      }}
+    >
+      {icon}
+    </span>
+  );
+}
+
+/**
+ * A bundle as a whole clickable "chip": its identicon beside a label (version +
+ * identiname), the ENTIRE chip opening the bundle's details - not just the small
+ * identicon. Matches the prototype's compact "Promoting [icon] vX" chip. When no
+ * `onSelect` is given it is inert (plain icon + label).
+ */
+function BundleChip({
+  seed,
+  label,
+  onSelect,
+}: {
+  seed: string;
+  label: React.ReactNode;
+  onSelect?: (seed: string) => void;
+}): React.ReactElement {
+  const content = (
+    <Flex
+      alignItems={{ default: "alignItemsCenter" }}
+      spaceItems={{ default: "spaceItemsSm" }}
+      flexWrap={{ default: "nowrap" }}
+    >
+      <FlexItem>
+        <BundleIdenticon seed={seed} size={20} />
+      </FlexItem>
+      <FlexItem>{label}</FlexItem>
+    </Flex>
+  );
+  if (!onSelect) {
+    return content;
+  }
+  // A PatternFly inline link button: standard link colour + hover/focus underline
+  // (PF link affordance), so a clickable bundle reference reads as a link. The
+  // identicon is an SVG with its own fills, unaffected by the link text colour.
+  return (
+    <Button
+      variant="link"
+      isInline
+      aria-label={identiName(seed)}
+      onClick={() => {
+        onSelect(seed);
+      }}
+    >
+      {content}
+    </Button>
+  );
+}
 
 /** What the map currently has selected. `id` is a node id, gate id or bundle seed. */
 export interface MapSelection {
@@ -59,6 +161,8 @@ export interface MapDetailsProps {
   readonly releaseByDigest: Readonly<Record<string, ReleaseBundle>>;
   readonly selection: MapSelection;
   readonly onClose: () => void;
+  /** Opens a release bundle's details (from any identicon in the panel). */
+  readonly onSelectBundle: (seed: string) => void;
 }
 
 const PROMO_LABEL: Record<
@@ -154,26 +258,44 @@ function PrList({ prs }: { prs: readonly PullRequest[] }): React.ReactElement {
   );
 }
 
-/** Section heading + optional PR-count summary, then the PR list for `bundle`. */
+/** Section heading + optional PR-count summary, then the PR list for `bundle`.
+ *  When `seed` is given, the bundle's identicon sits beside the heading so the
+ *  tab's bundle is identifiable on its own. */
 function BundleContents({
   bundle,
+  seed,
+  onSelectBundle,
 }: {
   bundle: ReleaseBundle | undefined;
+  seed?: string;
+  onSelectBundle?: (seed: string) => void;
 }): React.ReactElement {
   const prs = bundle?.prs ?? [];
   return (
     <>
-      <Title headingLevel="h4" size="md">
-        <FormattedMessage {...messages.sectionInBundle} />
-        {prs.length > 0 ? (
-          <Content component="small" className="pf-v6-u-ml-sm">
-            <FormattedMessage
-              {...messages.bundlePrSummary}
-              values={{ count: prs.length }}
-            />
-          </Content>
+      <Flex
+        alignItems={{ default: "alignItemsCenter" }}
+        spaceItems={{ default: "spaceItemsSm" }}
+      >
+        {seed ? (
+          <FlexItem>
+            <BundleIdenticon seed={seed} size={20} onSelect={onSelectBundle} />
+          </FlexItem>
         ) : null}
-      </Title>
+        <FlexItem>
+          <Title headingLevel="h4" size="md">
+            <FormattedMessage {...messages.sectionInBundle} />
+            {prs.length > 0 ? (
+              <Content component="small" className="pf-v6-u-ml-sm">
+                <FormattedMessage
+                  {...messages.bundlePrSummary}
+                  values={{ count: prs.length }}
+                />
+              </Content>
+            ) : null}
+          </Title>
+        </FlexItem>
+      </Flex>
       <PrList prs={prs} />
     </>
   );
@@ -185,6 +307,9 @@ function GatewaySummary({ node }: { node: MapNode }): React.ReactElement {
   const running = g.running ?? 0;
   const provisioning = g.provisioning ?? 0;
   const failed = g.failed ?? 0;
+  // Gateways in any phase beyond the three named rows, so the legend sums to the
+  // donut's centre total instead of under-counting it.
+  const other = otherGateways(g);
   const label = intl.formatMessage(messages.detailGatewayBreakdown, {
     total: node.gatewaysTotal,
     running,
@@ -219,13 +344,24 @@ function GatewaySummary({ node }: { node: MapNode }): React.ReactElement {
           <Row term={<FormattedMessage {...messages.legendFailed} />}>
             {failed}
           </Row>
+          {other > 0 ? (
+            <Row term={<FormattedMessage {...messages.legendOther} />}>
+              {other}
+            </Row>
+          ) : null}
         </DescriptionList>
       </FlexItem>
     </Flex>
   );
 }
 
-function NodeFields({ node }: { node: MapNode }): React.ReactElement {
+function NodeFields({
+  node,
+  onSelectBundle,
+}: {
+  node: MapNode;
+  onSelectBundle: (seed: string) => void;
+}): React.ReactElement {
   const promo = PROMO_LABEL[node.state];
   const releaseLabel = node.version
     ? `${node.version} · ${identiName(node.seed)}`
@@ -273,16 +409,32 @@ function NodeFields({ node }: { node: MapNode }): React.ReactElement {
         </Label>
       </Row>
       <Row term={<FormattedMessage {...messages.columnRelease} />}>
-        {releaseLabel ?? <FormattedMessage {...messages.valueNone} />}
+        {releaseLabel ? (
+          <BundleChip
+            seed={node.seed}
+            label={releaseLabel}
+            onSelect={onSelectBundle}
+          />
+        ) : (
+          <FormattedMessage {...messages.valueNone} />
+        )}
       </Row>
       {node.proposedVersion ? (
         <Row term={<FormattedMessage {...messages.detailProposed} />}>
-          {node.proposedVersion}
+          <BundleChip
+            seed={node.proposedDigest ?? node.proposedVersion}
+            label={node.proposedVersion}
+            onSelect={onSelectBundle}
+          />
         </Row>
       ) : null}
       {node.digest ? (
         <Row term={<FormattedMessage {...messages.detailDigest} />}>
-          <code>{node.digest}</code>
+          <BundleChip
+            seed={node.seed}
+            label={<code>{node.digest}</code>}
+            onSelect={onSelectBundle}
+          />
         </Row>
       ) : null}
       {node.managedClusters !== null ? (
@@ -335,9 +487,11 @@ function NodeLinks({ node }: { node: MapNode }): React.ReactElement {
 function NodeDetails({
   node,
   releaseByDigest,
+  onSelectBundle,
 }: {
   node: MapNode;
   releaseByDigest: Readonly<Record<string, ReleaseBundle>>;
+  onSelectBundle: (seed: string) => void;
 }): React.ReactElement {
   const [activeKey, setActiveKey] = useState<string | number>("details");
   const bundle = node.digest ? releaseByDigest[node.digest] : undefined;
@@ -360,7 +514,7 @@ function NodeDetails({
         <div className="pf-v6-u-mt-md">
           <GatewaySummary node={node} />
           <div className="pf-v6-u-mt-md">
-            <NodeFields node={node} />
+            <NodeFields node={node} onSelectBundle={onSelectBundle} />
           </div>
         </div>
       </Tab>
@@ -373,7 +527,11 @@ function NodeDetails({
         }
       >
         <div className="pf-v6-u-mt-md">
-          <BundleContents bundle={bundle} />
+          <BundleContents
+            bundle={bundle}
+            seed={node.seed}
+            onSelectBundle={onSelectBundle}
+          />
         </div>
       </Tab>
       <Tab
@@ -395,14 +553,22 @@ function NodeDetails({
 function GateDetails({
   gateId,
   model,
+  onSelectBundle,
 }: {
   gateId: string;
   model: MapModel;
+  onSelectBundle: (seed: string) => void;
 }): React.ReactElement | null {
   const gate = model.gates.find((x) => x.id === gateId);
   if (!gate) {
     return null;
   }
+  const promotingLabel =
+    gate.promotingSeed !== null
+      ? gate.promotingVersion
+        ? `${gate.promotingVersion} · ${identiName(gate.promotingSeed)}`
+        : identiName(gate.promotingSeed)
+      : null;
   return (
     <DescriptionList isCompact>
       <Row term={<FormattedMessage {...messages.detailFlow} />}>
@@ -414,15 +580,47 @@ function GateDetails({
           <FlexItem>
             <LongArrowAltRightIcon />
           </FlexItem>
-          <FlexItem>{gate.toColumnKey}</FlexItem>
+          <FlexItem>
+            {gate.terminal ? (
+              <em>
+                <FormattedMessage {...messages.detailFinalStage} />
+              </em>
+            ) : (
+              gate.toColumnKey
+            )}
+          </FlexItem>
         </Flex>
       </Row>
       <Row term={<FormattedMessage {...messages.columnGates} />}>
         <StatusLabel badge={gate.badge} />
       </Row>
+      {gate.analysisUrl ? (
+        <Row term={<FormattedMessage {...messages.detailAnalysisRun} />}>
+          <Flex spaceItems={{ default: "spaceItemsSm" }}>
+            <Link
+              href={gate.analysisUrl}
+              label={<FormattedMessage {...messages.linkAnalysis} />}
+            />
+          </Flex>
+        </Row>
+      ) : null}
+      {gate.argoUrl ? (
+        <Row term={<FormattedMessage {...messages.detailAnalysisLogs} />}>
+          <Flex spaceItems={{ default: "spaceItemsSm" }}>
+            <Link
+              href={gate.argoUrl}
+              label={<FormattedMessage {...messages.linkArgo} />}
+            />
+          </Flex>
+        </Row>
+      ) : null}
       <Row term={<FormattedMessage {...messages.detailPromoting} />}>
-        {gate.promoting ? (
-          <StatusLabel badge={gatePhaseBadge("pending")} />
+        {gate.promotingSeed !== null && promotingLabel !== null ? (
+          <BundleChip
+            seed={gate.promotingSeed}
+            label={promotingLabel}
+            onSelect={onSelectBundle}
+          />
         ) : (
           <FormattedMessage {...messages.valueNone} />
         )}
@@ -499,6 +697,7 @@ export function MapDetails({
   releaseByDigest,
   selection,
   onClose,
+  onSelectBundle,
 }: MapDetailsProps): React.ReactElement {
   const intl = useIntl();
   const node =
@@ -515,9 +714,21 @@ export function MapDetails({
         alignItems={{ default: "alignItemsCenter" }}
       >
         <FlexItem>
-          <Title headingLevel="h3" size="md">
-            {title}
-          </Title>
+          <Flex
+            alignItems={{ default: "alignItemsCenter" }}
+            spaceItems={{ default: "spaceItemsSm" }}
+          >
+            {selection.kind === "bundle" ? (
+              <FlexItem>
+                <BundleIdenticon seed={selection.id} />
+              </FlexItem>
+            ) : null}
+            <FlexItem>
+              <Title headingLevel="h3" size="md">
+                {title}
+              </Title>
+            </FlexItem>
+          </Flex>
         </FlexItem>
         <FlexItem>
           <Button
@@ -529,10 +740,18 @@ export function MapDetails({
         </FlexItem>
       </Flex>
       {selection.kind === "node" && node ? (
-        <NodeDetails node={node} releaseByDigest={releaseByDigest} />
+        <NodeDetails
+          node={node}
+          releaseByDigest={releaseByDigest}
+          onSelectBundle={onSelectBundle}
+        />
       ) : null}
       {selection.kind === "gate" ? (
-        <GateDetails gateId={selection.id} model={model} />
+        <GateDetails
+          gateId={selection.id}
+          model={model}
+          onSelectBundle={onSelectBundle}
+        />
       ) : null}
       {selection.kind === "bundle" ? (
         <BundleDetails

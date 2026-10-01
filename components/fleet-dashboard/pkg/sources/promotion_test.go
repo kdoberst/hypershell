@@ -81,6 +81,7 @@ func TestPromotionDerivation(t *testing.T) {
 		PromoterVersion:       "v1alpha1",
 		ArgoGroup:             "argoproj.io",
 		ArgoVersion:           "v1alpha1",
+		ArgoBaseURL:           "https://argo.example",
 	}
 	p := NewPromotion(c, dyn, nil, nil, nil)
 
@@ -103,6 +104,9 @@ func TestPromotionDerivation(t *testing.T) {
 	}
 	if alpha.ArgoHealth != "Healthy" || alpha.ArgoSync != "Synced" {
 		t.Errorf("alpha argo status not surfaced: health=%q sync=%q", alpha.ArgoHealth, alpha.ArgoSync)
+	}
+	if want := "https://argo.example/applications/promoter-ns/promoter-ns-alpha?resource=kind%3AAnalysisRun%2Ckind%3APod%2Ckind%3AJob"; alpha.ArgoURL != want {
+		t.Errorf("alpha argoUrl = %q, want %q", alpha.ArgoURL, want)
 	}
 
 	beta := payload.Environments["beta"]

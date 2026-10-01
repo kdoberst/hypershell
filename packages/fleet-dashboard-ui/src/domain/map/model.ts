@@ -3,11 +3,14 @@
 //
 // FIREWALL: this module hard-codes NOTHING about the fleet - no environment
 // names, no hub table, no provider list, no ordering. Columns are the promotion
-// environments in `promotion.order` (one column per env, left -> right), lanes come
-// from `role`/`provider`, the env-type (`envLabel`) only groups column headers, and
-// gates come from the per-env gate data. A static ENV->HUB or provider table here
-// would bake the topology into public source; deriving it at runtime is the whole
-// point (data-architecture.spec §3.5 in the gitops repo).
+// STAGES - the hubs in `promotion.order`, left -> right - and a spoke (a hub's
+// managed cluster) stacks into its hub's column rather than forming its own stage,
+// so a hub and its managed clusters share one column with no gate between them.
+// Lanes come from `role`/`provider`, the env-type (`envLabel`) only groups column
+// headers, and each column gets a gate to its right reporting that env's own
+// analysis (the condition to promote out of it). A static ENV->HUB or provider
+// table here would bake the topology into public source; deriving it at runtime is
+// the whole point (data-architecture.spec §3.5 in the gitops repo).
 
 import {
   findInstance,
@@ -15,6 +18,7 @@ import {
   totalGateways,
   ZERO_RATE,
   type FleetData,
+  type GatewayHistorySample,
   type GatewayPhaseCounts,
   type RateStats,
 } from "../fleet";
@@ -50,10 +54,10 @@ export interface MapNode {
   /** Instance key from the payload (runtime data, never compiled in). */
   readonly id: string;
   /**
-   * Column this node belongs to: its promotion environment (the `promotion.order`
-   * identity). Each environment is one column, laid left -> right in promotion
-   * order, so a cloud's sequential stages read across, not stacked (the promoter
-   * model - every environment is a distinct promotion step).
+   * Column (promotion stage) this node belongs to. A hub is its own column, laid
+   * left -> right in promotion order. A spoke (a hub's managed cluster) carries its
+   * hub's key, so it stacks into the hub's column instead of forming a separate
+   * stage - a hub and its managed clusters move together, with no gate between them.
    */
   readonly columnKey: string;
   /** Env-type grouping (int/stage/prod, server data) used for the header bands. */
@@ -87,8 +91,8 @@ export interface MapNode {
   readonly gateways: GatewayPhaseCounts;
   readonly gatewaysTotal: number;
   readonly gatewayTone: StatusBadge["tone"];
-  /** Total-gateway samples oldest -> newest for the sand spark (may be empty). */
-  readonly gatewayHistory: readonly number[];
+  /** Per-phase samples oldest -> newest for the stacked sand spark (may be empty). */
+  readonly gatewayHistory: readonly GatewayHistorySample[];
   readonly managedClusters: number | null;
   readonly users: number | null;
   readonly metrics: MapNodeMetrics;
@@ -112,16 +116,44 @@ export interface MapLane {
   readonly hostsHub: boolean;
 }
 
-/** A promotion gate sitting between two adjacent columns on the hub spine. */
+/**
+ * A promotion gate on the hub spine. It rides to the RIGHT of its SOURCE column
+ * (`fromColumnKey`) because a gate reports the source environment's own health
+ * (its analysis commit-status, name from runtime data), which is what must pass to
+ * promote OUT of it into the next stage - a GitOps-Promoter env only advances once
+ * its upstream dependency's checks are green. The last stage's gate is `terminal`
+ * (no downstream column): it sits past the final column and reports that stage's
+ * own analysis.
+ */
 export interface MapGate {
   readonly id: string;
+  /** The SOURCE column: the env whose analysis this gate reports. */
   readonly fromColumnKey: string;
+  /** The destination column fed when this gate passes; "" for the terminal gate. */
   readonly toColumnKey: string;
+  /** True for the final stage's gate: it has no downstream column. */
+  readonly terminal: boolean;
   readonly badge: StatusBadge;
-  /** Gate display name, from the destination's governing gates (opaque data). */
+  /** Gate display name, from the SOURCE env's governing gates (opaque data). */
   readonly name: string | null;
+  /** Deep-link to the source env's analysis run, when the server provides one. */
+  readonly analysisUrl: string | null;
+  /**
+   * Deep-link to the source env's Argo CD Application tree, where its analysis
+   * AnalysisRun and the Jobs/Pods it spawns surface - so the analysis logs are
+   * viewable there without piping. Null when the server provides no Argo URL.
+   */
+  readonly argoUrl: string | null;
   /** True when a release is actively promoting into the destination column. */
   readonly promoting: boolean;
+  /**
+   * Identicon/identiname seed of the release promoting into the destination, when
+   * one is (the destination's proposed digest, else its key). Null when nothing is
+   * promoting. Lets the gate sidebar name WHICH bundle it is carrying.
+   */
+  readonly promotingSeed: string | null;
+  /** Version string of the promoting release, when one is. Null otherwise. */
+  readonly promotingVersion: string | null;
 }
 
 export interface MapModel {
@@ -146,13 +178,17 @@ function laneKeyFor(provider: string | null): string {
   return provider ?? "none";
 }
 
-function buildNode(env: PromotionEnvironment, fleet: FleetData): MapNode {
+function buildNode(
+  env: PromotionEnvironment,
+  fleet: FleetData,
+  columnKey: string,
+): MapNode {
   const provider = nonEmpty(env.provider);
   const fl = findInstance(fleet.instances, env.name);
   const gateways = fl?.gateways ?? {};
   return {
     id: env.name,
-    columnKey: env.name,
+    columnKey,
     envLabel: nonEmpty(env.envLabel),
     laneKey: laneKeyFor(provider),
     isHub: isHubRole(env.role),
@@ -190,6 +226,40 @@ function buildNode(env: PromotionEnvironment, fleet: FleetData): MapNode {
       analysis: env.analysisUrl,
     },
   };
+}
+
+/**
+ * Assign each environment to a promotion COLUMN (stage). Hubs are the stages, one
+ * column each. A spoke (non-hub) joins the column of the hub it belongs to: the hub
+ * whose name is the longest prefix of the spoke's name (a managed cluster's name
+ * extends its hub's name), so a hub and its managed clusters share one stage and get
+ * no gate between them. A spoke that matches no hub keeps its own column. FIREWALL:
+ * the pairing is derived from the runtime role + name data alone - no fleet names,
+ * hub table or ordering are baked in.
+ */
+function assignColumns(
+  envs: readonly PromotionEnvironment[],
+): Map<string, string> {
+  const hubNames = envs.filter((e) => isHubRole(e.role)).map((e) => e.name);
+  const columnKey = new Map<string, string>();
+  for (const e of envs) {
+    if (isHubRole(e.role)) {
+      columnKey.set(e.name, e.name);
+      continue;
+    }
+    let hub: string | null = null;
+    for (const h of hubNames) {
+      if (
+        e.name !== h &&
+        e.name.startsWith(h) &&
+        (hub === null || h.length > hub.length)
+      ) {
+        hub = h;
+      }
+    }
+    columnKey.set(e.name, hub ?? e.name);
+  }
+  return columnKey;
 }
 
 /**
@@ -244,39 +314,56 @@ function buildGates(
   byId: ReadonlyMap<string, MapNode>,
 ): MapGate[] {
   const gates: MapGate[] = [];
-  for (let i = 1; i < columns.length; i++) {
-    const to = columns[i];
-    const from = columns[i - 1];
-    if (!to || !from) {
+  // One gate per column, riding to its RIGHT and reporting THAT column's (source)
+  // analysis - the condition to promote out of it. The last column's gate is
+  // terminal (no downstream env), reporting the final stage's own analysis.
+  for (let i = 0; i < columns.length; i++) {
+    const from = columns[i];
+    if (!from) {
       continue;
     }
-    const governing = governingNode(to, byId);
-    if (!governing) {
+    const source = governingNode(from, byId);
+    if (!source) {
       continue;
     }
+    const to = columns[i + 1] ?? null;
+    const dest = to ? governingNode(to, byId) : null;
+    // A release is crossing this gate only when the DESTINATION is receiving one;
+    // the terminal gate (no destination) never animates.
+    const promoting = dest?.state === "promoting";
     gates.push({
-      id: `${from.key}->${to.key}`,
+      id: to ? `${from.key}->${to.key}` : `${from.key}->end`,
       fromColumnKey: from.key,
-      toColumnKey: to.key,
-      badge: governing.gateBadge,
-      name: governing.gateNames[0] ?? null,
-      promoting: governing.state === "promoting",
+      toColumnKey: to?.key ?? "",
+      terminal: to === null,
+      badge: source.gateBadge,
+      name: source.gateNames[0] ?? null,
+      analysisUrl: source.links.analysis,
+      argoUrl: source.links.argo,
+      promoting,
+      // The bundle in flight is the destination's PROPOSED release (identicon seed
+      // = its proposed digest, else the instance key). Null when nothing is moving.
+      promotingSeed: promoting ? (dest.proposedDigest ?? dest.id) : null,
+      promotingVersion: promoting ? dest.proposedVersion : null,
     });
   }
   return gates;
 }
 
 /**
- * Project the promotion plane (+ fleet metrics) into the map model. Columns follow
- * the server's promotion order; nodes carry their merged promotion + fleet state;
- * gates bridge adjacent columns using the destination column's governing node.
+ * Project the promotion plane (+ fleet metrics) into the map model. Columns are the
+ * hub stages in the server's promotion order (spokes stack into their hub's column);
+ * nodes carry their merged promotion + fleet state; each column gets a gate to its
+ * right reporting that (source) column's governing node's analysis.
  */
 export function buildMapModel(
   promotion: PromotionData,
   fleet: FleetData,
 ): MapModel {
-  const nodes = orderedEnvironments(promotion).map((env) =>
-    buildNode(env, fleet),
+  const envs = orderedEnvironments(promotion);
+  const columnKeyByName = assignColumns(envs);
+  const nodes = envs.map((env) =>
+    buildNode(env, fleet, columnKeyByName.get(env.name) ?? env.name),
   );
   const byId = new Map(nodes.map((n) => [n.id, n]));
 

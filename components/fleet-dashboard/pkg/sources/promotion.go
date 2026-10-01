@@ -23,6 +23,7 @@ type Promotion struct {
 	ns        string
 	strategy  string
 	argoNS    []string
+	argoBase  string
 	psGVR     schema.GroupVersionResource
 	ctpGVR    schema.GroupVersionResource
 	appGVR    schema.GroupVersionResource
@@ -84,6 +85,7 @@ func NewPromotion(c *config.Config, dyn dynamic.Interface, versioner VersionReso
 		ns:        c.PromoterNamespace,
 		strategy:  c.PromotionStrategyName,
 		argoNS:    c.ArgoNamespaces,
+		argoBase:  c.ArgoBaseURL,
 		psGVR:     schema.GroupVersionResource{Group: c.PromoterGroup, Version: c.PromoterVersion, Resource: "promotionstrategies"},
 		ctpGVR:    schema.GroupVersionResource{Group: c.PromoterGroup, Version: c.PromoterVersion, Resource: "changetransferpolicies"},
 		appGVR:    schema.GroupVersionResource{Group: c.ArgoGroup, Version: c.ArgoVersion, Resource: "applications"},
@@ -118,8 +120,13 @@ type Environment struct {
 	ActiveGates   []Gate `json:"activeGates"`
 	ProposedGates []Gate `json:"proposedGates"`
 	// Argo + delivery labels (present when a matching Application is found).
-	ArgoApp    string `json:"argoApp,omitempty"`
-	ArgoNS     string `json:"argoNs,omitempty"`
+	ArgoApp string `json:"argoApp,omitempty"`
+	ArgoNS  string `json:"argoNs,omitempty"`
+	// ArgoURL deep-links to the Application tree in the Argo CD UI, where the
+	// env's analysis AnalysisRun and the Jobs/Pods it spawns surface (so their
+	// logs are viewable without piping). Emitted only when a matching Application
+	// is found AND an Argo base URL is configured (firewall - see config).
+	ArgoURL    string `json:"argoUrl,omitempty"`
 	ArgoHealth string `json:"argoHealth,omitempty"`
 	ArgoSync   string `json:"argoSync,omitempty"`
 	Role       string `json:"role,omitempty"`
@@ -193,6 +200,7 @@ func (p *Promotion) Promotion(ctx context.Context) (any, error) {
 		if a, ok := argoByKey[key]; ok {
 			env.ArgoApp = a.app
 			env.ArgoNS = a.ns
+			env.ArgoURL = p.argoAppURL(a.ns, a.app)
 			env.ArgoHealth = a.health
 			env.ArgoSync = a.sync
 			env.Role = a.role
@@ -257,6 +265,28 @@ func (p *Promotion) pullRequestsByBranch(ctx context.Context) map[string]prInfo 
 		out[branch] = prInfo{state: state, url: url}
 	}
 	return out
+}
+
+// argoResourceFilter narrows the Application tree to the resources that carry
+// the analysis e2e logs: the AnalysisRun, its Pods, and the e2e Job. These are
+// generic Kubernetes/Argo Rollouts kinds, not fleet-identifying values, so they
+// are safe to compile in (data-architecture firewall). The value is the
+// pre-encoded form of ?resource=kind:AnalysisRun,kind:Pod,kind:Job.
+const argoResourceFilter = "?resource=kind%3AAnalysisRun%2Ckind%3APod%2Ckind%3AJob"
+
+// argoAppURL builds a deep link to an Argo CD Application tree. Modern Argo CD
+// routes Applications as /applications/<appNamespace>/<appName>. A resource
+// filter is appended so the tree lands pre-scoped to the analysis run, its pods,
+// and the e2e job. Returns "" when no base URL is configured (firewall) or the
+// app is unknown, so the field is simply omitted.
+func (p *Promotion) argoAppURL(ns, app string) string {
+	if p.argoBase == "" || app == "" {
+		return ""
+	}
+	if ns == "" {
+		return fmt.Sprintf("%s/applications/%s%s", p.argoBase, app, argoResourceFilter)
+	}
+	return fmt.Sprintf("%s/applications/%s/%s%s", p.argoBase, ns, app, argoResourceFilter)
 }
 
 type argoInfo struct {
