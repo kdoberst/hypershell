@@ -120,3 +120,118 @@ func TestPromotionDerivation(t *testing.T) {
 		t.Errorf("beta proposed gates = %+v, want one some-check", beta.ProposedGates)
 	}
 }
+
+// fakeResolver resolves any SHA to a prebuilt Release, keyed by SHA, so tests can
+// drive canonicalRelease's dedup-by-identity behaviour directly.
+type fakeResolver map[string]*Release
+
+func (f fakeResolver) Resolve(_ context.Context, sha string) *Release {
+	if r, ok := f[sha]; ok {
+		return r
+	}
+	return nil
+}
+
+// TestCanonicalReleaseDedupByDigest proves the core "out of date" fix: two
+// distinct gitops dry SHAs that render the same release bundle (same digest)
+// collapse onto a single shared *Release and a single map entry, so envs on the
+// same bundle read up-to-date even when their gitops commits differ.
+func TestCanonicalReleaseDedupByDigest(t *testing.T) {
+	const digest = "sha256:6145e7f19d28d502b57f21aac8a60d4b07049390810264078e9bbc3e7aebd608"
+	p := &Promotion{versioner: fakeResolver{
+		"aaaaaaaa": {Version: "v20260930", Digest: digest, SHA: "aaaaaaaa"},
+		"bbbbbbbb": {Version: "v20260930", Digest: digest, SHA: "bbbbbbbb"},
+		"cccccccc": {Version: "cccccccc", SHA: "cccccccc"}, // no digest: short-SHA fallback
+	}}
+	releases := map[string]*Release{}
+	ctx := context.Background()
+
+	a := p.canonicalRelease(ctx, "aaaaaaaa", releases)
+	b := p.canonicalRelease(ctx, "bbbbbbbb", releases)
+	if a == nil || b == nil {
+		t.Fatal("canonicalRelease returned nil for a resolvable sha")
+	}
+	if a != b {
+		t.Errorf("same-digest SHAs must share one *Release: got %p and %p", a, b)
+	}
+	if a.SHA != "aaaaaaaa" {
+		t.Errorf("first resolution should win: SHA = %q, want aaaaaaaa", a.SHA)
+	}
+	// A different bundle (no digest) stays its own entry, keyed by SHA.
+	c := p.canonicalRelease(ctx, "cccccccc", releases)
+	if c == a {
+		t.Error("a distinct bundle must not collapse into the digest entry")
+	}
+	if _, ok := releases[digest]; !ok {
+		t.Errorf("digest-keyed entry missing: have keys %v", keysOf(releases))
+	}
+	if _, ok := releases["cccccccc"]; !ok {
+		t.Errorf("short-SHA entry missing: have keys %v", keysOf(releases))
+	}
+	if len(releases) != 2 {
+		t.Errorf("want 2 canonical releases (one per bundle identity), got %d: %v", len(releases), keysOf(releases))
+	}
+
+	// An unresolvable SHA yields nil and adds no entry.
+	if p.canonicalRelease(ctx, "zzzzzzzz", releases) != nil {
+		t.Error("unresolvable SHA must resolve to nil")
+	}
+	if len(releases) != 2 {
+		t.Errorf("unresolvable SHA must not add an entry, got %d", len(releases))
+	}
+}
+
+// TestSameRelease proves UpToDate's identity test: two releases match by bundle
+// digest (so differing gitops SHAs on the same bundle are up-to-date), fall back
+// to SHA when no digest, and a nil (unresolvable) side is never up-to-date.
+func TestSameRelease(t *testing.T) {
+	const digest = "sha256:6145e7f19d28d502b57f21aac8a60d4b07049390810264078e9bbc3e7aebd608"
+	cases := []struct {
+		name             string
+		active, proposed *Release
+		want             bool
+	}{
+		{
+			name:     "same digest, different gitops SHA -> up to date",
+			active:   &Release{Digest: digest, SHA: "aaaaaaaa"},
+			proposed: &Release{Digest: digest, SHA: "bbbbbbbb"},
+			want:     true,
+		},
+		{
+			name:     "different digest -> behind",
+			active:   &Release{Digest: digest, SHA: "aaaaaaaa"},
+			proposed: &Release{Digest: "sha256:other", SHA: "bbbbbbbb"},
+			want:     false,
+		},
+		{
+			name:     "no digest, same SHA -> up to date (short-SHA fallback)",
+			active:   &Release{SHA: "cccccccc"},
+			proposed: &Release{SHA: "cccccccc"},
+			want:     true,
+		},
+		{
+			name:     "no digest, different SHA -> behind",
+			active:   &Release{SHA: "cccccccc"},
+			proposed: &Release{SHA: "dddddddd"},
+			want:     false,
+		},
+		{name: "nil proposed -> behind", active: &Release{Digest: digest}, proposed: nil, want: false},
+		{name: "nil active -> behind", active: nil, proposed: &Release{Digest: digest}, want: false},
+		{name: "both nil -> behind", active: nil, proposed: nil, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sameRelease(tc.active, tc.proposed); got != tc.want {
+				t.Errorf("sameRelease = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func keysOf(m map[string]*Release) []string {
+	ks := make([]string, 0, len(m))
+	for k := range m {
+		ks = append(ks, k)
+	}
+	return ks
+}
