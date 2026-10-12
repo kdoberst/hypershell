@@ -4,8 +4,8 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Name** | **string** | Human-readable spoke name, unique per fleet (e.g. hyp0-mc1). Must match on every subsequent call. | 
-**Description** | Pointer to **string** | Optional description of the spoke. | [optional] 
+**Name** | **string** | Human-readable spoke name, unique per fleet (e.g. hyp0-mc1). Must match on every subsequent call. |
+**Description** | Pointer to **string** | Optional description of the spoke. | [optional]
 **Capabilities** | **[]string** | Complete self-declared capability set. |
 
 ## Methods
@@ -94,4 +94,3 @@ SetCapabilities sets Capabilities field to given value.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-

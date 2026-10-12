@@ -512,6 +512,11 @@ jobs:
           # stale image would 400 and abort. The "Seed platform resources" step
           # runs it once the working-tree images are swapped in.
           SKIP_SEED: "true"
+          # kind-up starts the main-branch controller while the PR image builds.
+          # This temporary input satisfies that old binary only; the image-swap
+          # helper removes it before checking the PR controller rollout.
+          KIND_BASELINE_MANAGED_CLUSTER_PROVIDER: "kind"
+          KIND_BASELINE_MANAGED_CLUSTER_VISIBILITY: "public"
         run: make kind-up
 
       - name: Save cloud-provider-kind cache

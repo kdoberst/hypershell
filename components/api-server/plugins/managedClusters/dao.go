@@ -2,6 +2,8 @@ package managedClusters
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm/clause"
@@ -124,12 +126,16 @@ func (d *sqlManagedClusterDao) FindDeletedBySubjectAndName(ctx context.Context, 
 
 func (d *sqlManagedClusterDao) Restore(ctx context.Context, id, provider, visibility string, capabilities []string, lastSeenAt time.Time) (*ManagedCluster, error) {
 	g2 := (*d.sessionFactory).New(ctx)
+	encodedCapabilities, err := json.Marshal(capabilities)
+	if err != nil {
+		return nil, fmt.Errorf("encode managed cluster capabilities: %w", err)
+	}
 	if err := g2.Unscoped().Model(&ManagedCluster{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"deleted_at":   nil,
 			"provider":     provider,
 			"visibility":   visibility,
-			"capabilities": capabilities,
+			"capabilities": string(encodedCapabilities),
 			"last_seen_at": lastSeenAt,
 			"updated_at":   time.Now(),
 		}).Error; err != nil {
