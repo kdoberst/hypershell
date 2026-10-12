@@ -158,7 +158,9 @@ func TestGRPCCapabilitySelectorPlacementSurvivesCapabilityReplacement(t *testing
 	Expect(replaced.Capabilities).To(Equal([]string{"network/vpn", "provider/aws"}))
 	Expect(replaced.LastSeenAt.After(initialSeenAt)).To(BeTrue())
 
-	beforeInvalidSeenAt := *replaced.LastSeenAt
+	beforeInvalid, svcErr := clusterService.Get(ctx, cluster.ID)
+	Expect(svcErr).To(BeNil())
+	beforeInvalidSeenAt := *beforeInvalid.LastSeenAt
 	_, _, svcErr = clusterService.Register(ctx, cluster.Name, "", []string{"unknown/value"}, cluster.OIDCSubject)
 	Expect(svcErr).NotTo(BeNil())
 	afterInvalid, svcErr := clusterService.Get(ctx, cluster.ID)
