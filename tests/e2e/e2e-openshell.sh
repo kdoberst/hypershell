@@ -3496,17 +3496,19 @@ except Exception: pass" "$PADMIN_USERS_FILE" 2>/dev/null)
   acquire_oidc_token 2>/dev/null || true
 
   # ── 14b. Unknown gateway phase rejected ──
-  # Any existing gateway serves as the target; the PATCH is rejected before any
-  # write, so the stored phase is unchanged.
-  PHASE_GW_JSON=$(api_curl "${API_HOST}/api/hypershell/v1/gateways?size=1" 2>/dev/null || true)
-  PHASE_GW_ID=$(echo "$PHASE_GW_JSON" | python3 -c "import json,sys
-try:
-    items=json.load(sys.stdin).get('items',[])
-    print(items[0].get('id','') if items else '')
-except Exception: pass" 2>/dev/null)
+  # Use a dedicated gateway created by the active identity. The admin can see
+  # gateways it does not own, but visibility alone does not grant PATCH access;
+  # selecting the first visible gateway makes this validation depend on list
+  # order and can produce 403 before request validation runs.
+  PHASE_GW_NAME="e2e-phase-validation-$RANDOM"
+  PHASE_GW_BODY=$(e2e_gateway_create_body "$PHASE_GW_NAME")
+  PHASE_GW_RESPONSE=$(api_curl -X POST "${API_HOST}/api/hypershell/v1/gateways" \
+    -H "Content-Type: application/json" -d "$PHASE_GW_BODY" 2>/dev/null || true)
+  PHASE_GW_ID=$(echo "$PHASE_GW_RESPONSE" | e2e_json_field id)
   if [[ -z "$PHASE_GW_ID" ]]; then
-    dim "  Skipped unknown-phase check: no gateway available to target"
+    fail_test "Could not create the owned gateway for unknown-phase validation"
   else
+    E2E_EXTRA_GW_IDS+=("$PHASE_GW_ID")
     PHASE_BEFORE=$(api_curl "${API_HOST}/api/hypershell/v1/gateways/${PHASE_GW_ID}" 2>/dev/null | e2e_json_field phase)
     show_cmd "api_curl -X PATCH .../gateways/${PHASE_GW_ID} -d '{phase: Bogus}'  # expect 400"
     PHASE_FILE=$(mktemp)
@@ -3524,6 +3526,15 @@ except Exception: pass" 2>/dev/null)
       pass "Stored gateway phase is unchanged after the rejected write (${PHASE_AFTER})"
     else
       fail_test "Stored gateway phase changed after a rejected write (${PHASE_BEFORE} -> ${PHASE_AFTER})"
+    fi
+    PHASE_DELETE_CODE=$(api_curl -o /dev/null -w '%{http_code}' -X DELETE \
+      "${API_HOST}/api/hypershell/v1/gateways/${PHASE_GW_ID}" 2>/dev/null || true)
+    if [[ "$PHASE_DELETE_CODE" == "204" || "$PHASE_DELETE_CODE" == "200" ]]; then
+      PHASE_NEW_EXTRA=()
+      for _x in "${E2E_EXTRA_GW_IDS[@]}"; do
+        [[ "$_x" != "$PHASE_GW_ID" ]] && PHASE_NEW_EXTRA+=("$_x")
+      done
+      E2E_EXTRA_GW_IDS=("${PHASE_NEW_EXTRA[@]}")
     fi
   fi
 fi
