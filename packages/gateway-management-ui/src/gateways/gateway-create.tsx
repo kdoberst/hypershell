@@ -101,6 +101,7 @@ function Choice({
   value,
   selected,
   icon,
+  iconClassName,
   iconPadding,
   isDisabled,
   name,
@@ -112,6 +113,7 @@ function Choice({
   value: string;
   selected?: boolean;
   icon?: string;
+  iconClassName?: string;
   iconPadding?: string;
   isDisabled?: boolean;
   name: string;
@@ -163,7 +165,11 @@ function Choice({
           {icon ? (
             <span className={styles.providerContent}>
               <img
-                className={styles.providerLogo}
+                className={[styles.providerLogo, iconClassName]
+                  .filter((className): className is string =>
+                    Boolean(className),
+                  )
+                  .join(" ")}
                 src={icon}
                 alt=""
                 style={iconPadding ? { padding: iconPadding } : undefined}
@@ -608,7 +614,7 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                         : intl.formatMessage(messages.awsProviderDescription)
                     }
                     icon={awsLogo}
-                    iconPadding="0.5rem 0"
+                    iconClassName={styles.awsProviderLogo}
                     isDisabled={
                       availability.data
                         ? !(network === "vpn"

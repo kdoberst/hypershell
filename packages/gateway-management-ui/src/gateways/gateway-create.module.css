@@ -20,6 +20,10 @@
   object-position: center;
   box-sizing: content-box;
 }
+.awsProviderLogo {
+  width: 12rem;
+  height: 5rem;
+}
 .providerContent {
   display: block;
   text-align: center;
