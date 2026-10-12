@@ -23,7 +23,7 @@ func controlPlaneContext(h *test.Helper, subject string) context.Context {
 
 func register(client *openapi.APIClient, ctx context.Context, name string) (*openapi.ManagedClusterRegistrationResponse, *http.Response, error) {
 	return client.DefaultAPI.RegisterManagedCluster(ctx).
-		ManagedClusterRegistrationRequest(openapi.ManagedClusterRegistrationRequest{Name: name, Provider: openapi.PtrString("aws"), Visibility: openapi.PtrString("public")}).
+		ManagedClusterRegistrationRequest(openapi.ManagedClusterRegistrationRequest{Name: name, Capabilities: []string{"network/public", "provider/aws"}}).
 		Execute()
 }
 
@@ -58,58 +58,19 @@ func TestManagedClusterRegistrationIdempotent(t *testing.T) {
 	Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 }
 
-func TestManagedClusterRegistrationAcceptsLegacyHeartbeatWithoutErasingPlacement(t *testing.T) {
+func TestManagedClusterRegistrationRequiresCapabilities(t *testing.T) {
 	h, client := test.RegisterIntegration(t)
 	ctx := controlPlaneContext(h, uniqueName("cp"))
 	name := uniqueName("hyp0-mc")
 
-	legacy := openapi.ManagedClusterRegistrationRequest{Name: name}
-	first, resp, err := client.DefaultAPI.RegisterManagedCluster(ctx).
-		ManagedClusterRegistrationRequest(legacy).
+	_, resp, err := client.DefaultAPI.RegisterManagedCluster(ctx).
+		ManagedClusterRegistrationRequest(openapi.ManagedClusterRegistrationRequest{Name: name}).
 		Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-
-	_, resp, err = client.DefaultAPI.RegisterManagedCluster(ctx).
-		ManagedClusterRegistrationRequest(openapi.ManagedClusterRegistrationRequest{
-			Name:       name,
-			Provider:   openapi.PtrString("ibm"),
-			Visibility: openapi.PtrString("public"),
-		}).
-		Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-	_, resp, err = client.DefaultAPI.RegisterManagedCluster(ctx).
-		ManagedClusterRegistrationRequest(legacy).
-		Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-	cluster, _, err := client.DefaultAPI.GetManagedCluster(ctx, first.ClusterId).Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cluster.Provider).To(Equal("ibm"))
-	Expect(cluster.GetVisibility()).To(Equal("public"))
-
-	resp, err = client.DefaultAPI.DeleteManagedCluster(ctx, first.ClusterId).Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
-
-	_, resp, err = client.DefaultAPI.RegisterManagedCluster(ctx).
-		ManagedClusterRegistrationRequest(legacy).
-		Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-
-	cluster, _, err = client.DefaultAPI.GetManagedCluster(ctx, first.ClusterId).Execute()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cluster.Provider).To(Equal("ibm"))
-	Expect(cluster.GetVisibility()).To(Equal("public"))
+	Expect(err).To(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 }
 
-// Re-registration restores placement metadata from the current registration,
-// rather than retaining the provider and visibility from the deleted record.
-func TestManagedClusterRegistrationRestoreRefreshesPlacementMetadata(t *testing.T) {
+func TestManagedClusterRegistrationRestoreRefreshesCapabilities(t *testing.T) {
 	h, client := test.RegisterIntegration(t)
 	ctx := controlPlaneContext(h, uniqueName("cp"))
 	name := uniqueName("hyp0-mc")
@@ -124,9 +85,8 @@ func TestManagedClusterRegistrationRestoreRefreshesPlacementMetadata(t *testing.
 
 	restored, resp, err := client.DefaultAPI.RegisterManagedCluster(ctx).
 		ManagedClusterRegistrationRequest(openapi.ManagedClusterRegistrationRequest{
-			Name:       name,
-			Provider:   openapi.PtrString("ibm"),
-			Visibility: openapi.PtrString("public"),
+			Name:         name,
+			Capabilities: []string{"network/public", "provider/ibm"},
 		}).Execute()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
@@ -134,8 +94,7 @@ func TestManagedClusterRegistrationRestoreRefreshesPlacementMetadata(t *testing.
 
 	cluster, _, err := client.DefaultAPI.GetManagedCluster(ctx, restored.ClusterId).Execute()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(cluster.Provider).To(Equal("ibm"))
-	Expect(cluster.GetVisibility()).To(Equal("public"))
+	Expect(cluster.Capabilities).To(Equal([]string{"network/public", "provider/ibm"}))
 	Expect(cluster.LastSeenAt).NotTo(BeNil())
 }
 

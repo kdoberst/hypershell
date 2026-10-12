@@ -407,40 +407,19 @@ components:
           description: JSON-encoded credential storage driver configuration
     GatewayPlacementIntent:
       type: object
-      description: Exactly one of selector, legacy network/provider, or mode must be supplied.
+      description: Exactly one of selector or mode must be supplied.
       oneOf:
         - title: Capability selector placement
           required: [selector]
           not:
-            anyOf:
-              - required: [mode]
-              - required: [network]
-              - required: [provider]
-        - title: Legacy managed placement
-          required: [network, provider]
-          not:
-            anyOf:
-              - required: [mode]
-              - required: [selector]
+            required: [mode]
         - title: Local Kind placement
           required: [mode]
           not:
-            anyOf:
-              - required: [network]
-              - required: [provider]
-              - required: [selector]
+            required: [selector]
       properties:
         selector:
           $ref: '#/components/schemas/GatewayPlacementSelector'
-        network:
-          type: string
-          enum: [public, vpn]
-          deprecated: true
-        provider:
-          type: string
-          enum: [aws, ibm]
-          deprecated: true
-          description: Legacy compatibility field translated to a provider capability label.
         mode:
           type: string
           enum: [local-kind]

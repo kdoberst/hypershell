@@ -3203,7 +3203,7 @@
             "name": "placement",
             "type": "object",
             "required": true,
-            "description": "Exactly one of selector, legacy network/provider, or mode must be supplied."
+            "description": "Exactly one of selector or mode must be supplied."
           },
           {
             "name": "route",
@@ -6970,8 +6970,8 @@
           {
             "name": "capabilities",
             "type": "array",
-            "required": false,
-            "description": "Complete self-declared capability set. Omission is accepted only for legacy heartbeat compatibility."
+            "required": true,
+            "description": "Complete self-declared capability set."
           },
           {
             "name": "description",
@@ -6984,27 +6984,6 @@
             "type": "string",
             "required": true,
             "description": "Human-readable spoke name, unique per fleet (e.g. hyp0-mc1). Must match on every subsequent call."
-          },
-          {
-            "name": "provider",
-            "type": "string",
-            "required": false,
-            "description": "Cloud provider hosting this control plane.",
-            "enum": [
-              "aws",
-              "ibm",
-              "kind"
-            ]
-          },
-          {
-            "name": "visibility",
-            "type": "string",
-            "required": false,
-            "description": "Network visibility supported for gateways on this control plane.",
-            "enum": [
-              "public",
-              "vpn"
-            ]
           }
         ]
       },

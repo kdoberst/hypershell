@@ -130,14 +130,6 @@ func newRegisteredPlacementService(s *environments.Services) *registeredPlacemen
 	return &registeredPlacementService{services: s, now: time.Now}
 }
 
-func normalizePlacementProvider(provider string) string {
-	provider = strings.ToLower(strings.TrimSpace(provider))
-	if provider == "ibm cloud" {
-		return "ibm"
-	}
-	return provider
-}
-
 func (p *registeredPlacementService) snapshot(ctx context.Context) (placementSnapshot, *errors.ServiceError) {
 	result := placementSnapshot{}
 	svc := managedClusters.Service(p.services)
@@ -195,9 +187,6 @@ func (p *registeredPlacementService) Resolve(ctx context.Context, intent openapi
 		return snapshot.localID, nil
 	}
 	selector := intent.Selector
-	if selector == nil && intent.Network != nil && intent.Provider != nil {
-		selector = []string{"network/" + *intent.Network, "provider/" + normalizePlacementProvider(*intent.Provider)}
-	}
 	selector, validationErr := managedClusters.NormalizeSelector(selector)
 	if validationErr != nil {
 		return "", validationErr

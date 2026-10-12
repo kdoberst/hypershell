@@ -34,8 +34,7 @@ type ManagedClusterService interface {
 	// held by a record with a different or empty oidc_subject, or a subject
 	// already registered under another name, is a 409 Conflict: registration
 	// never creates a duplicate name and never adopts an existing record.
-	Register(ctx context.Context, name, description, provider, visibility, oidcSubject string) (*ManagedCluster, bool, *errors.ServiceError)
-	RegisterWithCapabilities(ctx context.Context, name, description, provider, visibility string, capabilities []string, capabilitiesSupplied bool, oidcSubject string) (*ManagedCluster, bool, *errors.ServiceError)
+	Register(ctx context.Context, name, description string, capabilities []string, oidcSubject string) (*ManagedCluster, bool, *errors.ServiceError)
 	// FindRegisteredBySubject returns the ManagedCluster a control plane
 	// registered under the given OIDC subject, or (nil, nil) when the subject
 	// has not registered. An empty subject never matches.
@@ -221,11 +220,11 @@ func normalizeCapabilityLabels(labels []string, requireNonEmpty, rejectDuplicate
 	return result, nil
 }
 
-func (s *sqlManagedClusterService) Register(ctx context.Context, name, description, provider, visibility, oidcSubject string) (*ManagedCluster, bool, *errors.ServiceError) {
-	return s.RegisterWithCapabilities(ctx, name, description, provider, visibility, nil, false, oidcSubject)
-}
-
-func (s *sqlManagedClusterService) RegisterWithCapabilities(ctx context.Context, name, description, provider, visibility string, capabilities []string, capabilitiesSupplied bool, oidcSubject string) (*ManagedCluster, bool, *errors.ServiceError) {
+func (s *sqlManagedClusterService) Register(ctx context.Context, name, description string, capabilities []string, oidcSubject string) (*ManagedCluster, bool, *errors.ServiceError) {
+	capabilities, validationErr := NormalizeCapabilities(capabilities, true)
+	if validationErr != nil {
+		return nil, false, validationErr
+	}
 	lockOwnerID, lockErr := s.lockFactory.NewAdvisoryLock(ctx, oidcSubject, managedClustersLockType)
 	if lockErr != nil {
 		return nil, false, errors.DatabaseAdvisoryLock(lockErr)
@@ -243,15 +242,7 @@ func (s *sqlManagedClusterService) RegisterWithCapabilities(ctx context.Context,
 		}
 		now := time.Now()
 		existing.LastSeenAt = &now
-		// A legacy control plane omits placement metadata. Its heartbeat must
-		// refresh connectivity without erasing values from a newer registration.
-		if provider != "" {
-			existing.Provider = provider
-			existing.Visibility = visibility
-		}
-		if capabilitiesSupplied {
-			existing.Capabilities = append([]string(nil), capabilities...)
-		}
+		existing.Capabilities = append([]string(nil), capabilities...)
 		updated, replaceErr := s.managedClusterDao.Replace(ctx, existing)
 		if replaceErr != nil {
 			return nil, false, services.HandleUpdateError("ManagedCluster", replaceErr)
@@ -284,14 +275,7 @@ func (s *sqlManagedClusterService) RegisterWithCapabilities(ctx context.Context,
 		return nil, false, errors.GeneralError("registration lookup failed: %s", delErr)
 	}
 	if deleted != nil {
-		if provider == "" {
-			provider = deleted.Provider
-			visibility = deleted.Visibility
-		}
-		if !capabilitiesSupplied {
-			capabilities = deleted.Capabilities
-		}
-		restored, restoreErr := s.managedClusterDao.Restore(ctx, deleted.ID, provider, visibility, capabilities, now)
+		restored, restoreErr := s.managedClusterDao.Restore(ctx, deleted.ID, "", "", capabilities, now)
 		if restoreErr != nil {
 			if isUniqueViolation(restoreErr) {
 				if winner, err := s.managedClusterDao.FindByName(ctx, name); err == nil && winner != nil {
@@ -314,8 +298,6 @@ func (s *sqlManagedClusterService) RegisterWithCapabilities(ctx context.Context,
 		Name:         name,
 		OIDCSubject:  oidcSubject,
 		LastSeenAt:   &now,
-		Provider:     provider,
-		Visibility:   visibility,
 		Capabilities: append([]string(nil), capabilities...),
 	}
 	cluster.CaptureTraceContext(ctx)

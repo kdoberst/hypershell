@@ -16,15 +16,13 @@ import (
 
 type registrationServiceStub struct {
 	ManagedClusterService
-	capabilities         []string
-	capabilitiesSupplied bool
-	called               bool
+	capabilities []string
+	called       bool
 }
 
-func (s *registrationServiceStub) RegisterWithCapabilities(_ context.Context, _, _, _, _ string, capabilities []string, supplied bool, _ string) (*ManagedCluster, bool, *errors.ServiceError) {
+func (s *registrationServiceStub) Register(_ context.Context, _, _ string, capabilities []string, _ string) (*ManagedCluster, bool, *errors.ServiceError) {
 	s.called = true
 	s.capabilities = capabilities
-	s.capabilitiesSupplied = supplied
 	cluster := &ManagedCluster{}
 	cluster.ID = "cluster-id"
 	return cluster, true, nil
@@ -36,14 +34,12 @@ func TestRegisterCapabilitiesJSONSemantics(t *testing.T) {
 		body             string
 		wantStatus       int
 		wantCalled       bool
-		wantSupplied     bool
 		wantCapabilities []string
 	}{
 		{
-			name:       "omitted preserves legacy registration",
+			name:       "omitted is rejected",
 			body:       `{"name":"cluster-one"}`,
-			wantStatus: http.StatusCreated,
-			wantCalled: true,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "empty array is rejected",
@@ -60,7 +56,6 @@ func TestRegisterCapabilitiesJSONSemantics(t *testing.T) {
 			body:             `{"name":"cluster-one","capabilities":["provider/aws","network/public"]}`,
 			wantStatus:       http.StatusCreated,
 			wantCalled:       true,
-			wantSupplied:     true,
 			wantCapabilities: []string{"network/public", "provider/aws"},
 		},
 	}
@@ -81,9 +76,6 @@ func TestRegisterCapabilitiesJSONSemantics(t *testing.T) {
 			}
 			if service.called != tt.wantCalled {
 				t.Fatalf("service called = %t, want %t", service.called, tt.wantCalled)
-			}
-			if service.capabilitiesSupplied != tt.wantSupplied {
-				t.Errorf("capabilities supplied = %t, want %t", service.capabilitiesSupplied, tt.wantSupplied)
 			}
 			if !reflect.DeepEqual(service.capabilities, tt.wantCapabilities) {
 				t.Errorf("capabilities = %v, want %v", service.capabilities, tt.wantCapabilities)

@@ -22,14 +22,13 @@ message ProvisioningCondition {
 
 message GatewayPlacementIntent {
   oneof placement {
-    NetworkProviderPlacement network_provider = 1;
+    CapabilitySelectorPlacement capability_selector = 1;
     LocalKindPlacement local_kind = 2;
   }
 }
 
-message NetworkProviderPlacement {
-  string network = 1;
-  string provider = 2;
+message CapabilitySelectorPlacement {
+  repeated string selector = 1;
 }
 
 message LocalKindPlacement {}

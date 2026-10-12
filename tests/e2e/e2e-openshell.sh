@@ -1834,7 +1834,7 @@ import json, os
 body = {
     'name': os.environ['GW_NAME'],
     'placement': ({'mode': 'local-kind'} if os.environ.get('E2E_INFRA_DRIVER') == 'kind'
-                  else {'network': 'public', 'provider': 'aws'}),
+                  else {'selector': ['network/public', 'provider/aws']}),
     'oidc': json.dumps({
         'issuer': os.environ['E2E_OIDC_ISSUER'],
         'audience': os.environ['E2E_OIDC_CLIENT_ID'],
@@ -2531,7 +2531,7 @@ import json, os
 body = {
     'name': os.environ['GW_NAME'],
     'placement': ({'mode': 'local-kind'} if os.environ.get('E2E_INFRA_DRIVER') == 'kind'
-                  else {'network': 'public', 'provider': 'aws'}),
+                  else {'selector': ['network/public', 'provider/aws']}),
     'oidc': json.dumps({
         'issuer': os.environ['E2E_OIDC_ISSUER'],
         'audience': os.environ['E2E_OIDC_CLIENT_ID'],
@@ -3013,7 +3013,7 @@ import json, os
 print(json.dumps({
     'name': os.environ['GW_NAME'],
     'cluster_id': '',
-    'placement': {'mode': 'local-kind'} if os.environ.get('E2E_INFRA_DRIVER') == 'kind' else {'network': 'public', 'provider': 'aws'},
+    'placement': {'mode': 'local-kind'} if os.environ.get('E2E_INFRA_DRIVER') == 'kind' else {'selector': ['network/public', 'provider/aws']},
     'oidc': json.dumps({'issuer': os.environ['E2E_OIDC_ISSUER'], 'audience': os.environ['E2E_OIDC_CLIENT_ID'],
                         'roles_claim': 'groups', 'admin_role': 'hypershell-admins', 'user_role': 'hypershell-users'}),
     'route': json.dumps({'enabled': True}),
@@ -3043,7 +3043,7 @@ import json, os
 print(json.dumps({
     'name': os.environ['GW_NAME'],
     'cluster_id': os.environ['PH_ID'],
-    'placement': {'mode': 'local-kind'} if os.environ.get('E2E_INFRA_DRIVER') == 'kind' else {'network': 'public', 'provider': 'aws'},
+    'placement': {'mode': 'local-kind'} if os.environ.get('E2E_INFRA_DRIVER') == 'kind' else {'selector': ['network/public', 'provider/aws']},
     'oidc': json.dumps({'issuer': os.environ['E2E_OIDC_ISSUER'], 'audience': os.environ['E2E_OIDC_CLIENT_ID'],
                         'roles_claim': 'groups', 'admin_role': 'hypershell-admins', 'user_role': 'hypershell-users'}),
     'route': json.dumps({'enabled': True}),

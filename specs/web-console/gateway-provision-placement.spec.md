@@ -242,9 +242,9 @@ The backend SHALL reject local-kind placement with a typed client-visible error 
 
 ### Requirement: GP-09 -- API and Persistence Compatibility
 
-The API contract, generated clients or adapters, authorization boundaries, and gateway provisioning tests SHALL be updated consistently for selector-based placement and batched availability. Existing gateway records and read APIs SHALL continue to expose their resolved `cluster_id`. During a bounded client rollout, the server MAY translate the legacy provider/network request into the equivalent two-label selector, but all availability and eligibility decisions SHALL use capabilities.
+The API contract, generated clients or adapters, authorization boundaries, and gateway provisioning tests SHALL be updated consistently for selector-based placement and batched availability. Existing gateway records and read APIs SHALL continue to expose their resolved `cluster_id`. Gateway creation SHALL require selector-based placement and SHALL NOT accept the former provider/network request shape.
 
-The Gateway table SHALL NOT require a migration unless the implementation introduces persisted placement-intent fields. The ManagedCluster capability migration is specified by `managed-cluster-registration.spec.md`. Placement intent MAY remain request-scoped after the backend resolves `cluster_id`.
+The Gateway table SHALL NOT require a migration unless the implementation introduces persisted placement-intent fields. Placement intent MAY remain request-scoped after the backend resolves `cluster_id`.
 
 #### Scenario: Existing gateway placement remains readable
 

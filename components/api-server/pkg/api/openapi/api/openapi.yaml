@@ -3529,8 +3529,6 @@ components:
         capabilities:
         - capabilities
         - capabilities
-        visibility: public
-        provider: aws
         name: name
         description: description
       properties:
@@ -3541,27 +3539,15 @@ components:
         description:
           description: Optional description of the spoke.
           type: string
-        provider:
-          description: Cloud provider hosting this control plane.
-          enum:
-          - aws
-          - ibm
-          - kind
-          type: string
-        visibility:
-          description: Network visibility supported for gateways on this control plane.
-          enum:
-          - public
-          - vpn
-          type: string
         capabilities:
-          description: Complete self-declared capability set. Omission is accepted
-            only for legacy heartbeat compatibility.
+          description: Complete self-declared capability set.
           items:
             type: string
+          minItems: 1
           type: array
           uniqueItems: true
       required:
+      - capabilities
       - name
       type: object
     ManagedClusterRegistrationResponse:
@@ -3863,15 +3849,12 @@ components:
           type: string
       type: object
     GatewayPlacementIntent:
-      description: "Exactly one of selector, legacy network/provider, or mode must\
-        \ be supplied."
+      description: Exactly one of selector or mode must be supplied.
       example:
         mode: local-kind
-        provider: aws
         selector:
         - selector
         - selector
-        network: public
       nullable: true
       oneOf: []
       properties:
@@ -3880,20 +3863,6 @@ components:
             type: string
           minItems: 1
           type: array
-        network:
-          deprecated: true
-          enum:
-          - public
-          - vpn
-          type: string
-        provider:
-          deprecated: true
-          description: Legacy compatibility field translated to a provider capability
-            label.
-          enum:
-          - aws
-          - ibm
-          type: string
         mode:
           enum:
           - local-kind
@@ -5298,11 +5267,9 @@ components:
         name: name
         placement:
           mode: local-kind
-          provider: aws
           selector:
           - selector
           - selector
-          network: public
         external_dns: external_dns
         status: status
       properties:

@@ -5,8 +5,6 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Selector** | Pointer to **[]string** |  | [optional] 
-**Network** | Pointer to **string** |  | [optional] 
-**Provider** | Pointer to **string** | Legacy compatibility field translated to a provider capability label. | [optional] 
 **Mode** | Pointer to **string** |  | [optional] 
 
 ## Methods
@@ -52,56 +50,6 @@ SetSelector sets Selector field to given value.
 `func (o *GatewayPlacementIntent) HasSelector() bool`
 
 HasSelector returns a boolean if a field has been set.
-
-### GetNetwork
-
-`func (o *GatewayPlacementIntent) GetNetwork() string`
-
-GetNetwork returns the Network field if non-nil, zero value otherwise.
-
-### GetNetworkOk
-
-`func (o *GatewayPlacementIntent) GetNetworkOk() (*string, bool)`
-
-GetNetworkOk returns a tuple with the Network field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetNetwork
-
-`func (o *GatewayPlacementIntent) SetNetwork(v string)`
-
-SetNetwork sets Network field to given value.
-
-### HasNetwork
-
-`func (o *GatewayPlacementIntent) HasNetwork() bool`
-
-HasNetwork returns a boolean if a field has been set.
-
-### GetProvider
-
-`func (o *GatewayPlacementIntent) GetProvider() string`
-
-GetProvider returns the Provider field if non-nil, zero value otherwise.
-
-### GetProviderOk
-
-`func (o *GatewayPlacementIntent) GetProviderOk() (*string, bool)`
-
-GetProviderOk returns a tuple with the Provider field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetProvider
-
-`func (o *GatewayPlacementIntent) SetProvider(v string)`
-
-SetProvider sets Provider field to given value.
-
-### HasProvider
-
-`func (o *GatewayPlacementIntent) HasProvider() bool`
-
-HasProvider returns a boolean if a field has been set.
 
 ### GetMode
 

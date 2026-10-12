@@ -31,7 +31,3 @@ patches:
                     value: "hub"
                   - name: HYPERSHELL_MANAGED_CLUSTER_CAPABILITIES
                     value: "provider/aws,network/public"
-                  - name: HYPERSHELL_MANAGED_CLUSTER_PROVIDER
-                    value: "aws"
-                  - name: HYPERSHELL_MANAGED_CLUSTER_VISIBILITY
-                    value: "public"

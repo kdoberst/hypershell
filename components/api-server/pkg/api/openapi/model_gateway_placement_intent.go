@@ -17,14 +17,9 @@ import (
 // checks if the GatewayPlacementIntent type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &GatewayPlacementIntent{}
 
-// GatewayPlacementIntent Exactly one of selector, legacy network/provider, or mode must be supplied.
+// GatewayPlacementIntent Exactly one of selector or mode must be supplied.
 type GatewayPlacementIntent struct {
 	Selector []string
-	// Deprecated
-	Network *string
-	// Legacy compatibility field translated to a provider capability label.
-	// Deprecated
-	Provider *string
 	Mode     *string
 }
 
@@ -77,76 +72,6 @@ func (o *GatewayPlacementIntent) SetSelector(v []string) {
 	o.Selector = v
 }
 
-// GetNetwork returns the Network field value if set, zero value otherwise.
-// Deprecated
-func (o *GatewayPlacementIntent) GetNetwork() string {
-	if o == nil || IsNil(o.Network) {
-		var ret string
-		return ret
-	}
-	return *o.Network
-}
-
-// GetNetworkOk returns a tuple with the Network field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-// Deprecated
-func (o *GatewayPlacementIntent) GetNetworkOk() (*string, bool) {
-	if o == nil || IsNil(o.Network) {
-		return nil, false
-	}
-	return o.Network, true
-}
-
-// HasNetwork returns a boolean if a field has been set.
-func (o *GatewayPlacementIntent) HasNetwork() bool {
-	if o != nil && !IsNil(o.Network) {
-		return true
-	}
-
-	return false
-}
-
-// SetNetwork gets a reference to the given string and assigns it to the Network field.
-// Deprecated
-func (o *GatewayPlacementIntent) SetNetwork(v string) {
-	o.Network = &v
-}
-
-// GetProvider returns the Provider field value if set, zero value otherwise.
-// Deprecated
-func (o *GatewayPlacementIntent) GetProvider() string {
-	if o == nil || IsNil(o.Provider) {
-		var ret string
-		return ret
-	}
-	return *o.Provider
-}
-
-// GetProviderOk returns a tuple with the Provider field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-// Deprecated
-func (o *GatewayPlacementIntent) GetProviderOk() (*string, bool) {
-	if o == nil || IsNil(o.Provider) {
-		return nil, false
-	}
-	return o.Provider, true
-}
-
-// HasProvider returns a boolean if a field has been set.
-func (o *GatewayPlacementIntent) HasProvider() bool {
-	if o != nil && !IsNil(o.Provider) {
-		return true
-	}
-
-	return false
-}
-
-// SetProvider gets a reference to the given string and assigns it to the Provider field.
-// Deprecated
-func (o *GatewayPlacementIntent) SetProvider(v string) {
-	o.Provider = &v
-}
-
 // GetMode returns the Mode field value if set, zero value otherwise.
 func (o *GatewayPlacementIntent) GetMode() string {
 	if o == nil || IsNil(o.Mode) {
@@ -191,12 +116,6 @@ func (o GatewayPlacementIntent) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Selector) {
 		toSerialize["selector"] = o.Selector
-	}
-	if !IsNil(o.Network) {
-		toSerialize["network"] = o.Network
-	}
-	if !IsNil(o.Provider) {
-		toSerialize["provider"] = o.Provider
 	}
 	if !IsNil(o.Mode) {
 		toSerialize["mode"] = o.Mode

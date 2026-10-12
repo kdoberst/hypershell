@@ -1,7 +1,6 @@
 package managedClusters
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -48,16 +47,6 @@ func (h managedClusterHandler) Register(w http.ResponseWriter, r *http.Request) 
 		handlers.HandleError(r.Context(), w, errors.MalformedRequest("invalid request format: %s", err))
 		return
 	}
-	var rawFields map[string]json.RawMessage
-	if err := json.Unmarshal(body, &rawFields); err != nil {
-		handlers.HandleError(r.Context(), w, errors.MalformedRequest("invalid request format: %s", err))
-		return
-	}
-	rawCapabilities, capabilitiesSupplied := rawFields["capabilities"]
-	if capabilitiesSupplied && bytes.Equal(bytes.TrimSpace(rawCapabilities), []byte("null")) {
-		handlers.HandleError(r.Context(), w, errors.Validation("capabilities must be an array"))
-		return
-	}
 
 	if svcErr := handlers.ValidateNotEmpty(&req, "Name", "name")(); svcErr != nil {
 		handlers.HandleError(r.Context(), w, svcErr)
@@ -68,24 +57,6 @@ func (h managedClusterHandler) Register(w http.ResponseWriter, r *http.Request) 
 			"name %q is not a valid K8s DNS label: must be lowercase alphanumeric or hyphens, start and end with alphanumeric, max 63 characters",
 			req.Name,
 		))
-		return
-	}
-	provider := req.GetProvider()
-	visibility := req.GetVisibility()
-	// Provider and visibility were added after managed-cluster registration was
-	// already deployed. Accept an omitted pair while older control planes are
-	// still posting heartbeats; the service preserves any placement metadata
-	// previously supplied by a newer client.
-	if (provider == "") != (visibility == "") {
-		handlers.HandleError(r.Context(), w, errors.Validation("provider and visibility must be supplied together"))
-		return
-	}
-	if provider != "" && provider != "aws" && provider != "ibm" && provider != "kind" {
-		handlers.HandleError(r.Context(), w, errors.Validation("provider must be aws, ibm, or kind"))
-		return
-	}
-	if visibility != "" && visibility != "public" && visibility != "vpn" {
-		handlers.HandleError(r.Context(), w, errors.Validation("visibility must be public or vpn"))
 		return
 	}
 	ctx := r.Context()
@@ -110,12 +81,12 @@ func (h managedClusterHandler) Register(w http.ResponseWriter, r *http.Request) 
 		description = *req.Description
 	}
 
-	capabilities, svcErr := NormalizeCapabilities(req.Capabilities, capabilitiesSupplied)
+	capabilities, svcErr := NormalizeCapabilities(req.Capabilities, true)
 	if svcErr != nil {
 		handlers.HandleError(r.Context(), w, svcErr)
 		return
 	}
-	cluster, created, svcErr := h.managedCluster.RegisterWithCapabilities(ctx, req.Name, description, provider, visibility, capabilities, capabilitiesSupplied, oidcSubject)
+	cluster, created, svcErr := h.managedCluster.Register(ctx, req.Name, description, capabilities, oidcSubject)
 	if svcErr != nil {
 		handlers.HandleError(r.Context(), w, svcErr)
 		return

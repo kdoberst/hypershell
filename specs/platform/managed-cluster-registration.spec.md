@@ -278,27 +278,23 @@ them. A heartbeat SHALL replace the prior set in one transaction and update
 - THEN the API SHALL return 400
 - AND its prior capabilities and `last_seen_at` SHALL remain unchanged
 
-### Requirement: Capability Migration
+### Requirement: Capability Deployment Convergence
 
-The migration SHALL backfill capability labels from every existing registered
-cluster's legacy `provider`, `visibility`, and `region` values. A non-empty
-provider SHALL become `provider/<normalized-provider>`, visibility SHALL become
-`network/<visibility>`, and region SHALL become `region/<region>`. Legacy
-registration clients that omit `capabilities` MAY continue heartbeats during a
-bounded rollout window; such a heartbeat SHALL preserve the stored capability
-set and SHALL NOT make a cluster eligible when no set exists.
+The registration request SHALL require a non-empty `capabilities` array. It
+SHALL NOT accept omitted capabilities or derive capabilities from the legacy
+`provider`, `visibility`, or `region` fields. Every deployed control plane SHALL
+send its complete GitOps-configured capability set on registration and each
+heartbeat.
 
-After all deployed control planes send capabilities, the legacy `provider` and
-`visibility` fields SHALL be removed from registration and SHALL NOT be read by
-placement. Existing gateway records require no migration because they continue
-to persist the resolved `cluster_id`.
+Existing gateway records require no migration because they continue to persist
+the resolved `cluster_id`. A control plane restart SHALL upsert its configured
+capabilities without changing those gateway assignments.
 
-#### Scenario: Legacy registered cluster is backfilled
+#### Scenario: Restart publishes configured capabilities
 
-- GIVEN a registered cluster has `provider: aws`, `visibility: vpn`, and
-  `region: us-east-1`
-- WHEN the capability migration runs
-- THEN it SHALL have `provider/aws`, `network/vpn`, and `region/us-east-1`
+- GIVEN a registered cluster has existing gateway assignments
+- WHEN its control plane restarts with its GitOps-configured capabilities
+- THEN its registration SHALL replace the stored capability set
 - AND its existing gateway assignments SHALL remain unchanged
 
 ### Requirement: oidc_subject Is Server-Assigned and Immutable
