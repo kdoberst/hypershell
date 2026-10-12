@@ -2851,15 +2851,26 @@ print('%s\t%s' % (subject, age))
   fi
 
   # ── 12b. Registration is idempotent ──
+  MC_ORIGINAL=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null || true)
+  MC_ORIGINAL_CAPS=$(echo "$MC_ORIGINAL" | python3 -c '
+import json, sys
+try:
+    caps = json.load(sys.stdin).get("capabilities", [])
+    print(json.dumps(sorted(caps), separators=(",", ":")))
+except Exception:
+    print("[]")
+')
   MC_LS_BEFORE=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null | e2e_json_field last_seen_at)
   if acquire_registrar_token; then
     pass "Registrar client-credentials token acquired (${E2E_REGISTRAR_CLIENT_ID})"
-    show_cmd "api_curl -X POST ${API_HOST}/api/hypershell/v1/managed_clusters/registration -d '{name: ${E2E_SEED_CLUSTER_NAME}}'"
+    show_cmd "api_curl -X POST ${API_HOST}/api/hypershell/v1/managed_clusters/registration -d '{name: ${E2E_SEED_CLUSTER_NAME}, capabilities: <current>}'"
     REG1=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/registration" \
-      -X POST -H "Content-Type: application/json" -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\"}" 2>/dev/null || true)
+      -X POST -H "Content-Type: application/json" \
+      -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\",\"capabilities\":${MC_ORIGINAL_CAPS}}" 2>/dev/null || true)
     REG1_ID=$(echo "$REG1" | e2e_json_field cluster_id)
     REG2=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/registration" \
-      -X POST -H "Content-Type: application/json" -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\"}" 2>/dev/null || true)
+      -X POST -H "Content-Type: application/json" \
+      -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\",\"capabilities\":${MC_ORIGINAL_CAPS}}" 2>/dev/null || true)
     REG2_ID=$(echo "$REG2" | e2e_json_field cluster_id)
     if [[ -n "$REG1_ID" && "$REG1_ID" == "$E2E_CLUSTER_ID" && "$REG2_ID" == "$E2E_CLUSTER_ID" ]]; then
       pass "Re-registration is idempotent (both calls returned the existing cluster_id ${E2E_CLUSTER_ID})"
@@ -2882,15 +2893,6 @@ print('%s\t%s' % (subject, age))
 
     # Capability declarations are a complete replacement, and validation is
     # atomic: a rejected heartbeat must update neither the set nor last_seen_at.
-    MC_ORIGINAL=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null || true)
-    MC_ORIGINAL_CAPS=$(echo "$MC_ORIGINAL" | python3 -c '
-import json, sys
-try:
-    caps = json.load(sys.stdin).get("capabilities", [])
-    print(json.dumps(sorted(caps), separators=(",", ":")))
-except Exception:
-    print("[]")
-')
     MC_REPLACEMENT_CAPS=$(ORIGINAL_CAPS="$MC_ORIGINAL_CAPS" python3 -c '
 import json, os
 caps = set(json.loads(os.environ["ORIGINAL_CAPS"]))
@@ -2987,9 +2989,10 @@ except Exception:
   # ── 12d. Name collision rejected ──
   if acquire_registrar_token; then
     COLLIDE_NAME="${E2E_SEED_CLUSTER_NAME}-collide-$RANDOM"
-    show_cmd "api_curl -X POST .../managed_clusters/registration -d '{name: ${COLLIDE_NAME}}' (registrar, different name) -> expect 409"
+    show_cmd "api_curl -X POST .../managed_clusters/registration -d '{name: ${COLLIDE_NAME}, capabilities: <current>}' (registrar, different name) -> expect 409"
     COLLIDE_CODE=$(e2e_http_status POST "${API_HOST}/api/hypershell/v1/managed_clusters/registration" \
-      -H "Content-Type: application/json" -d "{\"name\":\"${COLLIDE_NAME}\"}")
+      -H "Content-Type: application/json" \
+      -d "{\"name\":\"${COLLIDE_NAME}\",\"capabilities\":${MC_ORIGINAL_CAPS}}")
     acquire_oidc_token 2>/dev/null || true
     COLLIDE_PRESENT=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters?search=name%3D%27${COLLIDE_NAME}%27" 2>/dev/null | e2e_json_field total)
     if [[ "$COLLIDE_CODE" == "409" ]]; then
