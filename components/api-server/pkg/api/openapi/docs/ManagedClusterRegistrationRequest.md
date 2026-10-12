@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **Description** | Pointer to **string** | Optional description of the spoke. | [optional] 
 **Provider** | Pointer to **string** | Cloud provider hosting this control plane. | [optional] 
 **Visibility** | Pointer to **string** | Network visibility supported for gateways on this control plane. | [optional] 
+**Capabilities** | Pointer to **[]string** | Complete self-declared capability set. Omission is accepted only for legacy heartbeat compatibility. | [optional] 
 
 ## Methods
 
@@ -122,6 +123,31 @@ SetVisibility sets Visibility field to given value.
 `func (o *ManagedClusterRegistrationRequest) HasVisibility() bool`
 
 HasVisibility returns a boolean if a field has been set.
+
+### GetCapabilities
+
+`func (o *ManagedClusterRegistrationRequest) GetCapabilities() []string`
+
+GetCapabilities returns the Capabilities field if non-nil, zero value otherwise.
+
+### GetCapabilitiesOk
+
+`func (o *ManagedClusterRegistrationRequest) GetCapabilitiesOk() (*[]string, bool)`
+
+GetCapabilitiesOk returns a tuple with the Capabilities field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCapabilities
+
+`func (o *ManagedClusterRegistrationRequest) SetCapabilities(v []string)`
+
+SetCapabilities sets Capabilities field to given value.
+
+### HasCapabilities
+
+`func (o *ManagedClusterRegistrationRequest) HasCapabilities() bool`
+
+HasCapabilities returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

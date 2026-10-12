@@ -67,6 +67,8 @@ patches:
                   # creating it (managed-cluster-registration.spec.md).
                   - name: HYPERSHELL_MANAGED_CLUSTER_NAME
                     value: "local-kind"
+                  - name: HYPERSHELL_MANAGED_CLUSTER_CAPABILITIES
+                    value: "provider/kind,network/public,environment/kind"
                   - name: HYPERSHELL_MANAGED_CLUSTER_PROVIDER
                     value: "kind"
                   - name: HYPERSHELL_MANAGED_CLUSTER_VISIBILITY

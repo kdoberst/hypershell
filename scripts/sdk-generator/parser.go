@@ -334,6 +334,10 @@ func projectModels(document *ir.Document, roots []string) []Model {
 	models := make([]Model, 0, len(names))
 	for _, name := range names {
 		schema := document.Schema(name)
+		openAPIType, _ := schemaType(schema)
+		if openAPIType == "array" {
+			continue
+		}
 		model := Model{Name: name}
 		if len(schema.Enum) > 0 {
 			model.IsEnum = true
@@ -514,6 +518,7 @@ func projectResource(document *ir.Document, schema *ir.Schema, collection *ir.Re
 	}
 	if schema.Name == "Gateway" && document.Schema("GatewayPlacementAvailability") != nil {
 		roots = append(roots, "GatewayPlacementAvailability")
+		roots = append(roots, "GatewayPlacementAvailabilityRequest")
 	}
 	models := projectModels(document, roots)
 	createSchemaName := ""

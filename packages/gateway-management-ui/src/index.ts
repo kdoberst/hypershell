@@ -22,6 +22,7 @@ export type {
   GatewayPage as GatewayPageResult,
   GatewayPlacement,
   GatewayPlacementAvailability,
+  GatewayPlacementAvailabilityItem,
   GatewayPlacementOptions,
   GatewayProvisionInput,
   ProvisioningCondition,

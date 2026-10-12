@@ -25,7 +25,7 @@ type ManagedClusterDao interface {
 	FindDeletedBySubjectAndName(ctx context.Context, subject, name string) (*ManagedCluster, error)
 	// Restore clears deleted_at on a soft-deleted record, keeping its id, and
 	// atomically refreshes its placement metadata from the new registration.
-	Restore(ctx context.Context, id, provider, visibility string, lastSeenAt time.Time) (*ManagedCluster, error)
+	Restore(ctx context.Context, id, provider, visibility string, capabilities []string, lastSeenAt time.Time) (*ManagedCluster, error)
 	InventorySnapshot(ctx context.Context, evaluationTime time.Time) (*ClusterInventorySnapshot, error)
 }
 
@@ -122,13 +122,14 @@ func (d *sqlManagedClusterDao) FindDeletedBySubjectAndName(ctx context.Context, 
 	return &managedCluster, nil
 }
 
-func (d *sqlManagedClusterDao) Restore(ctx context.Context, id, provider, visibility string, lastSeenAt time.Time) (*ManagedCluster, error) {
+func (d *sqlManagedClusterDao) Restore(ctx context.Context, id, provider, visibility string, capabilities []string, lastSeenAt time.Time) (*ManagedCluster, error) {
 	g2 := (*d.sessionFactory).New(ctx)
 	if err := g2.Unscoped().Model(&ManagedCluster{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"deleted_at":   nil,
 			"provider":     provider,
 			"visibility":   visibility,
+			"capabilities": capabilities,
 			"last_seen_at": lastSeenAt,
 			"updated_at":   time.Now(),
 		}).Error; err != nil {

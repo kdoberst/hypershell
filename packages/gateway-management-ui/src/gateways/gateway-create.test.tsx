@@ -12,13 +12,27 @@ const { provisionGateway, navigate } = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 
-const availablePlacement = {
-  awsPublic: true,
-  awsVpn: true,
-  ibmPublic: true,
-  ibmVpn: false,
-  localKind: false,
-} as const;
+function placementAvailability(
+  available: readonly boolean[],
+  localKind = false,
+) {
+  const selectors = [
+    ["network/public", "provider/aws"],
+    ["network/vpn", "provider/aws"],
+    ["network/public", "provider/ibm"],
+    ["network/vpn", "provider/ibm"],
+  ] as const;
+  return {
+    localKind,
+    placements: selectors.map((selector, index) => ({
+      available: available[index] ?? false,
+      ...(!available[index] ? { reason: "no-eligible-cluster" as const } : {}),
+      selector,
+    })),
+  };
+}
+
+const availablePlacement = placementAvailability([true, true, true, false]);
 
 const operations = {
   changeGatewayAccessRole: vi.fn(),
@@ -103,7 +117,9 @@ describe("GatewayCreatePage", () => {
     await waitFor(() => {
       expect(provisionGateway).toHaveBeenCalledWith({
         name: "team-gateway",
-        placement: { network: "public", provider: "ibm" },
+        placement: {
+          selector: ["network/public", "provider/ibm"],
+        },
       });
     });
   });
@@ -124,9 +140,53 @@ describe("GatewayCreatePage", () => {
     await waitFor(() => {
       expect(provisionGateway).toHaveBeenCalledWith({
         name: "team-gateway",
-        placement: { network: "vpn", provider: "aws" },
+        placement: { selector: ["network/vpn", "provider/aws"] },
       });
     });
+  });
+
+  it("allows IBM Cloud for VPN when its selector is available", async () => {
+    operations.getGatewayPlacementAvailability.mockResolvedValue(
+      placementAvailability([true, true, true, true]),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Gateway name" }),
+      "team-gateway",
+    );
+    await user.click(screen.getByRole("radio", { name: "VPN" }));
+
+    expect(radio("IBM Cloud").disabled).toBe(false);
+    expect(radio("IBM Cloud").checked).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Provision gateway" }));
+
+    await waitFor(() => {
+      expect(provisionGateway).toHaveBeenCalledWith({
+        name: "team-gateway",
+        placement: { selector: ["network/vpn", "provider/ibm"] },
+      });
+    });
+  });
+
+  it("loads all rendered placement selectors in one batch", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(operations.getGatewayPlacementAvailability).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+    expect(operations.getGatewayPlacementAvailability).toHaveBeenCalledWith(
+      [
+        ["network/public", "provider/aws"],
+        ["network/vpn", "provider/aws"],
+        ["network/public", "provider/ibm"],
+        ["network/vpn", "provider/ibm"],
+      ],
+      expect.any(AbortSignal),
+    );
   });
 
   it("uses accessible radio groups with mutually exclusive choices", async () => {
@@ -179,13 +239,9 @@ describe("GatewayCreatePage", () => {
   });
 
   it("offers and defaults local-kind when it is the only available placement", async () => {
-    operations.getGatewayPlacementAvailability.mockResolvedValue({
-      awsPublic: false,
-      awsVpn: false,
-      ibmPublic: false,
-      ibmVpn: false,
-      localKind: true,
-    });
+    operations.getGatewayPlacementAvailability.mockResolvedValue(
+      placementAvailability([false, false, false, false], true),
+    );
     const user = userEvent.setup();
     renderPage();
 
@@ -212,10 +268,9 @@ describe("GatewayCreatePage", () => {
   });
 
   it("hides local-kind when managed placement is also available", () => {
-    operations.getGatewayPlacementAvailability.mockResolvedValue({
-      ...availablePlacement,
-      localKind: true,
-    });
+    operations.getGatewayPlacementAvailability.mockResolvedValue(
+      placementAvailability([true, true, true, false], true),
+    );
     renderPage();
 
     expect(screen.queryByRole("radio", { name: "Use local-kind" })).toBeNull();
@@ -223,11 +278,10 @@ describe("GatewayCreatePage", () => {
     expect(radio("VPN").checked).toBe(false);
   });
 
-  it("fails closed and retries when placement availability cannot be loaded", async () => {
-    const user = userEvent.setup();
-    operations.getGatewayPlacementAvailability
-      .mockRejectedValueOnce(new Error("unavailable"))
-      .mockResolvedValue(availablePlacement);
+  it("fails closed when placement availability cannot be loaded", async () => {
+    operations.getGatewayPlacementAvailability.mockRejectedValue(
+      new Error("unavailable"),
+    );
     renderPage();
 
     expect(
@@ -238,25 +292,13 @@ describe("GatewayCreatePage", () => {
     expect(radio("Public").disabled).toBe(true);
     expect(radio("VPN").disabled).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "Retry" }));
-
-    await waitFor(() => {
-      expect(radio("Public").disabled).toBe(false);
-      expect(radio("VPN").disabled).toBe(false);
-    });
-    expect(operations.getGatewayPlacementAvailability).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
   it("uses network-specific availability and explains the backend reason", async () => {
-    operations.getGatewayPlacementAvailability.mockResolvedValue({
-      awsPublic: true,
-      awsVpn: false,
-      awsReason: "no-eligible-cluster",
-      ibmPublic: false,
-      ibmVpn: false,
-      ibmReason: "no-eligible-cluster",
-      localKind: false,
-    });
+    operations.getGatewayPlacementAvailability.mockResolvedValue(
+      placementAvailability([true, false, false, false]),
+    );
     const user = userEvent.setup();
     renderPage();
     const vpn = radio("VPN");
@@ -285,13 +327,9 @@ describe("GatewayCreatePage", () => {
   });
 
   it("explains when neither managed nor local placement is available", async () => {
-    operations.getGatewayPlacementAvailability.mockResolvedValue({
-      awsPublic: false,
-      awsVpn: false,
-      ibmPublic: false,
-      ibmVpn: false,
-      localKind: false,
-    });
+    operations.getGatewayPlacementAvailability.mockResolvedValue(
+      placementAvailability([false, false, false, false]),
+    );
     renderPage();
 
     expect(

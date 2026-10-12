@@ -53,6 +53,7 @@ func PresentManagedCluster(managedCluster *ManagedCluster) openapi.ManagedCluste
 		result.OidcSubject = &managedCluster.OIDCSubject
 	}
 	result.LastSeenAt = managedCluster.LastSeenAt
+	result.Capabilities = append([]string(nil), managedCluster.Capabilities...)
 	return result
 }
 

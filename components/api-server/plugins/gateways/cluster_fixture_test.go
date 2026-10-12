@@ -49,7 +49,7 @@ func mustRegisterCluster() (string, string) {
 	subject := "cp-" + suffix
 	name := fmt.Sprintf("mc-%s", suffix)
 	svc := managedClusters.Service(&environments.Environment().Services)
-	cluster, _, svcErr := svc.Register(context.Background(), name, "", "aws", "public", subject)
+	cluster, _, svcErr := svc.RegisterWithCapabilities(context.Background(), name, "", "aws", "public", []string{"network/public", "provider/aws"}, true, subject)
 	Expect(svcErr).To(BeNil(), "register test managed cluster %s", name)
 	return cluster.ID, subject
 }

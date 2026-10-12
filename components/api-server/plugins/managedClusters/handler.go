@@ -1,6 +1,7 @@
 package managedClusters
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -47,6 +48,16 @@ func (h managedClusterHandler) Register(w http.ResponseWriter, r *http.Request) 
 		handlers.HandleError(r.Context(), w, errors.MalformedRequest("invalid request format: %s", err))
 		return
 	}
+	var rawFields map[string]json.RawMessage
+	if err := json.Unmarshal(body, &rawFields); err != nil {
+		handlers.HandleError(r.Context(), w, errors.MalformedRequest("invalid request format: %s", err))
+		return
+	}
+	rawCapabilities, capabilitiesSupplied := rawFields["capabilities"]
+	if capabilitiesSupplied && bytes.Equal(bytes.TrimSpace(rawCapabilities), []byte("null")) {
+		handlers.HandleError(r.Context(), w, errors.Validation("capabilities must be an array"))
+		return
+	}
 
 	if svcErr := handlers.ValidateNotEmpty(&req, "Name", "name")(); svcErr != nil {
 		handlers.HandleError(r.Context(), w, svcErr)
@@ -77,11 +88,6 @@ func (h managedClusterHandler) Register(w http.ResponseWriter, r *http.Request) 
 		handlers.HandleError(r.Context(), w, errors.Validation("visibility must be public or vpn"))
 		return
 	}
-	if provider == "ibm" && visibility == "vpn" {
-		handlers.HandleError(r.Context(), w, errors.Validation("IBM placement does not support VPN visibility"))
-		return
-	}
-
 	ctx := r.Context()
 	token, tokenErr := auth.TokenFromContext(ctx)
 	if tokenErr != nil || token == nil {
@@ -104,7 +110,12 @@ func (h managedClusterHandler) Register(w http.ResponseWriter, r *http.Request) 
 		description = *req.Description
 	}
 
-	cluster, created, svcErr := h.managedCluster.Register(ctx, req.Name, description, provider, visibility, oidcSubject)
+	capabilities, svcErr := NormalizeCapabilities(req.Capabilities, capabilitiesSupplied)
+	if svcErr != nil {
+		handlers.HandleError(r.Context(), w, svcErr)
+		return
+	}
+	cluster, created, svcErr := h.managedCluster.RegisterWithCapabilities(ctx, req.Name, description, provider, visibility, capabilities, capabilitiesSupplied, oidcSubject)
 	if svcErr != nil {
 		handlers.HandleError(r.Context(), w, svcErr)
 		return

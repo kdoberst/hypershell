@@ -5,14 +5,16 @@ import (
 	"strings"
 
 	"github.com/openshift-online/hypershell/components/api-server/pkg/api/openapi"
+	"github.com/openshift-online/hypershell/components/api-server/plugins/managedClusters"
 	"github.com/openshift-online/rh-trex-ai/components/api-server/pkg/errors"
 )
 
 type PlacementResolver func(context.Context, openapi.GatewayPlacementIntent) (string, *errors.ServiceError)
-type PlacementAvailabilityResolver func(context.Context) (openapi.GatewayPlacementAvailability, *errors.ServiceError)
+type PlacementAvailabilityResolver func(context.Context, [][]string) (openapi.GatewayPlacementAvailability, *errors.ServiceError)
 
 func validatePlacementIntent(intent openapi.GatewayPlacementIntent) *errors.ServiceError {
 	mode, network, provider := "", "", ""
+	selector := intent.Selector
 	if intent.Mode != nil {
 		mode = *intent.Mode
 	}
@@ -23,19 +25,23 @@ func validatePlacementIntent(intent openapi.GatewayPlacementIntent) *errors.Serv
 		provider = *intent.Provider
 	}
 	if mode != "" {
-		if mode != "local-kind" || network != "" || provider != "" {
-			return errors.Validation("placement mode must be local-kind and cannot include network or provider")
+		if mode != "local-kind" || network != "" || provider != "" || selector != nil {
+			return errors.Validation("placement mode must be local-kind and cannot include selector, network, or provider")
 		}
 		return nil
+	}
+	if selector != nil {
+		if network != "" || provider != "" {
+			return errors.Validation("placement selector cannot be combined with network or provider")
+		}
+		_, svcErr := managedClusters.NormalizeSelector(selector)
+		return svcErr
 	}
 	if network != "public" && network != "vpn" {
 		return errors.Validation("placement.network must be public or vpn")
 	}
 	if provider != "aws" && provider != "ibm" {
 		return errors.Validation("placement.provider must be aws or ibm")
-	}
-	if network == "vpn" && provider != "aws" {
-		return errors.Validation("VPN placement requires provider aws")
 	}
 	return nil
 }

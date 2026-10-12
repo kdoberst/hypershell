@@ -2879,6 +2879,95 @@ print('%s\t%s' % (subject, age))
     else
       fail_test "Could not read last_seen_at after registration"
     fi
+
+    # Capability declarations are a complete replacement, and validation is
+    # atomic: a rejected heartbeat must update neither the set nor last_seen_at.
+    MC_ORIGINAL=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null || true)
+    MC_ORIGINAL_CAPS=$(echo "$MC_ORIGINAL" | python3 -c '
+import json, sys
+try:
+    caps = json.load(sys.stdin).get("capabilities", [])
+    print(json.dumps(sorted(caps), separators=(",", ":")))
+except Exception:
+    print("[]")
+')
+    MC_REPLACEMENT_CAPS=$(ORIGINAL_CAPS="$MC_ORIGINAL_CAPS" python3 -c '
+import json, os
+caps = set(json.loads(os.environ["ORIGINAL_CAPS"]))
+caps.add("runtime/e2e-validation")
+print(json.dumps(sorted(caps), separators=(",", ":")))
+')
+
+    if [[ "$MC_ORIGINAL_CAPS" != "[]" ]]; then
+      acquire_registrar_token 2>/dev/null || true
+      show_cmd "api_curl -X POST .../managed_clusters/registration -d '{name: ${E2E_SEED_CLUSTER_NAME}, capabilities: <replacement>}'"
+      REG_REPLACE=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/registration" \
+        -X POST -H "Content-Type: application/json" \
+        -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\",\"capabilities\":${MC_REPLACEMENT_CAPS}}" 2>/dev/null || true)
+      REG_REPLACE_ID=$(echo "$REG_REPLACE" | e2e_json_field cluster_id)
+      acquire_oidc_token 2>/dev/null || true
+      MC_REPLACED=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null || true)
+      MC_REPLACED_CAPS=$(echo "$MC_REPLACED" | python3 -c '
+import json, sys
+try:
+    print(json.dumps(sorted(json.load(sys.stdin).get("capabilities", [])), separators=(",", ":")))
+except Exception:
+    print("[]")
+')
+      MC_REPLACED_LS=$(echo "$MC_REPLACED" | e2e_json_field last_seen_at)
+      if [[ "$REG_REPLACE_ID" == "$E2E_CLUSTER_ID" && "$MC_REPLACED_CAPS" == "$MC_REPLACEMENT_CAPS" ]]; then
+        pass "Registration replaced the complete declared capability set"
+      else
+        fail_test "Capability replacement mismatch (got ${MC_REPLACED_CAPS}, want ${MC_REPLACEMENT_CAPS})"
+      fi
+
+      MC_INVALID_CAPS=$(VALID_CAPS="$MC_REPLACEMENT_CAPS" python3 -c '
+import json, os
+caps = json.loads(os.environ["VALID_CAPS"])
+caps.append("unknown/e2e-validation")
+print(json.dumps(caps, separators=(",", ":")))
+')
+      acquire_registrar_token 2>/dev/null || true
+      show_cmd "api_curl -X POST .../managed_clusters/registration (unknown capability namespace) -> expect 400"
+      MC_INVALID_CODE=$(e2e_http_status POST "${API_HOST}/api/hypershell/v1/managed_clusters/registration" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\",\"capabilities\":${MC_INVALID_CAPS}}")
+      acquire_oidc_token 2>/dev/null || true
+      MC_AFTER_INVALID=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null || true)
+      MC_AFTER_INVALID_CAPS=$(echo "$MC_AFTER_INVALID" | python3 -c '
+import json, sys
+try:
+    print(json.dumps(sorted(json.load(sys.stdin).get("capabilities", [])), separators=(",", ":")))
+except Exception:
+    print("[]")
+')
+      MC_AFTER_INVALID_LS=$(echo "$MC_AFTER_INVALID" | e2e_json_field last_seen_at)
+      if [[ "$MC_INVALID_CODE" == "400" && "$MC_AFTER_INVALID_CAPS" == "$MC_REPLACED_CAPS" && "$MC_AFTER_INVALID_LS" == "$MC_REPLACED_LS" ]]; then
+        pass "Invalid capability set is 400 and preserves capabilities and last_seen_at atomically"
+      else
+        fail_test "Invalid capability registration was not atomic (status=${MC_INVALID_CODE:-none}, capabilities=${MC_AFTER_INVALID_CAPS}, last_seen_at=${MC_REPLACED_LS}->${MC_AFTER_INVALID_LS})"
+      fi
+
+      acquire_registrar_token 2>/dev/null || true
+      REG_RESTORE=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/registration" \
+        -X POST -H "Content-Type: application/json" \
+        -d "{\"name\":\"${E2E_SEED_CLUSTER_NAME}\",\"capabilities\":${MC_ORIGINAL_CAPS}}" 2>/dev/null || true)
+      acquire_oidc_token 2>/dev/null || true
+      MC_RESTORED_CAPS=$(api_curl "${API_HOST}/api/hypershell/v1/managed_clusters/${E2E_CLUSTER_ID}" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.dumps(sorted(json.load(sys.stdin).get("capabilities", [])), separators=(",", ":")))
+except Exception:
+    print("[]")
+')
+      if [[ "$(echo "$REG_RESTORE" | e2e_json_field cluster_id)" == "$E2E_CLUSTER_ID" && "$MC_RESTORED_CAPS" == "$MC_ORIGINAL_CAPS" ]]; then
+        pass "Original declared capability set restored after validation"
+      else
+        fail_test "Could not restore original capability set (got ${MC_RESTORED_CAPS}, want ${MC_ORIGINAL_CAPS})"
+      fi
+    else
+      fail_test "ManagedCluster ${E2E_SEED_CLUSTER_NAME} has no declared capabilities to validate"
+    fi
   else
     fail_test "Could not acquire the registrar client-credentials token (${E2E_REGISTRAR_CLIENT_ID})"
   fi

@@ -204,14 +204,14 @@ export function createGatewayOperations({
       execute("find-placements", signal, (context) =>
         controlPlane.findGatewayPlacements(search.trim(), context),
       ),
-    getGatewayPlacementAvailability: (signal) =>
+    getGatewayPlacementAvailability: (selectors, signal) =>
       execute("placement-availability", signal, (context) => {
         if (!controlPlane.getGatewayPlacementAvailability) {
           throw new GatewayOperationError("unknown", {
             cause: new Error("placement availability is unavailable"),
           });
         }
-        return controlPlane.getGatewayPlacementAvailability(context);
+        return controlPlane.getGatewayPlacementAvailability(selectors, context);
       }),
     getGatewayPlacement: (clusterId, signal) =>
       execute("get-placement", signal, (context) =>

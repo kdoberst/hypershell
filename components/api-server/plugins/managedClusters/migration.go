@@ -52,6 +52,30 @@ func migrationAddPlacementVisibility() *gormigrate.Migration {
 	}
 }
 
+func migrationAddCapabilities() *gormigrate.Migration {
+	return &gormigrate.Migration{
+		ID: "2026101200000001",
+		Migrate: func(tx *gorm.DB) error {
+			if err := tx.Exec(`ALTER TABLE managed_clusters ADD COLUMN IF NOT EXISTS capabilities JSONB`).Error; err != nil {
+				return err
+			}
+			return tx.Exec(`
+				UPDATE managed_clusters
+				SET capabilities =
+					CASE WHEN provider IS NOT NULL AND btrim(provider) <> ''
+						THEN jsonb_build_array('provider/' || CASE WHEN lower(btrim(provider)) = 'ibm cloud' THEN 'ibm' ELSE lower(btrim(provider)) END)
+						ELSE '[]'::jsonb END ||
+					CASE WHEN visibility IS NOT NULL AND btrim(visibility) <> '' THEN jsonb_build_array('network/' || lower(btrim(visibility))) ELSE '[]'::jsonb END ||
+					CASE WHEN region IS NOT NULL AND btrim(region) <> '' THEN jsonb_build_array('region/' || lower(btrim(region))) ELSE '[]'::jsonb END
+				WHERE oidc_subject IS NOT NULL AND oidc_subject <> '' AND capabilities IS NULL
+			`).Error
+		},
+		Rollback: func(tx *gorm.DB) error {
+			return tx.Exec(`ALTER TABLE managed_clusters DROP COLUMN IF EXISTS capabilities`).Error
+		},
+	}
+}
+
 // migrationUniqueName makes managed_clusters.name unique across all live
 // records, registered or not, so discovery by name (seed scripts, e2e,
 // operators) is unambiguous and a registration can never create a second

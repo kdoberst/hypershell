@@ -4,8 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**Selector** | Pointer to **[]string** |  | [optional] 
 **Network** | Pointer to **string** |  | [optional] 
-**Provider** | Pointer to **string** | IBM Cloud supports public placement only; VPN requires AWS. | [optional] 
+**Provider** | Pointer to **string** | Legacy compatibility field translated to a provider capability label. | [optional] 
 **Mode** | Pointer to **string** |  | [optional] 
 
 ## Methods
@@ -26,6 +27,31 @@ will change when the set of required properties is changed
 NewGatewayPlacementIntentWithDefaults instantiates a new GatewayPlacementIntent object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
+
+### GetSelector
+
+`func (o *GatewayPlacementIntent) GetSelector() []string`
+
+GetSelector returns the Selector field if non-nil, zero value otherwise.
+
+### GetSelectorOk
+
+`func (o *GatewayPlacementIntent) GetSelectorOk() (*[]string, bool)`
+
+GetSelectorOk returns a tuple with the Selector field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSelector
+
+`func (o *GatewayPlacementIntent) SetSelector(v []string)`
+
+SetSelector sets Selector field to given value.
+
+### HasSelector
+
+`func (o *GatewayPlacementIntent) HasSelector() bool`
+
+HasSelector returns a boolean if a field has been set.
 
 ### GetNetwork
 

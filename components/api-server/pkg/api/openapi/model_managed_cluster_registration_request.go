@@ -29,6 +29,8 @@ type ManagedClusterRegistrationRequest struct {
 	Provider *string `json:"provider,omitempty"`
 	// Network visibility supported for gateways on this control plane.
 	Visibility *string `json:"visibility,omitempty"`
+	// Complete self-declared capability set. Omission is accepted only for legacy heartbeat compatibility.
+	Capabilities []string `json:"capabilities,omitempty"`
 }
 
 type _ManagedClusterRegistrationRequest ManagedClusterRegistrationRequest
@@ -171,6 +173,38 @@ func (o *ManagedClusterRegistrationRequest) SetVisibility(v string) {
 	o.Visibility = &v
 }
 
+// GetCapabilities returns the Capabilities field value if set, zero value otherwise.
+func (o *ManagedClusterRegistrationRequest) GetCapabilities() []string {
+	if o == nil || IsNil(o.Capabilities) {
+		var ret []string
+		return ret
+	}
+	return o.Capabilities
+}
+
+// GetCapabilitiesOk returns a tuple with the Capabilities field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ManagedClusterRegistrationRequest) GetCapabilitiesOk() ([]string, bool) {
+	if o == nil || IsNil(o.Capabilities) {
+		return nil, false
+	}
+	return o.Capabilities, true
+}
+
+// HasCapabilities returns a boolean if a field has been set.
+func (o *ManagedClusterRegistrationRequest) HasCapabilities() bool {
+	if o != nil && !IsNil(o.Capabilities) {
+		return true
+	}
+
+	return false
+}
+
+// SetCapabilities gets a reference to the given []string and assigns it to the Capabilities field.
+func (o *ManagedClusterRegistrationRequest) SetCapabilities(v []string) {
+	o.Capabilities = v
+}
+
 func (o ManagedClusterRegistrationRequest) MarshalJSON() ([]byte, error) {
 	toSerialize, err := o.ToMap()
 	if err != nil {
@@ -190,6 +224,9 @@ func (o ManagedClusterRegistrationRequest) ToMap() (map[string]interface{}, erro
 	}
 	if !IsNil(o.Visibility) {
 		toSerialize["visibility"] = o.Visibility
+	}
+	if !IsNil(o.Capabilities) {
+		toSerialize["capabilities"] = o.Capabilities
 	}
 	return toSerialize, nil
 }

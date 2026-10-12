@@ -91,11 +91,18 @@ paths:
               schema:
                 $ref: 'openapi.yaml#/components/schemas/Error'
   /api/hypershell/v1/gateways/placement-availability:
-    get:
+    post:
       operationId: getGatewayPlacementAvailability
-      summary: Returns current provider placement eligibility
+      summary: Returns current placement eligibility for a batch of selectors
       security:
         - Bearer: []
+      requestBody:
+        description: Capability selectors to evaluate
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayPlacementAvailabilityRequest'
       responses:
         '200':
           description: Current backend placement eligibility
@@ -400,49 +407,79 @@ components:
           description: JSON-encoded credential storage driver configuration
     GatewayPlacementIntent:
       type: object
-      description: Exactly one of network/provider or mode must be supplied.
+      description: Exactly one of selector, legacy network/provider, or mode must be supplied.
       oneOf:
-        - title: Managed placement
+        - title: Capability selector placement
+          required: [selector]
+          not:
+            anyOf:
+              - required: [mode]
+              - required: [network]
+              - required: [provider]
+        - title: Legacy managed placement
           required: [network, provider]
           not:
-            required: [mode]
+            anyOf:
+              - required: [mode]
+              - required: [selector]
         - title: Local Kind placement
           required: [mode]
           not:
             anyOf:
               - required: [network]
               - required: [provider]
+              - required: [selector]
       properties:
+        selector:
+          $ref: '#/components/schemas/GatewayPlacementSelector'
         network:
           type: string
           enum: [public, vpn]
+          deprecated: true
         provider:
           type: string
           enum: [aws, ibm]
-          description: IBM Cloud supports public placement only; VPN requires AWS.
+          deprecated: true
+          description: Legacy compatibility field translated to a provider capability label.
         mode:
           type: string
           enum: [local-kind]
+    GatewayPlacementSelector:
+      type: array
+      minItems: 1
+      items:
+        type: string
+    GatewayPlacementAvailabilityRequest:
+      type: object
+      required: [selectors]
+      properties:
+        selectors:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            $ref: '#/components/schemas/GatewayPlacementSelector'
+    GatewayPlacementAvailabilityItem:
+      type: object
+      required: [selector, available]
+      properties:
+        selector:
+          $ref: '#/components/schemas/GatewayPlacementSelector'
+        available:
+          type: boolean
+        reason:
+          type: string
+          enum: [no-eligible-cluster]
     GatewayPlacementAvailability:
       type: object
-      required: [aws_public, aws_vpn, ibm_public, ibm_vpn, local_kind]
+      required: [placements, local_kind]
       properties:
-        aws_public:
-          type: boolean
-        aws_vpn:
-          type: boolean
-        ibm_public:
-          type: boolean
-        ibm_vpn:
-          type: boolean
+        placements:
+          type: array
+          items:
+            $ref: '#/components/schemas/GatewayPlacementAvailabilityItem'
         local_kind:
           type: boolean
-        aws_reason:
-          type: string
-          enum: [no-eligible-cluster]
-        ibm_reason:
-          type: string
-          enum: [no-eligible-cluster]
     # NEW SCHEMA START
     GatewayList:
     # NEW SCHEMA END

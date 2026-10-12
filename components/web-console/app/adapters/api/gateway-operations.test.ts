@@ -111,6 +111,7 @@ function managedCluster(
 ): ManagedCluster {
   return {
     api_server_url: "https://api.east.example.com",
+    capabilities: "",
     created_at: null,
     href: "/api/hypershell/v1/managed_clusters/cluster-east",
     id: "cluster-east",
@@ -684,7 +685,7 @@ describe("gateway API operations adapter", () => {
     await controlPlane.provisionGateway(
       {
         name: "team-gateway",
-        placement: { network: "public", provider: "aws" },
+        placement: { selector: ["network/public", "provider/aws"] },
       },
       context,
     );
@@ -692,7 +693,7 @@ describe("gateway API operations adapter", () => {
     expect(gatewayApi.create).toHaveBeenCalledWith(
       {
         name: "team-gateway",
-        placement: { network: "public", provider: "aws" },
+        placement: { selector: ["network/public", "provider/aws"] },
         route: '{"enabled":true}',
       },
       { signal: undefined },
@@ -701,30 +702,55 @@ describe("gateway API operations adapter", () => {
 
   it("maps backend placement availability", async () => {
     gatewayApi.placementAvailability.mockResolvedValue({
-      aws_public: true,
-      aws_vpn: true,
-      ibm_public: false,
-      ibm_vpn: false,
       local_kind: true,
+      placements: [
+        {
+          available: true,
+          selector: ["network/public", "provider/aws"],
+        },
+        {
+          available: false,
+          reason: "no-eligible-cluster",
+          selector: ["network/vpn", "provider/ibm"],
+        },
+      ],
     });
 
     if (controlPlane.getGatewayPlacementAvailability === undefined) {
       throw new Error("placement availability operation is unavailable");
     }
     await expect(
-      controlPlane.getGatewayPlacementAvailability(context),
+      controlPlane.getGatewayPlacementAvailability(
+        [
+          ["network/public", "provider/aws"],
+          ["network/vpn", "provider/ibm"],
+        ],
+        context,
+      ),
     ).resolves.toEqual({
-      awsPublic: true,
-      awsVpn: true,
-      awsReason: undefined,
-      ibmPublic: false,
-      ibmVpn: false,
-      ibmReason: undefined,
       localKind: true,
+      placements: [
+        {
+          available: true,
+          reason: undefined,
+          selector: ["network/public", "provider/aws"],
+        },
+        {
+          available: false,
+          reason: "no-eligible-cluster",
+          selector: ["network/vpn", "provider/ibm"],
+        },
+      ],
     });
-    expect(gatewayApi.placementAvailability).toHaveBeenCalledWith({
-      signal: undefined,
-    });
+    expect(gatewayApi.placementAvailability).toHaveBeenCalledWith(
+      {
+        selectors: [
+          ["network/public", "provider/aws"],
+          ["network/vpn", "provider/ibm"],
+        ],
+      },
+      { signal: undefined },
+    );
   });
 
   it("maps detail, rename, and deletion operations", async () => {

@@ -17,10 +17,13 @@ import (
 // checks if the GatewayPlacementIntent type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &GatewayPlacementIntent{}
 
-// GatewayPlacementIntent Exactly one of network/provider or mode must be supplied.
+// GatewayPlacementIntent Exactly one of selector, legacy network/provider, or mode must be supplied.
 type GatewayPlacementIntent struct {
+	Selector []string
+	// Deprecated
 	Network *string
-	// IBM Cloud supports public placement only; VPN requires AWS.
+	// Legacy compatibility field translated to a provider capability label.
+	// Deprecated
 	Provider *string
 	Mode     *string
 }
@@ -42,7 +45,40 @@ func NewGatewayPlacementIntentWithDefaults() *GatewayPlacementIntent {
 	return &this
 }
 
+// GetSelector returns the Selector field value if set, zero value otherwise.
+func (o *GatewayPlacementIntent) GetSelector() []string {
+	if o == nil || IsNil(o.Selector) {
+		var ret []string
+		return ret
+	}
+	return o.Selector
+}
+
+// GetSelectorOk returns a tuple with the Selector field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GatewayPlacementIntent) GetSelectorOk() ([]string, bool) {
+	if o == nil || IsNil(o.Selector) {
+		return nil, false
+	}
+	return o.Selector, true
+}
+
+// HasSelector returns a boolean if a field has been set.
+func (o *GatewayPlacementIntent) HasSelector() bool {
+	if o != nil && !IsNil(o.Selector) {
+		return true
+	}
+
+	return false
+}
+
+// SetSelector gets a reference to the given []string and assigns it to the Selector field.
+func (o *GatewayPlacementIntent) SetSelector(v []string) {
+	o.Selector = v
+}
+
 // GetNetwork returns the Network field value if set, zero value otherwise.
+// Deprecated
 func (o *GatewayPlacementIntent) GetNetwork() string {
 	if o == nil || IsNil(o.Network) {
 		var ret string
@@ -53,6 +89,7 @@ func (o *GatewayPlacementIntent) GetNetwork() string {
 
 // GetNetworkOk returns a tuple with the Network field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *GatewayPlacementIntent) GetNetworkOk() (*string, bool) {
 	if o == nil || IsNil(o.Network) {
 		return nil, false
@@ -70,11 +107,13 @@ func (o *GatewayPlacementIntent) HasNetwork() bool {
 }
 
 // SetNetwork gets a reference to the given string and assigns it to the Network field.
+// Deprecated
 func (o *GatewayPlacementIntent) SetNetwork(v string) {
 	o.Network = &v
 }
 
 // GetProvider returns the Provider field value if set, zero value otherwise.
+// Deprecated
 func (o *GatewayPlacementIntent) GetProvider() string {
 	if o == nil || IsNil(o.Provider) {
 		var ret string
@@ -85,6 +124,7 @@ func (o *GatewayPlacementIntent) GetProvider() string {
 
 // GetProviderOk returns a tuple with the Provider field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// Deprecated
 func (o *GatewayPlacementIntent) GetProviderOk() (*string, bool) {
 	if o == nil || IsNil(o.Provider) {
 		return nil, false
@@ -102,6 +142,7 @@ func (o *GatewayPlacementIntent) HasProvider() bool {
 }
 
 // SetProvider gets a reference to the given string and assigns it to the Provider field.
+// Deprecated
 func (o *GatewayPlacementIntent) SetProvider(v string) {
 	o.Provider = &v
 }
@@ -148,6 +189,9 @@ func (o GatewayPlacementIntent) MarshalJSON() ([]byte, error) {
 
 func (o GatewayPlacementIntent) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Selector) {
+		toSerialize["selector"] = o.Selector
+	}
 	if !IsNil(o.Network) {
 		toSerialize["network"] = o.Network
 	}

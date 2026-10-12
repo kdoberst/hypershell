@@ -64,6 +64,8 @@ patches:
             containers:
               - name: controller
                 env:
+                  - name: HYPERSHELL_MANAGED_CLUSTER_CAPABILITIES
+                    value: "provider/ibm,network/public"
                   - name: HYPERSHELL_MANAGED_CLUSTER_PROVIDER
                     value: "ibm"
                   - name: HYPERSHELL_MANAGED_CLUSTER_VISIBILITY

@@ -532,23 +532,23 @@ export function createGatewayControlPlaneAdapter(
         };
       });
     },
-    async getGatewayPlacementAvailability(context) {
+    async getGatewayPlacementAvailability(selectors, context) {
       return mapFailure(async () => {
         const gatewaysApi = apiClient(apiFactory, context).gateways;
         if (!gatewaysApi.placementAvailability) {
           throw new Error("placement availability API is unavailable");
         }
-        const availability = await gatewaysApi.placementAvailability({
-          signal: context.signal,
-        });
+        const availability = await gatewaysApi.placementAvailability(
+          { selectors: selectors.map((selector) => [...selector]) },
+          { signal: context.signal },
+        );
         return {
-          awsPublic: availability.aws_public,
-          awsVpn: availability.aws_vpn,
-          awsReason: availability.aws_reason,
-          ibmPublic: availability.ibm_public,
-          ibmVpn: availability.ibm_vpn,
-          ibmReason: availability.ibm_reason,
           localKind: availability.local_kind,
+          placements: availability.placements.map((placement) => ({
+            available: placement.available,
+            reason: placement.reason,
+            selector: placement.selector,
+          })),
         } satisfies GatewayPlacementAvailability;
       });
     },

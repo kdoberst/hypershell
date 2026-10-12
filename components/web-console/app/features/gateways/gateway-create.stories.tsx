@@ -12,19 +12,26 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 
 const placementAvailability: GatewayPlacementAvailability = {
-  awsPublic: true,
-  awsVpn: true,
-  ibmPublic: true,
-  ibmVpn: false,
   localKind: true,
+  placements: [
+    { available: true, selector: ["network/public", "provider/aws"] },
+    { available: true, selector: ["network/vpn", "provider/aws"] },
+    { available: true, selector: ["network/public", "provider/ibm"] },
+    {
+      available: false,
+      reason: "no-eligible-cluster",
+      selector: ["network/vpn", "provider/ibm"],
+    },
+  ],
 } as const;
 
 const localDevelopmentAvailability: GatewayPlacementAvailability = {
-  awsPublic: false,
-  awsVpn: false,
-  ibmPublic: false,
-  ibmVpn: false,
   localKind: true,
+  placements: placementAvailability.placements.map(({ selector }) => ({
+    available: false,
+    reason: "no-eligible-cluster",
+    selector,
+  })),
 } as const;
 
 const previewGateway: GatewayRecord = {

@@ -57,7 +57,9 @@ skills/
   - **Tests**: service-level validation suites (`plugins/repositories/service_test.go`, `plugins/agentRuntimes/service_test.go`) green (422, 409, provider+FK validation, import_path default); both booted the testcontainer TestMain, exercising the new migrations cleanly. `go build`/`go vet`/`gofmt` clean across api-server, sdk-go, cli; cli apply+urls tests green; TUI descriptor regenerated.
   - **Upstream dependency work (openshift-online/rh-trex-ai)**: the framework had no 422 code and `#58` had dropped `RegisterPrefixedRoutes`. Opened/merged **PR #64** (add `UnprocessableEntity`/422, tag `v0.0.34`) and **PR #65** (restore `RegisterPrefixedRoutes`+`LoadDiscoveredPrefixedRoutes`+call site+tests dropped by `#58`, tag `v0.0.35`). Bumped `components/api-server/go.mod` to `v0.0.0-20261010200958-071bd1d7342f` (the submodule path has no consumable tag, so a pseudo-version is used) and updated `dependency-age-allowlist.json`. `scripts/rh-trex-ai.ref` (CLI/TUI generators) left at `ff48c56`; its generators are byte-identical in the new commit.
 
-**Prior scoped analysis (2026-09-29)**: `specs/web-console/gateway-provision-placement.spec.md` against `77feccc3` plus the current working tree: 10 Present. GP-W1 made REST creation intent-only and refreshed restored placement metadata; GP-W2 added localized, programmatically associated disabled-network reasons.
+**Scoped analysis (2026-10-12)**: issue #499 updates to `specs/platform/managed-cluster-registration.spec.md`, `specs/platform/data-model.spec.md`, and `specs/web-console/gateway-provision-placement.spec.md`. Executed CAP-W1..W4: the API and generated SDKs now expose registration-owned capability sets, selector placement, and batched availability; the API server validates and atomically replaces capability sets, rejects an explicitly null capability field while retaining bounded omission compatibility, backfills registered clusters, resolves normalized match-all selectors, and retains bounded legacy intent compatibility; control-plane configuration and deployment overlays now register complete capability arrays; the reusable gateway UI and web-console adapter request all rendered selectors in one batch and submit selector intent, including data-driven IBM VPN availability. Area 12 now directly verifies declared capabilities, complete replacement, atomic invalid-set rejection, and restoration. Focused backend, control-plane, gateway UI, web-console adapter, and shell checks pass. The prior hard-coded provider/network placement matrix is superseded.
+
+**Prior scoped analysis (2026-09-29)**: `specs/web-console/gateway-provision-placement.spec.md` against `77feccc3` plus the current working tree: 10 Present. GP-W1 made REST creation intent-only and refreshed restored placement metadata; GP-W2 added localized, programmatically associated disabled-network reasons. Superseded by the capability-selector analysis above.
 **Spec corpus**: 56 spec files; the coverage table tracks 48 analyzed feature/spec groups after adding Ephemeral CI Secrets, Ephemeral Test Credentials, Console Browser Testing, Gateway Provision Outcomes, Gateway Release Distribution, Gateway Fleet Total Trend, Gateway Sandbox Active Trends, Hub Cluster Utilization Trends, and OpenShell Branch Build (9 new specs from commits `85927b3c`/`be0bf2ea`/`630a5ed1`/`2bdeece6`; full per-requirement analysis pending for the last 6)
 **Codebase commit**: working tree (HYPERSHELL-334 standing CI secrets + test-tier credentials, rebased onto `b152182c`; prior `5e14f29b` feat: remove ManagedDatabase API), then e2e-console-browser-testing CON-W1 (`2bdeece6`), then #342 Keycloak admin-console impersonation (`d7f33594`)
 
@@ -128,6 +130,19 @@ Layer 7:          web-console/architecture (depends on data-model, security, UI 
 ---
 
 ## Gap Table
+
+### Managed-cluster capability placement (issue #499)
+
+| # | Requirement | Status | Code Location | Wave |
+|---|-------------|--------|---------------|------|
+| CAP-01 | Registration-owned, validated capability sets with atomic heartbeat replacement and legacy omission preservation | Present | `components/api-server/plugins/managedClusters/`, `components/control-plane/internal/{config,registration}/` | CAP-W1/W2 |
+| CAP-02 | Migration backfills registered clusters from legacy provider, visibility, and region data | Present | `components/api-server/plugins/managedClusters/migration.go` | CAP-W2 |
+| CAP-03 | Normalized match-all selector placement with bounded legacy provider/network translation | Present | `components/api-server/plugins/gateways/{placement,plugin}.go` | CAP-W2 |
+| CAP-04 | One batched, selector-shaped availability request without a fixed provider/network response matrix | Present | OpenAPI + generated SDKs; gateway handler and web-console adapter | CAP-W1/W3 |
+| CAP-05 | Provision form submits selectors and treats every rendered provider/network combination as data-driven | Present | `packages/gateway-management-ui/src/gateways/gateway-create.tsx` | CAP-W3 |
+| CAP-06 | Registration JSON presence semantics and live replacement/rejection verification | Present | `components/api-server/plugins/managedClusters/handler_registration_test.go`, `tests/e2e/e2e-openshell.sh` Area 12 | CAP-W4 |
+
+**Direction checks:** Spec-to-code: registration, migration, placement, availability, deployment configuration, and console behavior are implemented. Code-to-spec: legacy request translation and omitted-capability heartbeats are bounded compatibility paths explicitly allowed by the approved spec. OpenAPI-to-spec: the selector intent and batched response are generic and expose no enumerated availability matrix.
 
 ### gateway-access-management.spec.md + web-console/gateway-access-management.spec.md (user_management PR)
 

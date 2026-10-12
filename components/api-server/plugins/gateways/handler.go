@@ -96,13 +96,17 @@ func (h gatewayHandler) GetPlacementAvailability(w http.ResponseWriter, r *http.
 		}, ErrorHandler: handlers.HandleError})
 		return
 	}
-	handlers.HandleGet(w, r, &handlers.HandlerConfig{Action: func() (interface{}, *errors.ServiceError) {
-		availability, svcErr := h.availability(r.Context())
+	var request openapi.GatewayPlacementAvailabilityRequest
+	handlers.Handle(w, r, &handlers.HandlerConfig{Body: &request, Action: func() (interface{}, *errors.ServiceError) {
+		if len(request.Selectors) == 0 || len(request.Selectors) > 32 {
+			return nil, errors.Validation("selectors must contain between 1 and 32 selectors")
+		}
+		availability, svcErr := h.availability(r.Context(), request.Selectors)
 		if svcErr != nil {
 			return nil, svcErr
 		}
 		return availability, nil
-	}, ErrorHandler: handlers.HandleError})
+	}, ErrorHandler: handlers.HandleError}, http.StatusOK)
 }
 
 // validateGatewayPhaseValue rejects a phase outside the canonical vocabulary. An

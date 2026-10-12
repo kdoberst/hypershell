@@ -3,7 +3,6 @@ package gateways
 import (
 	"context"
 	stderrors "errors"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -117,13 +116,9 @@ func registeredClusterLookup(s *environments.Services) RegisteredClusterLookup {
 	}
 }
 
-type providerPlacementState struct {
-	candidates []PlacementCandidate
-}
-
 type placementSnapshot struct {
-	providers map[string]*providerPlacementState
-	localID   string
+	candidates []PlacementCandidate
+	localID    string
 }
 
 type registeredPlacementService struct {
@@ -144,7 +139,7 @@ func normalizePlacementProvider(provider string) string {
 }
 
 func (p *registeredPlacementService) snapshot(ctx context.Context) (placementSnapshot, *errors.ServiceError) {
-	result := placementSnapshot{providers: map[string]*providerPlacementState{"aws": {}, "ibm": {}}}
+	result := placementSnapshot{}
 	svc := managedClusters.Service(p.services)
 	if svc == nil {
 		return result, errors.GeneralError("managed cluster service is not available")
@@ -157,7 +152,6 @@ func (p *registeredPlacementService) snapshot(ctx context.Context) (placementSna
 		if cluster == nil || cluster.OIDCSubject == "" || !PlacementControlPlaneConnected(cluster.LastSeenAt, p.now()) {
 			continue
 		}
-		provider := normalizePlacementProvider(cluster.Provider)
 		isLocal := cluster.Name == "local-kind"
 		if isLocal {
 			if os.Getenv("HYPERSHELL_PLATFORM_KIND") == "true" {
@@ -165,30 +159,21 @@ func (p *registeredPlacementService) snapshot(ctx context.Context) (placementSna
 			}
 			continue
 		}
-		state := result.providers[provider]
-		if state == nil {
+		if len(cluster.Capabilities) == 0 {
 			continue
 		}
-		state.candidates = append(state.candidates, PlacementCandidate{ID: cluster.ID, Provider: provider, Visibility: cluster.Visibility, Connected: true})
+		result.candidates = append(result.candidates, PlacementCandidate{ID: cluster.ID, Capabilities: cluster.Capabilities, Connected: true})
 	}
 	return result, nil
 }
 
-func (p *registeredPlacementService) selectManaged(snapshot placementSnapshot, network, provider string) (string, error) {
-	state := snapshot.providers[provider]
-	if state == nil {
-		return "", fmt.Errorf("unsupported provider %q", provider)
-	}
-	return ResolvePlacement(PlacementIntent{Network: network, Provider: provider}, state.candidates)
+func (p *registeredPlacementService) selectManaged(snapshot placementSnapshot, selector []string) (string, error) {
+	return ResolvePlacement(PlacementIntent{Selector: selector}, snapshot.candidates)
 }
 
-func managedPlacementAvailable(snapshot placementSnapshot, network, provider string) bool {
-	state := snapshot.providers[provider]
-	if !PlacementSupported(network, provider) || state == nil {
-		return false
-	}
-	for _, candidate := range state.candidates {
-		if candidate.Visibility == network {
+func managedPlacementAvailable(snapshot placementSnapshot, selector []string) bool {
+	for _, candidate := range snapshot.candidates {
+		if capabilitySetContains(candidate.Capabilities, selector) {
 			return true
 		}
 	}
@@ -209,37 +194,49 @@ func (p *registeredPlacementService) Resolve(ctx context.Context, intent openapi
 		}
 		return snapshot.localID, nil
 	}
-	if intent.Network == nil || intent.Provider == nil || !PlacementSupported(*intent.Network, *intent.Provider) {
-		return "", errors.Validation("the requested network and provider placement is unsupported")
+	selector := intent.Selector
+	if selector == nil && intent.Network != nil && intent.Provider != nil {
+		selector = []string{"network/" + *intent.Network, "provider/" + normalizePlacementProvider(*intent.Provider)}
 	}
-	selected, err := p.selectManaged(snapshot, *intent.Network, *intent.Provider)
+	selector, validationErr := managedClusters.NormalizeSelector(selector)
+	if validationErr != nil {
+		return "", validationErr
+	}
+	selected, err := p.selectManaged(snapshot, selector)
 	if err != nil {
 		if stderrors.Is(err, errNoEligiblePlacement) {
 			return "", errors.Validation("no eligible managed cluster is available for the requested placement")
 		}
-		glog.Errorf("failed to resolve managed cluster placement provider=%s network=%s: %v", *intent.Provider, *intent.Network, err)
+		glog.Errorf("failed to resolve managed cluster placement selector=%v: %v", selector, err)
 		return "", errors.GeneralError("failed to resolve managed cluster placement")
 	}
 	return selected, nil
 }
 
-func (p *registeredPlacementService) Availability(ctx context.Context) (openapi.GatewayPlacementAvailability, *errors.ServiceError) {
+func (p *registeredPlacementService) Availability(ctx context.Context, selectors [][]string) (openapi.GatewayPlacementAvailability, *errors.ServiceError) {
 	snapshot, svcErr := p.snapshot(ctx)
 	if svcErr != nil {
 		return openapi.GatewayPlacementAvailability{}, svcErr
 	}
-	availability := openapi.GatewayPlacementAvailability{}
-	availability.AwsPublic = managedPlacementAvailable(snapshot, "public", "aws")
-	availability.AwsVpn = managedPlacementAvailable(snapshot, "vpn", "aws")
-	availability.IbmPublic = managedPlacementAvailable(snapshot, "public", "ibm")
-	availability.IbmVpn = false
-	if !availability.AwsPublic && !availability.AwsVpn {
-		reason := "no-eligible-cluster"
-		availability.AwsReason = &reason
-	}
-	if !availability.IbmPublic {
-		reason := "no-eligible-cluster"
-		availability.IbmReason = &reason
+	availability := openapi.GatewayPlacementAvailability{Placements: make([]openapi.GatewayPlacementAvailabilityItem, 0, len(selectors))}
+	seen := make(map[string]struct{}, len(selectors))
+	for _, requested := range selectors {
+		selector, validationErr := managedClusters.NormalizeSelector(requested)
+		if validationErr != nil {
+			return openapi.GatewayPlacementAvailability{}, validationErr
+		}
+		key := strings.Join(selector, "\x00")
+		if _, duplicate := seen[key]; duplicate {
+			continue
+		}
+		seen[key] = struct{}{}
+		available := managedPlacementAvailable(snapshot, selector)
+		item := openapi.GatewayPlacementAvailabilityItem{Selector: selector, Available: available}
+		if !available {
+			reason := "no-eligible-cluster"
+			item.Reason = &reason
+		}
+		availability.Placements = append(availability.Placements, item)
 	}
 	availability.LocalKind = os.Getenv("HYPERSHELL_PLATFORM_KIND") == "true" && snapshot.localID != ""
 	return availability, nil
@@ -275,7 +272,7 @@ func init() {
 
 		gatewaysRouter := apiV1Router.PathPrefix("/gateways").Subrouter()
 		gatewaysRouter.HandleFunc("", gatewayHandler.List).Methods(http.MethodGet)
-		gatewaysRouter.HandleFunc("/placement-availability", gatewayHandler.GetPlacementAvailability).Methods(http.MethodGet)
+		gatewaysRouter.HandleFunc("/placement-availability", gatewayHandler.GetPlacementAvailability).Methods(http.MethodPost)
 		gatewaysRouter.HandleFunc("/{id}", gatewayHandler.Get).Methods(http.MethodGet)
 		gatewaysRouter.HandleFunc("", gatewayHandler.Create).Methods(http.MethodPost)
 		gatewaysRouter.HandleFunc("/{id}", gatewayHandler.Patch).Methods(http.MethodPatch)

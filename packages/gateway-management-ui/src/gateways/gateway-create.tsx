@@ -1,7 +1,6 @@
 import {
   ActionGroup,
   Alert,
-  AlertActionLink,
   Button,
   Card,
   CardBody,
@@ -34,7 +33,11 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
 import { useGatewayUi } from "../gateway-ui-provider";
-import type { GatewayProvisionInput } from "../application/gateway-types";
+import type {
+  GatewayPlacementAvailability,
+  GatewayPlacementAvailabilityItem,
+  GatewayProvisionInput,
+} from "../application/gateway-types";
 import { messages } from "../messages";
 import { gatewayListQueryRoot, gatewayQueryKey } from "./gateway-data";
 import styles from "./gateway-create.module.css";
@@ -44,6 +47,25 @@ import ibmCloudLogo from "../assets/ibm-cloud.svg";
 const placementReasonMessages = {
   "no-eligible-cluster": messages.noEligibleCluster,
 } as const;
+
+const placementSelectors = {
+  awsPublic: ["network/public", "provider/aws"],
+  awsVpn: ["network/vpn", "provider/aws"],
+  ibmPublic: ["network/public", "provider/ibm"],
+  ibmVpn: ["network/vpn", "provider/ibm"],
+} as const;
+const requestedPlacementSelectors = Object.values(placementSelectors);
+
+function placementResult(
+  availability: GatewayPlacementAvailability | undefined,
+  selector: readonly string[],
+): GatewayPlacementAvailabilityItem | undefined {
+  return availability?.placements.find(
+    (item) =>
+      item.selector.length === selector.length &&
+      item.selector.every((label) => selector.includes(label)),
+  );
+}
 
 function placementReasonKey(
   ...reasons: readonly (string | null | undefined)[]
@@ -320,22 +342,29 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
     queryFn:
       getPlacementAvailability === undefined
         ? skipToken
-        : ({ signal }) => getPlacementAvailability(signal),
+        : ({ signal }) =>
+            getPlacementAvailability(requestedPlacementSelectors, signal),
     staleTime: 30_000,
   });
-  const hasManagedPlacement = availability.data
-    ? availability.data.awsPublic ||
-      availability.data.awsVpn ||
-      availability.data.ibmPublic ||
-      availability.data.ibmVpn
-    : false;
+  const awsPublic = placementResult(
+    availability.data,
+    placementSelectors.awsPublic,
+  );
+  const awsVpn = placementResult(availability.data, placementSelectors.awsVpn);
+  const ibmPublic = placementResult(
+    availability.data,
+    placementSelectors.ibmPublic,
+  );
+  const ibmVpn = placementResult(availability.data, placementSelectors.ibmVpn);
+  const hasManagedPlacement =
+    availability.data?.placements.some(({ available }) => available) === true;
   const canUseLocalKind =
     availability.data?.localKind === true && !hasManagedPlacement;
   const defaultToLocalKind = canUseLocalKind && !hasManagedPlacement;
-  const publicPlacementAvailable = availability.data
-    ? availability.data.awsPublic || availability.data.ibmPublic
-    : false;
-  const vpnPlacementAvailable = availability.data?.awsVpn === true;
+  const publicPlacementAvailable =
+    awsPublic?.available === true || ibmPublic?.available === true;
+  const vpnPlacementAvailable =
+    awsVpn?.available === true || ibmVpn?.available === true;
 
   const submit = handleSubmit((values) => {
     if (values.localKind) {
@@ -346,17 +375,11 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
       return;
     }
     if (values.network === null || values.provider === null) return;
-    if (values.network === "vpn") {
-      if (values.provider !== "aws") return;
-      createGateway.mutate({
-        name: values.name,
-        placement: { network: "vpn", provider: "aws" },
-      });
-      return;
-    }
     createGateway.mutate({
       name: values.name,
-      placement: { network: "public", provider: values.provider },
+      placement: {
+        selector: [`network/${values.network}`, `provider/${values.provider}`],
+      },
     });
   });
   const network = useWatch({ control, name: "network" });
@@ -365,7 +388,11 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
   useEffect(() => {
     if (!availability.data || localKind) return;
     if (network === "vpn") {
-      const availableProvider = availability.data.awsVpn ? "aws" : null;
+      const availableProvider = ibmVpn?.available
+        ? "ibm"
+        : awsVpn?.available
+          ? "aws"
+          : null;
       if (provider === availableProvider) return;
       setValue("provider", availableProvider, {
         shouldValidate: true,
@@ -373,20 +400,26 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
     } else if (
       network === "public" &&
       (provider === null ||
-        (provider === "ibm" && !availability.data.ibmPublic) ||
-        (provider === "aws" && !availability.data.awsPublic))
+        (provider === "ibm" && !ibmPublic?.available) ||
+        (provider === "aws" && !awsPublic?.available))
     ) {
       setValue(
         "provider",
-        availability.data.ibmPublic
-          ? "ibm"
-          : availability.data.awsPublic
-            ? "aws"
-            : null,
+        ibmPublic?.available ? "ibm" : awsPublic?.available ? "aws" : null,
         { shouldValidate: true },
       );
     }
-  }, [availability.data, localKind, network, provider, setValue]);
+  }, [
+    availability.data,
+    awsPublic?.available,
+    awsVpn?.available,
+    ibmPublic?.available,
+    ibmVpn?.available,
+    localKind,
+    network,
+    provider,
+    setValue,
+  ]);
   useEffect(() => {
     if (defaultToLocalKind && !localKind) {
       setValue("localKind", true, { shouldValidate: true });
@@ -481,8 +514,8 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                           reason: intl.formatMessage(
                             placementReasonMessages[
                               placementReasonKey(
-                                availability.data.awsReason,
-                                availability.data.ibmReason,
+                                awsPublic?.reason,
+                                ibmPublic?.reason,
                               )
                             ],
                           ),
@@ -495,9 +528,9 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                     field.onChange("public");
                     setValue(
                       "provider",
-                      availability.data?.ibmPublic
+                      ibmPublic?.available
                         ? "ibm"
-                        : availability.data?.awsPublic
+                        : awsPublic?.available
                           ? "aws"
                           : null,
                     );
@@ -517,7 +550,7 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                           network: intl.formatMessage(messages.vpnNetwork),
                           reason: intl.formatMessage(
                             placementReasonMessages[
-                              placementReasonKey(availability.data.awsReason)
+                              placementReasonKey(awsVpn?.reason, ibmVpn?.reason)
                             ],
                           ),
                         })
@@ -529,7 +562,11 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                     field.onChange("vpn");
                     setValue(
                       "provider",
-                      availability.data?.awsVpn === true ? "aws" : null,
+                      ibmVpn?.available
+                        ? "ibm"
+                        : awsVpn?.available
+                          ? "aws"
+                          : null,
                     );
                   }}
                 />
@@ -554,13 +591,17 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                     description={
                       availability.data &&
                       !(network === "vpn"
-                        ? availability.data.awsVpn
-                        : availability.data.awsPublic)
+                        ? awsVpn?.available
+                        : awsPublic?.available)
                         ? intl.formatMessage(messages.unavailableProvider, {
                             provider: intl.formatMessage(messages.awsProvider),
                             reason: intl.formatMessage(
                               placementReasonMessages[
-                                placementReasonKey(availability.data.awsReason)
+                                placementReasonKey(
+                                  network === "vpn"
+                                    ? awsVpn?.reason
+                                    : awsPublic?.reason,
+                                )
                               ],
                             ),
                           })
@@ -571,8 +612,8 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                     isDisabled={
                       availability.data
                         ? !(network === "vpn"
-                            ? availability.data.awsVpn
-                            : availability.data.awsPublic)
+                            ? awsVpn?.available
+                            : awsPublic?.available)
                         : true
                     }
                     onChoose={() => {
@@ -585,29 +626,35 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
                     selected={field.value === "ibm"}
                     title={intl.formatMessage(messages.ibmCloudProvider)}
                     description={
-                      network === "vpn"
-                        ? intl.formatMessage(messages.vpnRequiresAws)
-                        : availability.data && !availability.data.ibmPublic
-                          ? intl.formatMessage(messages.unavailableProvider, {
-                              provider: intl.formatMessage(
-                                messages.ibmCloudProvider,
-                              ),
-                              reason: intl.formatMessage(
-                                placementReasonMessages[
-                                  placementReasonKey(
-                                    availability.data.ibmReason,
-                                  )
-                                ],
-                              ),
-                            })
-                          : intl.formatMessage(
-                              messages.ibmCloudProviderDescription,
-                            )
+                      availability.data &&
+                      !(network === "vpn"
+                        ? ibmVpn?.available
+                        : ibmPublic?.available)
+                        ? intl.formatMessage(messages.unavailableProvider, {
+                            provider: intl.formatMessage(
+                              messages.ibmCloudProvider,
+                            ),
+                            reason: intl.formatMessage(
+                              placementReasonMessages[
+                                placementReasonKey(
+                                  network === "vpn"
+                                    ? ibmVpn?.reason
+                                    : ibmPublic?.reason,
+                                )
+                              ],
+                            ),
+                          })
+                        : intl.formatMessage(
+                            messages.ibmCloudProviderDescription,
+                          )
                     }
                     icon={ibmCloudLogo}
                     isDisabled={
-                      network === "vpn" ||
-                      (availability.data ? !availability.data.ibmPublic : true)
+                      availability.data
+                        ? !(network === "vpn"
+                            ? ibmVpn?.available
+                            : ibmPublic?.available)
+                        : true
                     }
                     onChoose={() => {
                       field.onChange("ibm");
@@ -626,15 +673,6 @@ export function GatewayCreatePage({ onCreated }: GatewayCreatePageProps = {}) {
           ) : null}
           {availability.isError ? (
             <Alert
-              actionLinks={
-                <AlertActionLink
-                  onClick={() => {
-                    void availability.refetch();
-                  }}
-                >
-                  {intl.formatMessage(messages.retry)}
-                </AlertActionLink>
-              }
               isInline
               title={intl.formatMessage(messages.placementAvailabilityError)}
               variant="warning"
