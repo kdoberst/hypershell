@@ -73,8 +73,9 @@ func isManagedClusterRecordMutation(fullMethod string) bool {
 }
 
 // authorizeControlPlaneGRPC decides a call from the control plane registered as
-// clusterID. req is nil on a streaming call, where only Watch methods exist.
-func authorizeControlPlaneGRPC(ctx context.Context, clusterID, fullMethod string, req interface{}, gateways GatewayClusterResolver) error {
+// clusterID. req is nil on a streaming call, where only Watch methods exist. imports
+// validates the reconciled Repository on a declarative-import write.
+func authorizeControlPlaneGRPC(ctx context.Context, clusterID, fullMethod string, req interface{}, gateways GatewayClusterResolver, imports ImportRepositoryResolver) error {
 	service, method, ok := splitHypershellMethod(fullMethod)
 	if !ok {
 		return nil
@@ -146,6 +147,29 @@ func authorizeControlPlaneGRPC(ctx context.Context, clusterID, fullMethod string
 			// Scoped to the caller's cluster by the caller binding, which resolves
 			// each AgentRuntime's effective cluster (its own cluster_id, or the
 			// cluster of its referenced gateway) server-side.
+			return nil
+		}
+		return denied()
+	case "SandboxTemplateService", "ProviderSpecService",
+		"ProviderBindingService", "InferenceRouteService", "SecretSourceService":
+		// A registered control plane may READ these owned import kinds (list/watch/get)
+		// to drive reconciliation. WRITES are the declarative-import reconciler's
+		// bounded path: they are authorized only when the write carries the reconciled
+		// Repository id in trusted metadata and that Repository exists
+		// (authorizeImportWrite / import_binding.go). The handler then sets the
+		// repository_id ownership mark server-side from that metadata and refuses a
+		// write to a resource owned by a different Repository, so a registered spoke
+		// cannot forge ownership of or prune another Repository's resources.
+		if isReadMethodName(method) {
+			return nil
+		}
+		return authorizeImportWrite(ctx, imports)
+	case "RepositoryService":
+		// A Repository is the owner (no ownership mark) and is registered and managed
+		// by an admin over HTTP, not created, updated, or pruned by the import
+		// reconciler. The control plane may READ repositories to drive the import;
+		// Repository writes over gRPC stay denied.
+		if isReadMethodName(method) {
 			return nil
 		}
 		return denied()
@@ -246,6 +270,16 @@ func authorizeUserGRPC(fullMethod string, req interface{}, bindings []BindingSum
 			// The gRPC list and watch are unfiltered by caller, so only
 			// platform:admin (who sees every agent runtime over HTTP too) may use
 			// them, mirroring GatewayService.
+			return allowIf(hasPlatformAdmin(bindings))
+		}
+		return denied()
+	case "RepositoryService", "SandboxTemplateService", "ProviderSpecService",
+		"ProviderBindingService", "InferenceRouteService", "SecretSourceService":
+		// These import kinds are authored over HTTP; their gRPC read methods are
+		// unfiltered by caller, so only platform:admin (who sees them all over HTTP
+		// too) may read them. Writes over gRPC are the control-plane import
+		// reconciler's exclusive path and are denied to every user caller.
+		if isReadMethodName(method) {
 			return allowIf(hasPlatformAdmin(bindings))
 		}
 		return denied()

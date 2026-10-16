@@ -3,8 +3,10 @@ package e2e
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"strings"
@@ -135,6 +137,7 @@ func (s *E2ESuite) assertNoUnauthenticatedControllerLogs(t *testing.T) {
 // p0_2EnvironmentReadiness asserts the seed ids resolved (done in SetupSuite).
 // Long mode also asserts the platform dependencies are healthy.
 func (s *E2ESuite) p0_2EnvironmentReadiness(t *testing.T) {
+	s.logger.Additionalf("verify seeded managed cluster and platform API dependencies")
 	s.Assert().NotEmpty(s.clusterID, "seeded cluster id")
 	s.longOnly("platform-dependencies", s.assertPlatformDependencies)
 }
@@ -196,13 +199,14 @@ func (s *E2ESuite) p1_1Provisioning(t *testing.T) {
 		return conditionsErr == nil, nil
 	})
 	s.Require().NoError(conditionsWaitErr, "gateway provisioning conditions did not settle: %v", conditionsErr)
-	t.Logf("primary gateway %s (%s) Running in namespace %s", running.Name, running.ID, running.Namespace)
+	s.Logf("primary gateway %s (%s) Running in namespace %s", running.Name, running.ID, running.Namespace)
 	if !s.skipKubeChecks {
 		s.startOrphanReaper(t)
 	}
 }
 
 func (s *E2ESuite) p1_2InfraVerification(t *testing.T) {
+	s.logger.Additionalf("verify gateway deployment, service, TLS, and database configuration")
 	if s.skipKubeChecks {
 		t.Skip("no per-cluster kube context; skipping gateway infrastructure checks")
 	}
@@ -365,7 +369,7 @@ func (s *E2ESuite) p1_4RouteAndCLIRegistration(t *testing.T) {
 	s.Require().NoError(s.driver.WaitForGatewayRoute(t.Context(), s.primary), "wait for gateway route")
 	endpoint, err := s.driver.DiscoverGatewayEndpoint(t.Context(), s.primary)
 	s.Require().NoError(err, "discover gateway endpoint")
-	t.Logf("gateway endpoint: %s", endpoint)
+	s.Logf("gateway endpoint: %s", endpoint)
 
 	s.primaryLocalName = s.registerGateway(t, s.primary, endpoint, s.primaryGatewayToken.AccessToken)
 }
@@ -444,7 +448,7 @@ func (s *E2ESuite) p2_1SandboxLifecycle(t *testing.T) {
 	s.longOnly("workspace-listing", func(t *testing.T) {
 		out, err := s.cli(t, local, "sandbox", "exec", "-n", name, "--", "ls", "-la", "/workspace")
 		if err != nil && strings.Contains(out, "No such file or directory") {
-			t.Log("sandbox image has no /workspace directory; using its default working directory")
+			s.Log("sandbox image has no /workspace directory; using its default working directory")
 		} else {
 			s.Require().NoError(err, "sandbox workspace listing")
 			s.Assert().NotEmpty(strings.TrimSpace(stripANSI(out)), "workspace listing")
@@ -475,20 +479,47 @@ func (s *E2ESuite) runSandboxCLIConcurrently(t *testing.T, local, action string,
 	for i, sandboxName := range names {
 		i, sandboxName := i, sandboxName
 		g.Go(func() error {
-			args := []string{"sandbox", action}
-			if action == "create" {
-				args = append(args, "--name")
+			steps := sandboxCLISteps(action, sandboxName, s.sandboxImage)
+			outputs := make([]string, 0, len(steps))
+			for j, args := range steps {
+				out, err := s.cli(t, local, args...)
+				outputs = append(outputs, out)
+				// Only the final command decides the result; an earlier step (the
+				// stop before a delete) is best-effort, so its error is only logged.
+				if j < len(steps)-1 {
+					if err != nil {
+						s.Logf("sandbox %s %s: %q returned an error (continuing): %v", action, sandboxName, args, err)
+					}
+					continue
+				}
+				results[i].err = err
 			}
-			args = append(args, sandboxName)
-			results[i].output, results[i].err = s.cli(t, local, args...)
+			results[i].output = strings.Join(outputs, "\n")
 			return nil
 		})
 	}
 	s.Require().NoError(g.Wait(), "run concurrent sandbox %s commands", action)
 	for i, sandboxName := range names {
 		if results[i].err != nil {
-			t.Logf("sandbox %s %s returned an error (state will be verified): %v\n%s", action, sandboxName, results[i].err, results[i].output)
+			s.Logf("sandbox %s %s returned an error (state will be verified): %v\n%s", action, sandboxName, results[i].err, results[i].output)
 		}
+	}
+}
+
+// sandboxCLISteps returns the openshell CLI invocations that perform action on
+// one sandbox. A delete stops the sandbox first: `sandbox stop` shuts the
+// sandbox and supervisor processes down in order, while a bare `sandbox delete`
+// leaves the pods to Kubernetes, whose SIGTERM those processes ignore, so every
+// delete waits out the 30s termination grace period and the gateway route
+// answers it with "upstream request timeout" after 15s.
+func sandboxCLISteps(action, name, image string) [][]string {
+	switch action {
+	case "create":
+		return [][]string{{"sandbox", "create", "--from", image, "--name", name}}
+	case "delete":
+		return [][]string{{"sandbox", "stop", name}, {"sandbox", "delete", name}}
+	default:
+		return [][]string{{"sandbox", action, name}}
 	}
 }
 
@@ -585,7 +616,7 @@ func (s *E2ESuite) p2_3DeletionAndGC(t *testing.T) {
 		case http.StatusNoContent, http.StatusOK, http.StatusAccepted:
 			return true, nil
 		case http.StatusServiceUnavailable:
-			t.Logf("delete gateway %s returned 503 (service-account cleanup busy); retrying: %s", gw.ID, body)
+			s.Logf("delete gateway %s returned 503 (service-account cleanup busy); retrying: %s", gw.ID, body)
 			return false, nil
 		default:
 			return false, fmt.Errorf("delete gateway status %d: %s", status, body)
@@ -713,6 +744,16 @@ func (s *E2ESuite) assertControllerReconnectConvergence(t *testing.T) {
 	}
 	s.Require().Positive(originalReplicas, "controller has at least one replica before reconnect test")
 
+	if gate := os.Getenv("E2E_DISRUPTIVE_GATE_FILE"); gate != "" {
+		s.Log("waiting for the concurrent suites to finish before scaling the controller to zero")
+		timeout := durationSecondsEnv("E2E_DISRUPTIVE_GATE_TIMEOUT", 900*time.Second)
+		opened, err := waitDisruptiveGate(ctx, gate, timeout, 2*time.Second)
+		s.Require().NoError(err, "wait for the disruptive-step gate")
+		if !opened {
+			s.Logf("concurrent suites still running after %s; continuing anyway", timeout)
+		}
+	}
+
 	zero := int32(0)
 	s.Require().NoError(setDeploymentReplicas(ctx, deployments, zero), "scale controller to zero")
 	restoreNeeded := true
@@ -723,7 +764,7 @@ func (s *E2ESuite) assertControllerReconnectConvergence(t *testing.T) {
 		restoreCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		if restoreErr := setDeploymentReplicas(restoreCtx, deployments, originalReplicas); restoreErr != nil {
-			t.Errorf("emergency controller replica restore: %v", restoreErr)
+			reportingTest{t, s.logger}.Errorf("emergency controller replica restore: %v", restoreErr)
 		}
 	}()
 	s.Require().NoError(harness.Poll(ctx, time.Second, 120*time.Second, func(ctx context.Context) (bool, error) {
@@ -741,6 +782,30 @@ func (s *E2ESuite) assertControllerReconnectConvergence(t *testing.T) {
 	restoreNeeded = false
 	running := s.waitGatewayRunning(t, created.ID)
 	s.Assert().Equal("Running", running.Phase, "gateway created while disconnected converges from reconnect snapshot")
+}
+
+// waitDisruptiveGate blocks until gate exists, which is how
+// tests/e2e/run-parallel.sh signals that every concurrently running suite other
+// than this one has exited and the shared controller may be scaled down. It
+// mirrors e2e_wait_disruptive_gate in lib.sh: after timeout it reports false so
+// the caller can warn and proceed rather than hang the run.
+func waitDisruptiveGate(ctx context.Context, gate string, timeout, interval time.Duration) (bool, error) {
+	deadline := time.Now().Add(timeout)
+	for {
+		if _, err := os.Stat(gate); err == nil {
+			return true, nil
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return false, fmt.Errorf("check disruptive gate %s: %w", gate, err)
+		}
+		if !time.Now().Before(deadline) {
+			return false, nil
+		}
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-time.After(interval):
+		}
+	}
 }
 
 func setDeploymentReplicas(ctx context.Context, deployments typedappsv1.DeploymentInterface, replicas int32) error {
@@ -965,10 +1030,10 @@ func (s *E2ESuite) waitGatewayNamespace(t *testing.T, id string) string {
 // recent controller logs, so a provisioning timeout is debuggable from the run.
 func (s *E2ESuite) dumpGatewayDiagnostics(t *testing.T, id string, gw *sdktypes.Gateway) {
 	if gw != nil {
-		t.Logf("DIAG gateway %s phase=%q namespace=%q conditions=%v", id, gw.Phase, gw.Namespace, gw.ProvisioningConditions)
+		s.Logf("DIAG gateway %s phase=%q namespace=%q conditions=%v", id, gw.Phase, gw.Namespace, gw.ProvisioningConditions)
 	}
 	if logs, err := s.podLogs(context.Background(), s.driver.PlatformNamespace(), "app=hypershell-controller", 40); err == nil {
-		t.Logf("DIAG controller logs (tail):\n%s", logs)
+		s.Logf("DIAG controller logs (tail):\n%s", logs)
 	}
 }
 
@@ -1045,7 +1110,7 @@ func (s *E2ESuite) podLogs(ctx context.Context, ns, selector string, tail int64)
 func (s *E2ESuite) rbacDefaultIncludesCreator(t *testing.T) bool {
 	dep, err := s.clients.Kube.AppsV1().Deployments(s.driver.PlatformNamespace()).Get(t.Context(), "hypershell-api-server", metav1.GetOptions{})
 	if err != nil {
-		t.Logf("WARN read api-server RBAC default (assuming creator-default): %v", err)
+		s.Logf("WARN read api-server RBAC default (assuming creator-default): %v", err)
 		return true
 	}
 	for _, c := range dep.Spec.Template.Spec.Containers {
@@ -1132,20 +1197,29 @@ func (s *E2ESuite) assertGarbageCollectedEvent(t *testing.T, orphan string) {
 	s.Assert().NoError(err, "GarbageCollected Event for orphan namespace %s", orphan)
 }
 
-// waitPodRunning polls until a pod whose name contains substr is Running in ns.
+// waitPodRunning waits for the requested workload image, not just a supervisor
+// pod that happens to share the sandbox name.
 func (s *E2ESuite) waitPodRunning(ctx context.Context, ns, substr string, timeout time.Duration) error {
-	return harness.Poll(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
+	err := harness.Poll(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
 		pods, err := s.clients.Kube.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return false, nil
 		}
 		for _, p := range pods.Items {
 			if strings.Contains(p.Name, substr) && p.Status.Phase == corev1.PodRunning {
-				return true, nil
+				for _, container := range p.Spec.Containers {
+					if container.Image == s.sandboxImage {
+						return true, nil
+					}
+				}
 			}
 		}
 		return false, nil
 	})
+	if err != nil {
+		return fmt.Errorf("wait for sandbox pod %q with workload image %q: %w", substr, s.sandboxImage, err)
+	}
+	return nil
 }
 
 // pollActiveSandboxCount polls the gateway's active_sandbox_count until it reaches

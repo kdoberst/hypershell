@@ -7,7 +7,7 @@
 
 The HyperShell API server provides a control plane for deploying and managing distributed API gateways across multiple Kubernetes clusters and cloud providers.
 
-Gateways, clusters, releases, and networks are **top-level resources**. An earlier model included a top-level "Sector" (later renamed "Fleet") organizational unit that grouped these resources via a `fleet_id`; that layer has been removed. There is no sectorization: all gateways belong to the same platform, and tenancy is enforced by RBAC (platform-level `gateway:creator`/`platform:admin` and per-gateway `gateway:owner` (full control incl. delete; grantable, one or more), `gateway:admin` (granted administrators; no delete), and `gateway:viewer`), not by a fleet grouping. See [`security/rbac-enforcement.spec.md`](../security/rbac-enforcement.spec.md) and [`gateway-access-management.spec.md`](gateway-access-management.spec.md).
+Gateways and clusters are **top-level resources**. An earlier model included a top-level "Sector" (later renamed "Fleet") organizational unit that grouped these resources via a `fleet_id`; that layer has been removed. There is no sectorization: all gateways belong to the same platform, and tenancy is enforced by RBAC (platform-level `gateway:creator`/`platform:admin` and per-gateway `gateway:owner` (full control incl. delete; grantable, one or more), `gateway:admin` (granted administrators; no delete), and `gateway:viewer`), not by a fleet grouping. See [`security/rbac-enforcement.spec.md`](../security/rbac-enforcement.spec.md) and [`gateway-access-management.spec.md`](gateway-access-management.spec.md).
 
 Current model:
 
@@ -45,7 +45,6 @@ erDiagram
         string ID PK
         string name
         string cluster_id FK
-        string release_id FK
         string namespace
         string image
         string supervisor_image
@@ -60,7 +59,6 @@ erDiagram
         string status
         string phase
         string gateway_version
-        string observed_release_id
         int generation
         int observed_generation
         time created_at
@@ -224,23 +222,23 @@ erDiagram
 
 ### Requirement: Top-Level Resources
 
-ManagedCluster, GatewayRelease, Gateway, and GatewayNetwork SHALL be top-level resources. They SHALL NOT be scoped by a fleet or sector grouping, and their create and update contracts SHALL NOT include a `fleet_id` field.
+ManagedCluster and Gateway SHALL be top-level resources. They SHALL NOT be scoped by a fleet or sector grouping, and their create and update contracts SHALL NOT include a `fleet_id` field.
 
 #### Scenario: Create Gateway Without a Fleet Reference
-- GIVEN a valid cluster_id and release_id
+- GIVEN a valid cluster_id
 - WHEN a POST request is made to `/api/hypershell/v1/gateways`
 - THEN a new Gateway is created as a top-level resource
-- AND the Gateway references valid cluster and release resources
+- AND the Gateway references a valid cluster resource
 - AND the request SHALL NOT require or accept a `fleet_id`
 
-#### Scenario: Create Gateway With a Direct Image Reference and No Release
+#### Scenario: Create Gateway With a Direct Image Reference
 
-- GIVEN a valid cluster_id and database_id
-- AND an `image` and `supervisor_image` set directly, with no `release_id`
+- GIVEN a valid cluster_id
+- AND an `image` and `supervisor_image` set directly
 - WHEN a POST request is made to `/api/hypershell/v1/gateways`
-- THEN a new Gateway is created with `release_id` unset
+- THEN a new Gateway is created
 - AND the control plane reconciler provisions the gateway workload from the
-  given `image` and `supervisor_image` rather than resolving a GatewayRelease
+  given `image` and `supervisor_image`
 
 ### Requirement: Gateway Namespace Ownership
 
@@ -263,25 +261,26 @@ The API server SHALL assign each Gateway an immutable Kubernetes namespace befor
 
 ### Requirement: Gateway Provisioning Fields
 
-A Gateway SHALL include provisioning configuration fields that the control plane uses to deploy and configure the OpenShell gateway workload on a target cluster. `release_id` SHALL be optional on create and update: a Gateway MAY be created with `image` set and no `release_id` (for example, the branch-build workflow in [`openshell-branch-build.spec.md`](./openshell-branch-build.spec.md), which provisions a Gateway from a direct `image`/`supervisor_image` reference with no GatewayRelease behind it), in which case the reconciler uses `image` directly and no rollout management (canary, rollback) applies. The REST and gRPC create/update requests SHALL accept a Gateway with neither `release_id` nor `image` set, in which case the control-plane `GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` environment defaults apply (see [`openshell-gateway.spec.md`](./openshell-gateway.spec.md)).
+A Gateway SHALL include provisioning configuration fields that the control plane uses to deploy and configure the OpenShell gateway workload on a target cluster. A Gateway MAY be created with `image` set directly (for example, the branch-build workflow in [`openshell-branch-build.spec.md`](./openshell-branch-build.spec.md), which provisions a Gateway from a direct `image`/`supervisor_image` reference), in which case the reconciler uses `image` directly. The REST and gRPC create/update requests SHALL accept a Gateway with no `image` set, in which case the control-plane `GATEWAY_IMAGE`/`GATEWAY_SUPERVISOR_IMAGE` environment defaults apply (see [`openshell-gateway.spec.md`](./openshell-gateway.spec.md)).
 
-> **Relationship to release and database management fields:** The `image` field provides a direct image reference for the control plane reconciler, while `release_id` references a GatewayRelease for rollout management (canary, rollback). When both are set, `release_id` takes precedence and the reconciler resolves it to an image. A Gateway carries no database configuration at all: the control plane provisions each gateway's database and login role on the platform's gateway database server using the admin credential Secret mounted into the controller (see [`openshell-gateway-database.spec.md`](./openshell-gateway-database.spec.md)).
+> **Relationship to database management fields:** The `image` field provides a direct image reference for the control plane reconciler. A Gateway carries no database configuration at all: the control plane provisions each gateway's database and login role on the platform's gateway database server using the admin credential Secret mounted into the controller (see [`openshell-gateway-database.spec.md`](./openshell-gateway-database.spec.md)).
 
-All fields in the table below SHALL be part of the REST and gRPC Gateway create and update contract as optional inputs (except where marked read-only), exposed through the generated OpenAPI schema (`components/api-server/openapi/openapi.gateways.yaml`) and gRPC message the same way `image`, `supervisor_image`, and `credential_driver` already are, and SHALL be added to the `gateways` table via a schema migration. This applies in particular to `sandbox_image`, `dev_build`, and `dev_build_metadata`, which are new fields introduced by [`openshell-branch-build.spec.md`](./openshell-branch-build.spec.md) and are not yet present in the implemented schema or OpenAPI contract.
+All fields in the table below SHALL be part of the REST and gRPC Gateway create and update contract as optional inputs (except where marked read-only), exposed through the generated OpenAPI schema (`components/api-server/openapi/openapi.gateways.yaml`) and gRPC message the same way `image`, `supervisor_image`, and `credential_driver` already are. The `dev_build` and `dev_build_metadata` fields are defined by [`openshell-branch-build.spec.md`](./openshell-branch-build.spec.md).
 
-`sandbox_image` SHALL be a desired-spec field: a change to it SHALL cause the control plane to re-provision the gateway (Helm upgrade), the same as a change to `image` or `supervisor_image`. If the control plane uses a generation/`observed_generation` pair and a desired-state comparison to decide whether to re-provision, `sandbox_image` SHALL be included in that comparison. `dev_build` and `dev_build_metadata` SHALL also be included, because a change to either must be re-applied onto workload labels and annotations through Helm values.
+`dev_build` and `dev_build_metadata` SHALL be desired-spec fields because a change
+to either must be re-applied onto workload labels and annotations through Helm
+values. Sandbox workload images are selected per sandbox through OpenShell;
+they are not Gateway resource fields.
 
 | Field | Type | Description |
 |---|---|---|
 | `image` | string | Gateway container image reference (e.g., `quay.io/opendatahub/odh-openshell-gateway:v0.1.3-rhaiv.3@sha256:e59fea2fc97144ed2f402af69be73c6dbbf9a76739f042e86c2237f65852284e`) |
 | `supervisor_image` | string | Supervisor sidecar container image (default supplied by `GATEWAY_SUPERVISOR_IMAGE` env var on the control-plane deployment; see `deploy/base/platform-resources/controller.yaml`) |
-| `sandbox_image` | string | Sandbox base image the gateway uses when launching sandboxes (default: `ghcr.io/nvidia/openshell-community/sandboxes/base:latest`). Control plane passes the resolved value as Helm `server.sandboxImage`. See [`openshell-gateway.spec.md`](./openshell-gateway.spec.md) |
 | `server_dns_names` | string[] | DNS names for TLS certificate SANs |
 | `oidc` | JSONB | OIDC authentication config: `{issuer, audience, jwks_ttl, roles_claim, admin_role, user_role, scopes_claim}` |
 | `route` | JSONB | Route exposure config for GRPCRoute provisioning: `{host}` |
 | `route_address` | text | Read-only external address populated by the control plane (e.g., `grpcs://hostname:443`) |
 | `gateway_version` | string | Read-only runtime version from the last successful gateway health response |
-| `observed_release_id` | string | Read-only (control-plane-owned) release currently rolled out and observed healthy; advanced only after a new revision passes its health gates. Distinct from the desired `release_id`. See [`gateway-release-rollout.spec.md`](./gateway-release-rollout.spec.md) |
 | `credential_driver` | JSONB | Credential storage driver config: `{type, kubernetes_secrets, vault}`. `type` is one of `vault`, `kubernetes-secrets`, `kek-db`. When omitted/null it resolves to `vault` (the default; convention-addressed per-cluster Vault, no sub-fields required). See [`openshell-gateway-credentials.spec.md`](./openshell-gateway-credentials.spec.md) |
 | `dev_build` | boolean | Marks this Gateway as a dev/branch build (default: false). Control plane passes `hypershell.redhat.io/openshell-dev-build` via Helm `podLabels`. See [`openshell-branch-build.spec.md`](./openshell-branch-build.spec.md) |
 | `dev_build_metadata` | JSONB | Dev build provenance: `{ref, sha, repo}`. Control plane passes these via Helm `podAnnotations`. See [`openshell-branch-build.spec.md`](./openshell-branch-build.spec.md) |
@@ -306,8 +305,8 @@ from a redundant reconciliation event.
 
 The API server SHALL increment `generation` whenever any field of the Gateway's
 desired spec changes, including `image`, `supervisor_image`, `server_dns_names`,
-`oidc`, `route`, `database`, `credential_driver`, `external_dns`, `tls_mode`,
-`service_type`, `release_id`, `database_id`, and `cluster_id`. It SHALL NOT
+`oidc`, `route`, `credential_driver`, `external_dns`, `tls_mode`,
+`service_type`, and `cluster_id`. It SHALL NOT
 increment `generation` for changes to control-plane-owned observed fields
 (`status`, `phase`, `route_address`, `observed_generation`).
 
@@ -412,29 +411,6 @@ generation, under the same per-row lock that guards `generation`:
 - WHEN a reconcile pass writes `GatewayDeployed` as `Failed` at the same
   `generation`
 - THEN the API server SHALL record `GatewayDeployed` as `Failed`
-
-### Requirement: Canary Release Strategy [DEPRECATED - Slated for Removal]
-
-> **DEPRECATED - Slated for Removal**: This requirement belongs to GatewayRelease, which is being removed from the platform. See "Kinds Slated for Removal" above. The requirements below are historical; do not implement new features against this kind.
-
-A GatewayRelease SHALL support canary deployment via `rollout_strategy`, `canary_percent`, and `canary_duration` fields.
-
-#### Scenario: Canary Rollout
-- GIVEN a GatewayRelease with `rollout_strategy: canary`, `canary_percent: 10`, `canary_duration: 30m`
-- WHEN the release is deployed
-- THEN 10% of traffic SHALL route to the new version
-- AND after 30 minutes, the rollout SHALL proceed to full deployment
-
-### Requirement: Network Topology [DEPRECATED - Slated for Removal]
-
-> **DEPRECATED - Slated for Removal**: This requirement belongs to GatewayNetwork, which is being removed from the platform. See "Kinds Slated for Removal" above. The requirements below are historical; do not implement new features against this kind.
-
-A GatewayNetwork SHALL define how gateways communicate. The `topology` field indicates the network shape and `tunnel_mode` the encapsulation method.
-
-#### Scenario: Hub-and-Spoke Network
-- GIVEN a GatewayNetwork with `topology: hub-spoke` and a `hub_gateway_id`
-- WHEN gateways join the network
-- THEN all spoke gateways SHALL route through the hub gateway
 
 ### Requirement: AgentRuntime as a Top-Level Resource
 
@@ -555,22 +531,25 @@ supports (`AgentRuntime`, `SandboxTemplate`, `ProviderSpec`, `ProviderBinding`,
 The import process SHALL be hosted by the **control plane**, the reconciler of the
 system, NOT by the API server. For each `Repository` the control plane SHALL:
 
-1. Resolve the `Repository`'s `secret_source_id` credential cluster-side, through
-   the same `SecretSource` -> `ExternalSecret` -> External Secrets Operator ->
-   Kubernetes `Secret` resolution path the control plane already uses for
-   AgentRuntime provisioning.
+1. Read the `Repository`'s `secret_source_id` value from the configured secret
+   store through its read-only secret-store client (`pkg/secretstore`), when a
+   credential is needed for git access. This is the same read-only store access the
+   control plane uses to place `AgentRuntime` secrets; it does NOT create an
+   `ExternalSecret` and does NOT depend on External Secrets Operator.
 2. Git-clone the `Repository` at its `default_branch` (or the branch otherwise
-   specified) using that resolved credential.
-3. Render the Kustomize root at `import_path`.
-4. Reconcile (create / update / prune) the rendered ext resources into the API,
-   over the same create, update, and delete operations the REST layer owns.
+   specified) using that read credential.
+3. Render the Kustomize root at `import_path` by invoking `hsctl` (the CLI's
+   Kustomize render/apply path), NOT an embedded Kustomize library.
+4. Reconcile (create / update / prune) the rendered ext resources into the API
+   over the generated gRPC write path, marking each written resource with its
+   owning `Repository` (`repository_id`).
 
-The control plane holds per-cluster in-cluster credentials and the cluster-side
-`SecretSource` resolution and git access the import requires; the API server holds
-no in-process `SecretSource` resolver and no git access. Hosting the import in the
-control plane therefore places it where the credential resolution and repository
-access already exist, and removes the in-process-secret-resolution blocker that
-would otherwise fall on the API server.
+The control plane holds per-cluster in-cluster credentials, read-only secret-store
+access, and the git access the import requires; the API server holds no read access
+to the secret store and no git access. Hosting the import in the control plane
+therefore places it where the credential read and repository access already exist,
+and removes the in-process-secret-resolution blocker that would otherwise fall on
+the API server.
 
 The API server's only secret role in this flow is the secret-submission endpoint
 defined in "Requirement: Secret Submission and Storage" below: it stores a
@@ -585,13 +564,19 @@ gRPC API. The declarative-import reconciler is the SINGLE, clearly-bounded
 control-plane path that writes HyperShell API desired-state resources. That
 exception is scoped precisely: the import reconciler SHALL write ONLY ext
 resources that are owned by the originating `Repository`, SHALL perform only
-create / update / prune on those Repository-owned resources, SHALL mark each
-written resource with its owning `Repository` so ownership is explicit, and SHALL
-be idempotent against unchanged repository state. Outside this bounded path the
-control plane SHALL NOT write API desired-state resources. This resolves what
-would otherwise contradict the "control plane is a reader of desired state"
-principle: the principle holds everywhere except this one named, ownership-scoped
-reconciler.
+create / update / prune on those Repository-owned resources over the generated gRPC
+write path, SHALL mark each written resource with its owning `Repository` so
+ownership is explicit, and SHALL be idempotent against unchanged repository state.
+On create the server SHALL set `repository_id` from the reconciled `Repository` and
+SHALL ignore any client-supplied `repository_id`, so ownership cannot be forged.
+These gRPC writes SHALL be authorized as the control-plane identity and
+`Repository`-scoped (see
+[`security/rbac-enforcement.spec.md`](../../security/rbac-enforcement.spec.md),
+"Requirement: gRPC Authorization"); they are not an open bootstrap-service-account
+bypass. Outside this bounded path the control plane SHALL NOT write API
+desired-state resources. This resolves what would otherwise contradict the "control
+plane is a reader of desired state" principle: the principle holds everywhere except
+this one named, ownership-scoped reconciler.
 
 Imported resources SHALL be owned by the originating `Repository`. The import
 process SHALL reconcile, not create-and-skip: a resource added to `.hypershell`
@@ -613,9 +598,9 @@ by another Repository or created directly through the REST API or `hsctl apply`.
 
 - GIVEN a registered `Repository` whose `.hypershell` directory declares a `SandboxTemplate` and an `AgentRuntime`
 - WHEN the control-plane import reconciler runs
-- THEN it SHALL resolve the `Repository`'s credential cluster-side, git-clone the repository, and build the kustomization
-- AND it SHALL upsert both resources into the API
-- AND the resources SHALL be owned by the `Repository`
+- THEN it SHALL read the `Repository`'s credential from the store, git-clone the repository, and render the kustomization via `hsctl`
+- AND it SHALL upsert both resources into the API over the gRPC write path
+- AND the resources SHALL be owned by the `Repository` (`repository_id` set server-side)
 
 #### Scenario: Removed Declaration Is Pruned
 
@@ -648,9 +633,10 @@ response SHALL identify the created `SecretSource`.
 
 The API server SHALL NOT persist the raw secret value in the database, SHALL NOT
 resolve a stored secret value in-process, and SHALL NOT clone a git repository.
-Cluster-side resolution of a stored `SecretSource` into a usable credential is the
-control plane's responsibility (see "Requirement: Declarative `.hypershell`
-Import" and the control-plane `SecretSource` -> `ExternalSecret` wiring).
+Reading a stored `SecretSource` value and placing it as a usable credential is the
+control plane's responsibility, through its read-only `pkg/secretstore` client (see
+"Requirement: Declarative `.hypershell` Import" and "Requirement: SecretSource").
+The API server is write-only to the store; the control plane is read-only from it.
 
 #### Scenario: Submit a Secret
 
@@ -676,14 +662,14 @@ The controller SHALL apply the agent's scheduling resources directly to the targ
 1. `Namespace` - the agent's Kubernetes namespace
 2. `ServiceAccount` - with `automountServiceAccountToken: false`
 3. `NetworkPolicy` - default-deny all ingress
-4. `ExternalSecret` resources - one per `SecretSource`
+4. Kubernetes `Secret` resources - one per `SecretSource`, whose value the controller reads from the configured secret store (read-only `pkg/secretstore` client) and places directly; the controller SHALL NOT create an `ExternalSecret` and SHALL NOT depend on External Secrets Operator. Placement is one-shot at provision time (no periodic resync or rotation of the placed value).
 5. `CronJob` - the coordinator (schedule from `AgentRuntime`, image from `coordinator_image`)
 
 #### Scenario: Cluster Resources Created on AgentRuntime Reconcile
 
 - GIVEN a new `AgentRuntime` with status `Pending`
 - WHEN the controller runs its reconcile loop
-- THEN a `Namespace`, `ServiceAccount`, `NetworkPolicy`, `ExternalSecret` resources, and `CronJob` SHALL be created or updated directly on the target cluster
+- THEN a `Namespace`, `ServiceAccount`, `NetworkPolicy`, one Kubernetes `Secret` per `SecretSource` (value read from the store and placed directly), and `CronJob` SHALL be created or updated directly on the target cluster
 - AND the `AgentRuntime` status SHALL transition to `Provisioning`
 
 #### Scenario: Cluster Resources Updated on AgentRuntime Change
@@ -696,7 +682,7 @@ The controller SHALL apply the agent's scheduling resources directly to the targ
 
 - GIVEN an `AgentRuntime` with status `Running`
 - WHEN the `AgentRuntime` is deleted
-- THEN the controller SHALL delete all cluster resources (Namespace, ServiceAccount, NetworkPolicy, ExternalSecrets, CronJob)
+- THEN the controller SHALL delete all cluster resources (Namespace, ServiceAccount, NetworkPolicy, the placed `Secret` resources, CronJob)
 - AND the controller SHALL invoke the gateway API to delete the `AgentWorkspace` and its sub-resources
 - AND the `AgentWorkspace`, `WorkspaceMembership`, `ProviderBinding`, and `InferenceRoute` records SHALL be deleted from the database
 
@@ -804,8 +790,8 @@ The controller translates `refresh_strategy` to the gateway backend's refresh co
 - GIVEN a `ProviderSpec` with `category = inference`
 - AND a `SecretSource` with `purpose = service-account-key`
 - WHEN a `ProviderBinding` is created referencing both
-- THEN the controller generates an `ExternalSecret` from the `SecretSource`
-- AND provisions the provider on the gateway using the resolved secret as the credential
+- THEN the controller reads the `SecretSource` value from the store and places it as a Kubernetes `Secret`
+- AND provisions the provider on the gateway using that secret as the credential
 - AND registers the `refresh_strategy` on the gateway for automatic token rotation
 
 ---
@@ -876,9 +862,9 @@ The sandbox network policy and the `ProviderBinding.capability.allowed_operation
 
 ### Requirement: SecretSource
 
-A `SecretSource` is an abstract reference to a secret in an external secret backend (Vault, AWS Secrets Manager, or a Kubernetes Secret). The controller generates an `ExternalSecret` or direct `SecretReference` from it when producing the agent's scheduling resources.
+A `SecretSource` is an abstract reference to a secret stored in the configured secret store (Vault, AWS Secrets Manager, or a Kubernetes Secret). When producing the agent's scheduling resources the control plane reads the referenced value from the store through its read-only `pkg/secretstore` client and places it directly into a Kubernetes `Secret`; it does not create an `ExternalSecret`.
 
-`SecretSource.purpose` is a semantic enum that drives both the generated `ExternalSecret` field mapping and the environment variable wiring in the CronJob. Supported values:
+`SecretSource.purpose` is a semantic enum that drives both the placed `Secret` field mapping and the environment variable wiring in the CronJob. Supported values:
 
 | Purpose | Description | Controller-generated env vars |
 |---|---|---|
@@ -900,11 +886,10 @@ A `SecretSource` is an abstract reference to a secret in an external secret back
 
 #### Scenario: Unknown Backend Path Fails at Provisioning, Not at Persist Time
 
-- GIVEN a `SecretSource` with a valid `path` that does not exist in the backend
-- WHEN the controller generates an `ExternalSecret`
-- THEN the `ExternalSecret` SHALL be created on the cluster
-- AND the `ExternalSecret` SHALL enter status `SecretSyncedError`
-- AND the `AgentRuntime` status SHALL reflect the sync failure
+- GIVEN a `SecretSource` with a valid `path` that does not exist in the store
+- WHEN the control plane reads the `SecretSource` value to place its Kubernetes `Secret`
+- THEN the read SHALL fail at provisioning time
+- AND the `AgentRuntime` status SHALL reflect the placement failure
 - AND the `SecretSource` record itself SHALL remain in the database
 
 ---
@@ -926,7 +911,7 @@ A `Degraded` `AgentRuntime` SHALL surface the failing `SecretSource` name and th
 #### Scenario: SecretSource Sync Failure Degrades AgentRuntime
 
 - GIVEN an `AgentRuntime` with status `Running`
-- WHEN a `SecretSource` backend path becomes unreachable and its `ExternalSecret` enters `SecretSyncedError`
+- WHEN a `SecretSource` store path becomes unreachable and the control plane cannot read its value to place the Kubernetes `Secret`
 - THEN the `AgentRuntime` status SHALL transition to `Degraded`
 - AND the status message SHALL identify the failing `SecretSource` by name
 - AND the `CronJob` SHALL continue to run but its scheduled executions SHALL fail at gateway login
@@ -944,10 +929,6 @@ A `Degraded` `AgentRuntime` SHALL surface the failing `SecretSource` name and th
 | GET/POST | `/gateways/{gateway_id}/service_accounts` | List/Create gateway OpenShellGatewayServiceAccounts |
 | GET/DELETE | `/gateways/{gateway_id}/service_accounts/{service_account_id}` | Get/Delete an OpenShellGatewayServiceAccount |
 | POST | `/gateways/{gateway_id}/service_accounts/{service_account_id}/revoke` | Permanently revoke an OpenShellGatewayServiceAccount |
-| ~~GET/POST~~ | ~~`/gateway_networks`~~ | ~~List/Create~~ [REMOVED] |
-| ~~GET/PATCH/DELETE~~ | ~~`/gateway_networks/{id}`~~ | ~~Get/Update/Delete~~ [REMOVED] |
-| ~~GET/POST~~ | ~~`/gateway_releases`~~ | ~~List/Create~~ [REMOVED] |
-| ~~GET/PATCH/DELETE~~ | ~~`/gateway_releases/{id}`~~ | ~~Get/Update/Delete~~ [REMOVED] |
 | GET/POST | `/managed_clusters` | List/Create |
 | GET/PATCH/DELETE | `/managed_clusters/{id}` | Get/Update/Delete |
 | POST | `/managed_clusters/registration` | Self-register spoke; idempotent on (oidc_subject, name); updates last_seen_at on every call |
@@ -983,7 +964,7 @@ The `hsctl` CLI mirrors the REST API 1-for-1. Every REST operation has a corresp
 |---|---|---|
 | `GET /api/hypershell/v1/gateways` | `hsctl list gateways` | ✅ implemented |
 | `GET /api/hypershell/v1/gateways/{id}` | `hsctl get gateway <id>` | ✅ implemented |
-| `POST /api/hypershell/v1/gateways` | `hsctl create gateway --name <n> --cluster-id <c> --release-id <r> [--image <i>] [--external-dns <dns>] [--tls-mode <mode>]` | ✅ implemented |
+| `POST /api/hypershell/v1/gateways` | `hsctl create gateway --name <n> --cluster-id <c> [--image <i>] [--external-dns <dns>] [--tls-mode <mode>]` | ✅ implemented |
 | `PATCH /api/hypershell/v1/gateways/{id}` | `hsctl update gateway <id> [--name <n>] [--image <i>]` | 🔲 planned |
 | `DELETE /api/hypershell/v1/gateways/{id}` | `hsctl delete gateway <id>` | ✅ implemented |
 
@@ -996,30 +977,6 @@ The `hsctl` CLI mirrors the REST API 1-for-1. Every REST operation has a corresp
 | `POST /api/hypershell/v1/gateways/{gateway_id}/service_accounts` | `hsctl create serviceAccount --gateway-id <gateway_id> --name <n> --role <role> [--expires-in <duration>]` (`role`: `openshell-user` or `openshell-admin`) | ✅ implemented |
 | `POST /api/hypershell/v1/gateways/{gateway_id}/service_accounts/{id}/revoke` | `hsctl revoke serviceAccount <id> --gateway-id <gateway_id>` | ✅ implemented |
 | `DELETE /api/hypershell/v1/gateways/{gateway_id}/service_accounts/{id}` | `hsctl delete serviceAccount <id> --gateway-id <gateway_id>` | ✅ implemented |
-
-#### Gateway Networks [REMOVED]
-
-> **REMOVED**: GatewayNetwork is slated for deletion. These CLI commands will be removed.
-
-| REST API | `hsctl` Command | Status |
-|---|---|---|
-| `GET /api/hypershell/v1/gateway_networks` | `hsctl list gatewayNetworks` | [REMOVED] |
-| `GET /api/hypershell/v1/gateway_networks/{id}` | `hsctl get gatewayNetwork <id>` | [REMOVED] |
-| `POST /api/hypershell/v1/gateway_networks` | `hsctl create gatewayNetwork --name <n> --topology <t> [--tunnel-mode <m>] [--hub-gateway-id <g>]` | [REMOVED] |
-| `PATCH /api/hypershell/v1/gateway_networks/{id}` | `hsctl update gatewayNetwork <id> [--topology <t>]` | [REMOVED] |
-| `DELETE /api/hypershell/v1/gateway_networks/{id}` | `hsctl delete gatewayNetwork <id>` | [REMOVED] |
-
-#### Gateway Releases [REMOVED]
-
-> **REMOVED**: GatewayRelease is slated for deletion. These CLI commands will be removed.
-
-| REST API | `hsctl` Command | Status |
-|---|---|---|
-| `GET /api/hypershell/v1/gateway_releases` | `hsctl list gatewayReleases` | [REMOVED] |
-| `GET /api/hypershell/v1/gateway_releases/{id}` | `hsctl get gatewayRelease <id>` | [REMOVED] |
-| `POST /api/hypershell/v1/gateway_releases` | `hsctl create gatewayRelease --name <n> --image <i> [--rollout-strategy <s>] [--canary-percent <p>] [--canary-duration <d>]` | [REMOVED] |
-| `PATCH /api/hypershell/v1/gateway_releases/{id}` | `hsctl update gatewayRelease <id> [--image <i>] [--rollout-strategy <s>]` | [REMOVED] |
-| `DELETE /api/hypershell/v1/gateway_releases/{id}` | `hsctl delete gatewayRelease <id>` | [REMOVED] |
 
 #### Managed Clusters
 
@@ -1089,9 +1046,7 @@ The gateway access facade is a gateway-scoped, enriched projection over the `rol
 
 | Kind | Fields applied | Status |
 |---|---|---|
-| `Gateway` | `name`, `cluster_id`, `release_id`, `image`, `supervisor_image`, `sandbox_image`, `server_dns_names`, `oidc`, `route`, `external_dns`, `tls_mode`, `service_type`, `dev_build`, `dev_build_metadata` | ✅ implemented |
-| `GatewayNetwork` | `name`, `topology`, `tunnel_mode`, `hub_gateway_id` | [REMOVED] |
-| `GatewayRelease` | `name`, `image`, `rollout_strategy`, `canary_percent`, `canary_duration` | [REMOVED] |
+| `Gateway` | `name`, `cluster_id`, `image`, `supervisor_image`, `sandbox_image`, `server_dns_names`, `oidc`, `route`, `external_dns`, `tls_mode`, `service_type`, `dev_build`, `dev_build_metadata` | ✅ implemented |
 | `ManagedCluster` | `name`, `kubeconfig_secret`, `api_server_url` | 🔄 placement metadata moves to registration-owned capabilities and is not writable through `hsctl apply` |
 | `AgentRuntime` | `name`, `gateway_id`, `sandbox_template_id`, `repository_id`, `selector`, `cron`, `coordinator_image`, `concurrency_policy`, `login_refresh_seconds`, `parameters` (optional `cluster_id`, derived from the Gateway when omitted) | 🔲 planned |
 | `SandboxTemplate` | `name`, `image`, `name_prefix`, `policy` | 🔲 planned |
@@ -1269,7 +1224,7 @@ hsctl login --url https://api.example.com --issuer-url https://keycloak.example.
 hsctl login --no-browser --url https://api.example.com --issuer-url https://keycloak.example.com/realms/hypershell
 
 hsctl list gateways
-hsctl create gateway --name api-gateway --cluster-id eks-1 --release-id v1.0
+hsctl create gateway --name api-gateway --cluster-id eks-1 --image quay.io/opendatahub/odh-openshell-gateway:v0.1.3-rhaiv.3
 ```
 
 
@@ -1290,9 +1245,9 @@ hsctl create gateway --name api-gateway --cluster-id eks-1 --release-id v1.0
 | No ManifestWork: controller applies cluster resources directly | The controller has direct cluster API access via in-cluster credentials, the same mechanism used for gateway infrastructure. ManifestWork would add an OCM dependency without architectural benefit. |
 | No bootstrap Job: controller provisions gateway-side objects via gRPC | Gateway-side workspace, members, and provider objects are provisioned by the controller through the gateway gRPC API in its normal reconcile loop, co-located with existing gateway database provisioning logic. An idempotent imperative Job on the cluster would tie provisioning to a specific OpenShell CLI version. |
 | Repository as a reusable top-level ext resource | A registered repo plus its provider credential is referenced by many agent runtimes and read by the declarative import. Centralizing it keeps credential rotation and `.hypershell` discovery a single registration, not per-runtime config. |
-| Repository credential via SecretSource FK | Reuses the existing abstract secret backend model (Vault/AWS/Kubernetes) and `ExternalSecret` wiring, keeping provider secrets out of the database and consistent with every other credential in the platform. |
+| Repository credential via SecretSource FK | Reuses the existing abstract secret store model (Vault/AWS/Kubernetes) and the control plane's read-only store placement, keeping provider secrets out of the database and consistent with every other credential in the platform. |
 | AgentRuntime.selector as a label list (match-any) | Declarative repository scanning replaces the imperative `discover.sh` script. A simple label list is enough to express "scan these items" (e.g. `agent/reviewable`); an item matching any label yields one sandbox from the runtime's SandboxTemplate. Requires `repository_id`. |
 | Declarative `.hypershell` import over script invocation | Rendering declared Kustomize YAML into the API is safer and more predictable than executing `discover.sh`/`run.sh` found in an arbitrary repo. Imported resources are owned and pruned by the Repository (reconcile, don't create-or-skip). Deprecates the script-at-endpoint coordinator contract. |
-| `.hypershell` import hosted by the control plane, not the api-server | The import must resolve each `Repository`'s `secret_source_id` credential and git-clone the repository. The control plane already has cluster-side `SecretSource` -> `ExternalSecret` resolution and git/cluster access; the api-server has no in-process `SecretSource` resolver and no git access. Hosting the import in the control plane places it where credential resolution and repository access already live and removes the in-process-secret-resolution blocker. The import is the single bounded control-plane path that writes API desired state, scoped to create/update/prune of `Repository`-owned ext resources. The api-server's only secret role is a POST endpoint that stores the submitted value in the secret manager and its reference (a `SecretSource`) in the database. |
+| `.hypershell` import hosted by the control plane, not the api-server | The import must read each `Repository`'s `secret_source_id` credential and git-clone the repository. The control plane has read-only secret-store access (`pkg/secretstore`) and git/cluster access; the api-server has no store read access and no git access. Hosting the import in the control plane places it where the credential read and repository access already live and removes the in-process-secret-resolution blocker. The import is the single bounded control-plane path that writes API desired state (over the gRPC write path, `Repository`-scoped), scoped to create/update/prune of `Repository`-owned ext resources. The api-server's only secret role is a write-only POST endpoint that stores the submitted value in the secret store and its reference (a `SecretSource`) in the database. |
 | Remove GatewayRelease | Gateway `image`/`supervisor_image` fields make the release indirection layer unnecessary; canary rollout was never adopted in practice. Direct image references cover all current use cases. |
 | Remove GatewayNetwork | The reconciler only validates topology vocabulary and writes status - it owns no Kubernetes resources and applies no actual connectivity. Real mesh/tunnel provisioning was never defined by the product. Removing until concrete connectivity semantics are specified. |
