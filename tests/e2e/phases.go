@@ -348,8 +348,7 @@ func (s *E2ESuite) p1_3TokenAndCATrust(t *testing.T) {
 	} else {
 		s.runner.Comment("acquire per-gateway token for client %s with role openshell-admin", clientID)
 	}
-	tok, err := s.gatewayToken(t.Context(), s.primary)
-	s.Require().NoError(err, "acquire gateway token with openshell-admin role")
+	tok := s.requireGatewayToken(t, t.Context(), s.primary, "acquire gateway token with openshell-admin role")
 	s.Require().NotEmpty(tok.AccessToken, "gateway token")
 	s.primaryGatewayToken = tok
 	s.longOnly("device-authorization", func(t *testing.T) {
@@ -368,7 +367,7 @@ func (s *E2ESuite) p1_4RouteAndCLIRegistration(t *testing.T) {
 	if s.skipKubeChecks {
 		t.Skip("no per-cluster kube context; skipping route and CLI registration")
 	}
-	s.Require().NoError(s.driver.WaitForGatewayRoute(t.Context(), s.primary), "wait for gateway route")
+	s.requireGatewayRoute(t, s.primary, "wait for gateway route")
 	endpoint, err := s.driver.DiscoverGatewayEndpoint(t.Context(), s.primary)
 	s.Require().NoError(err, "discover gateway endpoint")
 	s.Logf("gateway endpoint: %s", endpoint)
@@ -402,12 +401,11 @@ func (s *E2ESuite) p2_1SandboxLifecycle(t *testing.T) {
 	s.trackGateway(gw.ID)
 	running := s.waitGatewayRunning(t, gw.ID)
 	ref := driver.GatewayRef{Name: running.Name, Namespace: running.Namespace, ID: running.ID}
-	s.Require().NoError(s.driver.WaitForGatewayRoute(ctx, ref), "wait for sandbox gateway route")
+	s.requireGatewayRoute(t, ref, "wait for sandbox gateway route")
 	endpoint, err := s.driver.DiscoverGatewayEndpoint(ctx, ref)
 	s.Require().NoError(err, "discover sandbox gateway endpoint")
 
-	tok, err := s.gatewayToken(ctx, ref)
-	s.Require().NoError(err, "sandbox gateway admin token")
+	tok := s.requireGatewayToken(t, ctx, ref, "sandbox gateway admin token")
 	local := s.registerGateway(t, ref, endpoint, tok.AccessToken)
 	s.cliStatusConnected(t, local, durationSecondsEnv("E2E_CONNECT_TIMEOUT", 90*time.Second))
 
@@ -771,7 +769,6 @@ func waitDisruptiveGate(ctx context.Context, gate string, timeout, interval time
 func (s *E2ESuite) p3_1AdminInventory(t *testing.T) {
 	ctx := t.Context()
 
-	privilegedAPI := s.admin
 	privilegedLabel := "platform-admin"
 	// The primary gateway's creator owns it. Its owner binding authorizes PATCH,
 	// while platform:admin is intentionally inventory-only for gateway mutation.
@@ -779,7 +776,7 @@ func (s *E2ESuite) p3_1AdminInventory(t *testing.T) {
 	unprivilegedLabel := "developer"
 	unprivilegedAPI := s.apiClientForCreds(t, s.devCreds())
 	s.Require().NoError(s.driver.AssignRealmRole(ctx, s.platformAdminCreds().Username, "platform:admin"), "grant platform:admin")
-	privilegedAPI = s.apiClientForCreds(t, s.platformAdminCreds())
+	privilegedAPI := s.apiClientForCreds(t, s.platformAdminCreds())
 
 	s.runner.Show("GET /users  # as %s, expect 403", unprivilegedLabel)
 	st, body, err := unprivilegedAPI.RawJSON(ctx, http.MethodGet, "/users", nil)
@@ -946,6 +943,22 @@ func (s *E2ESuite) waitGatewayRunning(t *testing.T, id string) *sdktypes.Gateway
 	return last
 }
 
+// requireGatewayRoute preserves both sides of a route-readiness failure: the
+// driver error reports the last GRPCRoute or parent Gateway observation, while
+// the suite diagnostic captures the management API state and controller log.
+func (s *E2ESuite) requireGatewayRoute(t *testing.T, ref driver.GatewayRef, message string) {
+	t.Helper()
+	err := s.driver.WaitForGatewayRoute(t.Context(), ref)
+	if err != nil {
+		gw, getErr := s.admin.Gateways().Get(t.Context(), ref.ID)
+		if getErr != nil {
+			s.Logf("DIAG gateway %s could not be read after route readiness failure: %v", ref.ID, getErr)
+		}
+		s.dumpGatewayDiagnostics(t, ref.ID, gw)
+	}
+	s.Require().NoError(err, message)
+}
+
 // waitGatewayNamespace waits only until reconciliation has assigned and created
 // the managed namespace. Deletion/GC coverage does not need to pay for the rest
 // of gateway provisioning before it can exercise namespace finalization.
@@ -968,11 +981,16 @@ func (s *E2ESuite) waitGatewayNamespace(t *testing.T, id string) string {
 	return namespace
 }
 
-// dumpGatewayDiagnostics logs the gateway's phase and provisioning conditions plus
-// recent controller logs, so a provisioning timeout is debuggable from the run.
+// dumpGatewayDiagnostics logs the gateway's phase, status, route state, and
+// provisioning conditions plus recent controller logs, so a provisioning
+// timeout or a gateway_not_ready service-account error is debuggable from the
+// run. Status is the field service-account creation actually gates on
+// (components/api-server/plugins/serviceAccounts/service.go readyGateway), so
+// it must be visible even when Phase already reads Running.
 func (s *E2ESuite) dumpGatewayDiagnostics(t *testing.T, id string, gw *sdktypes.Gateway) {
 	if gw != nil {
-		s.Logf("DIAG gateway %s phase=%q namespace=%q conditions=%v", id, gw.Phase, gw.Namespace, gw.ProvisioningConditions)
+		s.Logf("DIAG gateway %s phase=%q status=%q namespace=%q route=%q routeAddress=%q conditions=%v",
+			id, gw.Phase, gw.Status, gw.Namespace, gw.Route, gw.RouteAddress, gw.ProvisioningConditions)
 	}
 	if logs, err := s.podLogs(context.Background(), s.driver.PlatformNamespace(), "app=hypershell-controller", 40); err == nil {
 		s.Logf("DIAG controller logs (tail):\n%s", logs)
