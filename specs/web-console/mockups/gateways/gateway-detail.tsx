@@ -1048,7 +1048,7 @@ function ServiceAccountsTab({
                   <Td dataLabel="Status">
                     <HealthStatus
                       appearance={
-                        account.status === "Ready" ? "good" : "warning"
+                        account.status === "Ready" ? "success" : "warning"
                       }
                       label={account.status}
                     />
@@ -1310,7 +1310,7 @@ function DetailsTab({
                   <DescriptionListGroup>
                     <DescriptionListTerm>Status</DescriptionListTerm>
                     <DescriptionListDescription>
-                      <HealthStatus label="Healthy" />
+                      <HealthStatus appearance="success" label="Healthy" />
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                   <DescriptionListGroup>
@@ -2096,7 +2096,7 @@ export function GatewayDetailContent({
               </FlexItem>
               <FlexItem>
                 <HealthStatus
-                  appearance={isProvisioning ? "warning" : "good"}
+                  appearance={isProvisioning ? "warning" : "success"}
                   label={isProvisioning ? "Provisioning" : "Healthy"}
                 />
               </FlexItem>

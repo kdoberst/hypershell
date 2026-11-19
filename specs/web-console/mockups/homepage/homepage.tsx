@@ -38,12 +38,9 @@ import {
   BookOpenIcon,
   BoltIcon,
   ChartLineIcon,
-  CheckCircleIcon,
   CodeIcon,
   CompassIcon,
   CubesIcon,
-  ExclamationCircleIcon,
-  ExclamationTriangleIcon,
   HashtagIcon,
   RocketIcon,
   ServerAltIcon,
@@ -54,7 +51,7 @@ import { ChartDonut } from "@patternfly/react-charts/victory";
 import { useId, useState } from "react";
 
 import { externalLinkUrls } from "../../../../packages/gateway-management-ui/src/application/external-links";
-import { MockupTemplate } from "../shell/mockup-template";
+import { HealthStatus } from "../common/health-status";
 
 export type HomepageState =
   | "announcement"
@@ -67,12 +64,6 @@ export type HomepageState =
 
 type StatusTone = "success" | "warning" | "danger";
 
-const statusIcon = {
-  danger: ExclamationCircleIcon,
-  success: CheckCircleIcon,
-  warning: ExclamationTriangleIcon,
-} satisfies Record<StatusTone, typeof CheckCircleIcon>;
-
 function StatusHeading({
   children,
   tone,
@@ -80,20 +71,15 @@ function StatusHeading({
   children: React.ReactNode;
   tone: StatusTone;
 }) {
-  const StatusIcon = statusIcon[tone];
-
   return (
     <Flex
       alignItems={{ default: "alignItemsCenter" }}
       gap={{ default: "gapSm" }}
     >
       <FlexItem>
-        <Icon status={tone} title={tone}>
-          <StatusIcon aria-hidden />
-        </Icon>
-      </FlexItem>
-      <FlexItem>
-        <CardTitle>{children}</CardTitle>
+        <CardTitle>
+          <HealthStatus appearance={tone} label={children} />
+        </CardTitle>
       </FlexItem>
     </Flex>
   );
@@ -317,10 +303,7 @@ function GatewayHealthCard({ state }: { state: HomepageState }) {
                           alignItems={{ default: "alignItemsCenter" }}
                           gap={{ default: "gapXs" }}
                         >
-                          <Icon status="warning" title="Degraded">
-                            <ExclamationTriangleIcon aria-hidden />
-                          </Icon>
-                          <span>Degraded</span>
+                          <HealthStatus appearance="warning" label="Degraded" />
                         </Flex>
                       </FlexItem>
                     </Flex>
@@ -344,10 +327,7 @@ function GatewayHealthCard({ state }: { state: HomepageState }) {
                           alignItems={{ default: "alignItemsCenter" }}
                           gap={{ default: "gapXs" }}
                         >
-                          <Icon status="danger" title="Failed">
-                            <ExclamationCircleIcon aria-hidden />
-                          </Icon>
-                          <span>Failed</span>
+                          <HealthStatus appearance="danger" label="Failed" />
                         </Flex>
                       </FlexItem>
                     </Flex>
@@ -419,14 +399,10 @@ function ClusterAvailabilityContent({ state }: { state: HomepageState }) {
                       alignItems={{ default: "alignItemsCenter" }}
                       gap={{ default: "gapXs" }}
                     >
-                      <Icon status={clusterState.tone} title="Unavailable">
-                        {clusterState.tone === "danger" ? (
-                          <ExclamationCircleIcon aria-hidden />
-                        ) : (
-                          <ExclamationTriangleIcon aria-hidden />
-                        )}
-                      </Icon>
-                      <span>Unavailable</span>
+                      <HealthStatus
+                        appearance={clusterState.tone}
+                        label="Unavailable"
+                      />
                     </Flex>
                   </FlexItem>
                 </Flex>
@@ -492,15 +468,43 @@ function StatusDonut({
 
 function PlatformOverviewCard({ state }: { state: HomepageState }) {
   const gatewayStatuses = [
-    { label: "Healthy", value: 35, color: "#63993d" },
-    { label: "Provisioning", value: 5, color: "#0066cc" },
-    { label: "Failed", value: 2, color: "#c9190b" },
+    {
+      label: "Healthy",
+      value: 35,
+      color: "var(--pf-t--global--color--status--success--default)",
+    },
+    {
+      label: "Provisioning",
+      value: 5,
+      color: "var(--pf-t--global--color--status--info--default)",
+    },
+    {
+      label: "Failed",
+      value: 2,
+      color: "var(--pf-t--global--color--status--danger--default)",
+    },
   ];
   const sandboxStatuses = [
-    { label: "Active", value: 112, color: "#63993d" },
-    { label: "Expiring", value: 9, color: "#f0ab00" },
-    { label: "Idle", value: 5, color: "#0066cc" },
-    { label: "Orphaned", value: 2, color: "#c9190b" },
+    {
+      label: "Active",
+      value: 112,
+      color: "var(--pf-t--global--color--status--success--default)",
+    },
+    {
+      label: "Expiring",
+      value: 9,
+      color: "var(--pf-t--global--color--status--warning--default)",
+    },
+    {
+      label: "Idle",
+      value: 5,
+      color: "var(--pf-t--global--color--status--info--default)",
+    },
+    {
+      label: "Orphaned",
+      value: 2,
+      color: "var(--pf-t--global--color--status--danger--default)",
+    },
   ];
 
   return (
@@ -700,6 +704,20 @@ export function HomepagePageSurface({
   return (
     <>
       <PageSection
+        data-page-region="header"
+        hasBodyWrapper={false}
+        variant="default"
+      >
+        <Title headingLevel="h1" size="2xl">
+          HyperShell homepage
+        </Title>
+        <Content>
+          Gateway health, quick gateway creation, dashboards, support, and
+          learning resources.
+        </Content>
+      </PageSection>
+      <PageSection
+        data-page-region="body"
         hasBodyWrapper={false}
         isFilled
         style={{
@@ -749,22 +767,5 @@ export function HomepagePageSurface({
         </Grid>
       </PageSection>
     </>
-  );
-}
-
-export function HomepageMockup({
-  state = "loaded",
-}: {
-  state?: HomepageState;
-}) {
-  return (
-    <MockupTemplate
-      contentVariant="secondary"
-      description="A friendly starting point for your HyperShell work."
-      showBreadcrumbs={false}
-      title="Welcome to HyperShell"
-    >
-      <HomepagePageSurface state={state} />
-    </MockupTemplate>
   );
 }

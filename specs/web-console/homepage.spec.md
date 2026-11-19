@@ -65,6 +65,8 @@ A static or unit check SHALL reject new hard-coded production path literals for 
 
 The homepage SHALL follow the approved `Parity/Homepage` surface. On extra-large viewports it SHALL use a two-column grid whose first column is twice as wide as the second. Column one SHALL contain the primary CTA card, Gateway health, and the configured support-channel card. Column two SHALL contain the role-dependent dashboard or platform-overview card and Learn and explore. Learn and explore SHALL list HyperShell repository, OpenShell docs, and OpenShell CLI links in one column.
 
+The page-owned surface SHALL begin with a default PatternFly page-section header containing the visible `HyperShell homepage` title and its page description, followed by a filled secondary PatternFly body section that owns the homepage content and background.
+
 When an announcement is configured, the homepage SHALL render an inline PatternFly info alert above the two-column grid. When no announcement is configured, the homepage SHALL render no alert.
 
 The production page SHALL preserve the approved mockup's icon choices, descriptions, card hierarchy, spacing, responsive stacking, and PatternFly dark-mode chart text treatment.

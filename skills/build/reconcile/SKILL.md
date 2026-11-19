@@ -18,12 +18,15 @@ skills into a single convergence loop.
 
 ## UI completion contract
 
+For every new or changed web-console UI, execute
+`skills/web-console/ui-change-flow/SKILL.md` before closing its FE gap. The flow
+records the UI tier, applicable checks, validation loop, and human-review
+decision.
+
 For a new or materially changed production page with an approved mockup, do not
 close its FE gap until `skills/build/ui-build-gate/SKILL.md` returns `Complete`.
-
-If the UI change has no corresponding mockup, warn the user and continue
-reconciliation. Do not create a mockup. Skip `ui-build-gate` and all
-mockup-to-production parity checks; run the remaining FE checks.
+If the UI change has no corresponding mockup, do not create one; continue the
+remaining FE checks.
 
 ## User Input
 

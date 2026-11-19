@@ -39,6 +39,11 @@ status, action, form control, navigation element, and responsive layout.
 Do not recreate these with styled `div`, `span`, `ul`, `li`, `a`, or native
 form controls.
 
+When a static mockup uses a PatternFly component in a way that conflicts with
+the component's documented purpose, select the semantically correct component
+for the user outcome and record the correction as an intentional mockup
+deviation.
+
 For full pages, the parity root is the page surface, not an inner content grid.
 Use `PageSection data-page-region="header" variant="default"` for the visible
 header and a `PageSection data-page-region="body" isFilled` for the main

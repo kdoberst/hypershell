@@ -1,40 +1,18 @@
 # HyperShell agent rules
 
-## Mandatory web-console completion gate
+## Mandatory UI change flow
 
-For every new or materially changed production page with an approved mockup,
-read and execute `skills/build/ui-build-gate/SKILL.md`. Do not report or hand
-off the page until the gate returns a completion state. In image-capable runs,
-treat pending stories, fixtures, captures, inspection, or mismatches as
-implementation work.
+For every new or changed HyperShell web-console UI, read and execute
+`skills/web-console/ui-change-flow/SKILL.md`. Classify the change, make the
+spec decision, determine every applicable check, and validate to completion
+before reporting the UI work.
 
-If the current agent runtime cannot inspect images, follow the gate's
-`Complete without visual review` path: skip screenshot capture and comparison,
-record the capability reason, and continue all non-parity checks.
-
-When a build or reconcile task changes UI and no corresponding mockup exists,
-warn the user and continue. Do not create a mockup unless the task includes
-mockup or spec work. Skip `ui-build-gate` and all mockup-to-production parity
-checks. Continue running all non-parity checks required by the task.
-
-## Spec-to-mockup requirement
-
-When a feature spec describes a new or materially changed visual web-console
-page and includes an approved screenshot or visual reference:
-
-1. Create or update the corresponding repository mockup under
-   `specs/web-console/mockups/`.
-2. Treat the mockup as part of the spec deliverable, not optional later
-   implementation work.
-3. Add or update the mockup Storybook story and required styles.
-4. Run `check_mockup_patternfly.py` for every changed mockup TSX/CSS file.
-5. Reference the mockup story and source visual reference in the feature spec.
-6. Do not finalize the spec until the mockup exists and the mockup checks pass.
-
-When the condition above applies, the deliverable requires both artifacts:
-
-- the written feature spec
-- the repository mockup and Storybook design-review story
+Mockups are optional inputs, not required deliverables. Do not create a
+repository mockup unless the task explicitly includes mockup or spec work.
+For a new or materially changed production page with an approved mockup, invoke
+the UI build gate from the canonical UI flow and wait for its terminal state.
+Human UI review, when triggered by the canonical flow, blocks automatic merge
+eligibility but not automated code review.
 
 ## Repository conventions
 

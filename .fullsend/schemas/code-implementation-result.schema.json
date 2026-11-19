@@ -40,6 +40,15 @@
     "comment": {
       "type": "string",
       "maxLength": 16384
+    },
+    "human_review_required": {
+      "type": "boolean",
+      "description": "True when the implementation record requires human UI approval before automatic merge eligibility is released."
+    },
+    "human_review_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
     }
   },
   "allOf": [
@@ -55,6 +64,23 @@
         "required": [
           "pr_number",
           "head_sha"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "human_review_required": {
+            "const": true
+          }
+        },
+        "required": [
+          "human_review_required"
+        ]
+      },
+      "then": {
+        "required": [
+          "human_review_reason"
         ]
       }
     }

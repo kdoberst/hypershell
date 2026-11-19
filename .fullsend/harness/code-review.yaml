@@ -65,7 +65,7 @@ timeout_minutes: 30
 trigger: |
   event.transition.kind == "label_changed"
     && event.transition.label.action == "added"
-    && (event.transition.label.name == "agent/reviewable-code")
+    && event.transition.label.name == "agent/reviewable-code"
     && event.entity.kind == "work_item"
     && event.state.labels.exists(l, l.startsWith("agent/scope/"))
     && !event.state.labels.exists(l, l == "agent/review-code-approved")

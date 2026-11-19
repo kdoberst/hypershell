@@ -31,6 +31,45 @@ describe("GatewayStatus", () => {
     expect(container.querySelector(".pf-v6-c-spinner")).toBeTruthy();
   });
 
+  it("renders warning status with the warning icon treatment", () => {
+    const { container } = renderStatus("Unavailable");
+
+    expect(screen.getByText("Attention required")).toBeTruthy();
+    expect(
+      container.querySelector(".pf-v6-c-icon__content.pf-m-warning svg"),
+    ).toBeTruthy();
+  });
+
+  it("renders danger status with the danger icon treatment", () => {
+    const { container } = renderStatus("Failed");
+
+    expect(screen.getByText("Attention required")).toBeTruthy();
+    expect(
+      container.querySelector(".pf-v6-c-icon__content.pf-m-danger svg"),
+    ).toBeTruthy();
+  });
+
+  it("renders pending status with the pending icon treatment", () => {
+    const { container } = renderStatus("Pending");
+
+    expect(screen.getByText("Pending")).toBeTruthy();
+    expect(
+      container.querySelector(".pf-v6-c-icon__content.pf-m-info svg"),
+    ).toBeTruthy();
+  });
+
+  it("renders inactive status with the subtle status treatment", () => {
+    const { container } = renderStatus("Expired");
+    const inactiveClassName = styles.unknown;
+
+    expect(screen.getByText("Expired")).toBeTruthy();
+    expect(inactiveClassName).toBeDefined();
+    if (!inactiveClassName) {
+      throw new Error("Inactive status style is unavailable");
+    }
+    expect(container.querySelector(`.${inactiveClassName}`)).toBeTruthy();
+  });
+
   it("renders unknown statuses with the neutral status color", () => {
     const { container } = renderStatus("Future status");
     const unknownClassName = styles.unknown;

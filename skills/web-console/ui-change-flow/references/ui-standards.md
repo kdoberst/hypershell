@@ -1,16 +1,3 @@
----
-name: ui-standards
-description: >
-  Audit or design web user interfaces against HyperShell's UI/UX standards.
-  Use when reviewing UI changes, diffs, branches, or PRs; auditing accessibility,
-  usability, PatternFly 6 usage, component reuse or duplication, Red Hat brand/color,
-  content, forms, navigation, responsive behavior, trust, performance, localization,
-  narrow hexagonal boundaries, TanStack Query integration, domain probes, observability
-  fan-out, or raw console usage; or when turning a product intent into UI/UX
-  recommendations, flows, acceptance criteria,
-  and test plans. Not for general backend or security review.
----
-
 # Apply UI Standards
 
 Use the repository's standards as the authority for interface requirements. Separate what source inspection proves from behavior that still needs runtime or representative-user evidence.
@@ -144,4 +131,4 @@ Do not present a heuristic, five-user study, automated score, visual mockup, or 
 
 ## Boundary with General Code Review
 
-Keep this review focused on user outcomes, accessibility, PatternFly 6 and component reuse, Red Hat brand/color, interaction, content, trust, localization, resilience, narrow web-console/BFF application boundaries, domain observability, and UI evidence. For a mixed change, apply `ui-standards` to these UI standards and the repository's `amber-review` skill to other code, architecture, and security concerns without duplicating findings. For implementation guidance while building UI, use `patternfly` instead of re-deriving component choices here.
+Keep this review focused on user outcomes, accessibility, PatternFly 6 and component reuse, Red Hat brand/color, interaction, content, trust, localization, resilience, narrow web-console/BFF application boundaries, domain observability, and UI evidence. For a mixed change, apply this reference to these UI standards and the repository's `amber-review` skill to other code, architecture, and security concerns without duplicating findings. For implementation guidance while building UI, use the canonical UI change flow and its PatternFly reference instead of re-deriving component choices here.

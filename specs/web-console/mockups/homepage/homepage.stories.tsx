@@ -1,6 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { HomepageMockup } from "./homepage";
+import { MockupShell } from "../shell/mockup-template";
+import { HomepagePageSurface, type HomepageState } from "./homepage";
+
+function HomepageMockup({ state = "loaded" }: { state?: HomepageState }) {
+  return (
+    <MockupShell activeSection="overview">
+      <HomepagePageSurface state={state} />
+    </MockupShell>
+  );
+}
 
 const meta = {
   title: "Mockups/Homepage",

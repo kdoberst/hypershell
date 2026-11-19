@@ -34,7 +34,15 @@ class RefreshTests(unittest.TestCase):
                     'lifecycle_transition', 'lifecycle_block_rule', 'lifecycle_count_rejections')):
                 return refresh.subprocess.check_output(args, input=input, text=True)
             self.writes.append(args)
-            if args[0]=='bash':
+            if args[0]=='gh':
+                method, path = args[3], args[4]
+                number = int(path.split('/issues/')[1].split('/')[0])
+                if method == 'POST':
+                    self.labels[number].add(args[-1].split('=', 1)[1])
+                else:
+                    from urllib.parse import unquote
+                    self.labels[number].discard(unquote(path.split('/labels/')[1]))
+            elif args[0]=='bash':
                 if 'gh_add_labels' in args[2]:
                     self.labels[int(args[-2])].add(args[-1])
             else:
@@ -60,6 +68,39 @@ class RefreshTests(unittest.TestCase):
         self.writes.clear()
         self.call()
         self.assertEqual(self.writes, [])
+
+    def test_human_review_label_does_not_suppress_pr_merge_label(self):
+        self.state.update(mergeable=True, mergeable_state='clean')
+        self.labels[1] = {'agent/allowed', 'agent/scope/test',
+                          'agent/review-code-approved',
+                          'agent/human-review-required',
+                          'agent/human-review-approved'}
+        self.labels[5] = set()
+        self.assertTrue(self.call()['changed'])
+        self.assertIn('agent/review-code-approved', self.labels[5])
+        self.assertIn('agent/human-review-required', self.labels[1])
+
+    def test_human_review_label_is_not_managed_by_code_state_refresh(self):
+        self.state.update(mergeable=True, mergeable_state='clean')
+        self.labels[1] = {'agent/allowed', 'agent/scope/test',
+                          'agent/review-code-approved',
+                          'agent/human-review-required'}
+        self.labels[5] = set()
+        self.assertTrue(self.call()['changed'])
+        self.assertIn('agent/review-code-approved', self.labels[5])
+        self.assertIn('agent/human-review-required', self.labels[1])
+
+    def test_disabled_auto_merge_keeps_human_decision_but_holds_pr(self):
+        self.state.update(mergeable=True, mergeable_state='clean')
+        self.labels[1] = {'agent/allowed', 'agent/scope/test',
+                          'agent/review-code-approved',
+                          'agent/human-review-required',
+                          'agent/human-review-approved'}
+        with patch.dict(refresh.os.environ, {'FULLSEND_AUTO_MERGE':'disabled'}):
+            self.assertTrue(self.call()['changed'])
+        self.assertNotIn('agent/review-code-approved', self.labels[5])
+        self.assertIn('agent/human-review-required', self.labels[1])
+        self.assertIn('agent/human-review-approved', self.labels[1])
 
     # Verifies: SDLC-HOOK-14.04
     def test_unknown_mergeability_defers_without_claiming_conflict(self):

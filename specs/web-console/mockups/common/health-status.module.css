@@ -1,0 +1,11 @@
+/* patternfly-gap: specs/web-console/patterns/foundations/icon-status-tokens.md - inline status requires one non-wrapping element with tokenized spacing and subtle inactive or unknown text */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--sm);
+  white-space: nowrap;
+}
+
+.subtle {
+  color: var(--pf-t--global--text--color--subtle);
+}

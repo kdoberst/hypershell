@@ -23,6 +23,30 @@ def observe(repo, pr):
                           'code-state', library, repo, str(pr)))
 
 
+def auto_merge_enabled():
+    policy = os.environ.get('FULLSEND_AUTO_MERGE', 'enabled').lower()
+    if policy in ('enabled', 'true', '1'):
+        return True
+    if policy in ('disabled', 'false', '0'):
+        return False
+    raise ValueError('FULLSEND_AUTO_MERGE must be enabled, true, 1, disabled, false, or 0')
+
+
+def labels_for(repo, number):
+    return {label['name'] for label in api(f'repos/{repo}/issues/{number}/labels')}
+
+
+def add_label(repo, number, label):
+    run('gh', 'api', '-X', 'POST', f'repos/{repo}/issues/{number}/labels',
+        '-f', f'labels[]={label}')
+
+
+def remove_label(repo, number, label):
+    if label in labels_for(repo, number):
+        run('gh', 'api', '-X', 'DELETE',
+            f'repos/{repo}/issues/{number}/labels/{quote(label, safe="")}')
+
+
 def refresh(repo, number, pr_number, scope, inspect=False):
     item = api(f'repos/{repo}/issues/{number}')
     pr = api(f'repos/{repo}/pulls/{pr_number}')
@@ -40,6 +64,35 @@ def refresh(repo, number, pr_number, scope, inspect=False):
     if (inspect or dry_run or item['state'] != 'open' or state['state'] != 'open'
             or not {'agent/allowed', scope} <= labels or 'agent/blocked' in labels):
         return state
+    merge_policy_on = auto_merge_enabled()
+    pr_eligible = (state['state'] == 'open' and state['draft'] is False
+                   and state['mergeable'] is True and state['checks'] == 'green')
+
+    def sync_pr_merge_label():
+        changed = False
+        if 'agent/review-code-approved' not in labels:
+            return changed
+        current = api(f'repos/{repo}/issues/{number}')
+        live = api(f'repos/{repo}/pulls/{pr_number}')
+        current_labels = {label['name'] for label in current['labels']}
+        if (current['state'] != 'open' or live['state'] != 'open'
+                or not {'agent/allowed', scope} <= current_labels
+                or 'agent/blocked' in current_labels
+                or live['head']['sha'] != state['head_sha']
+                or live['base']['sha'] != state['base_sha']):
+            raise ValueError('Code state changed during PR merge-label sync')
+        pr_labels = labels_for(repo, pr_number)
+        if merge_policy_on and pr_eligible:
+            if 'agent/review-code-approved' not in pr_labels:
+                add_label(repo, pr_number, 'agent/review-code-approved')
+                changed = True
+                if 'agent/review-code-approved' not in labels_for(repo, pr_number):
+                    raise ValueError('PR approval repair verification failed')
+        elif 'agent/review-code-approved' in pr_labels:
+            remove_label(repo, pr_number, 'agent/review-code-approved')
+            changed = True
+        return changed
+
     conflicted = state['mergeable'] is False and state['mergeable_state'] == 'dirty'
     # Conflicts invalidate both an existing approval and an in-progress review.
     # A separate phase label avoids counting this as a model review rejection.
@@ -56,6 +109,7 @@ def refresh(repo, number, pr_number, scope, inspect=False):
                                 'agent/review-spec-approved'}):
         return state
     if not needs_recovery:
+        state['changed'] = sync_pr_merge_label()
         return state
     # Re-read authorization and head/base before writes; an unknown or changing
     # snapshot must never trigger edits based on an earlier observation.

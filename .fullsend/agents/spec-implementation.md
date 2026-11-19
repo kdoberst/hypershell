@@ -52,6 +52,13 @@ and whether a Jira issue is mentioned in the issue body or title (eg. HYPERSHELL
 
 Output: (`$ISSUE_CONTENT`, `$ISSUE_NUMBER`, `$EXISTING_PR`[NULL or string], `$JIRA_ISSUE`[NULL or string])
 
+If the issue text, attached input, existing spec, or required behavior implies a
+web-console UI change, even when the user did not explicitly say "UI", execute
+steps 1 and 2 of [ui-change-flow](../../../skills/web-console/ui-change-flow/SKILL.md)
+before drafting the spec. Record the UI input inventory, tier, tier rationale,
+and spec decision in the spec PR body so the later code-implementation agent can
+continue the same flow.
+
 ### Step 2: Write and/or Update Specifications
 
 Read the [spec skill](../../../skills/plan/spec/SKILL.md).

@@ -80,8 +80,8 @@ Apply all fixes. Place the file in `specs/{domain}/` with filename `<descriptive
 When the Phase 1 visual deliverable check applies:
 
 - Create or update the mockup TSX/CSS and Storybook story.
-- Read `skills/web-console/ui-spec/references/patternfly-mockup-implementation.md`.
-- Run `skills/web-console/ui-spec/scripts/check_mockup_patternfly.py` on every changed mockup TSX/CSS file.
+- Read `skills/web-console/ui-change-flow/references/patternfly-mockup-implementation.md`.
+- Run `skills/web-console/ui-change-flow/scripts/check_mockup_patternfly.py` on every changed mockup TSX/CSS file.
 - Reference the mockup story and source visual reference in the spec.
 - Do not finalize the spec while the mockup or its checks are missing.
 

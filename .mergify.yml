@@ -7,6 +7,7 @@ queue_rules:
     queue_conditions:
       - base = main
       - label = agent/review-code-approved
+      - -label = agent/human-review-required
       - -draft
       - check-success = Checks CI Gate
       - check-success = Tests CI Gate
@@ -27,6 +28,7 @@ merge_protections_settings:
   auto_merge_conditions:
     - base = main
     - label = agent/review-code-approved
+    - -label = agent/human-review-required
     - -draft
     - check-success = Checks CI Gate
     - check-success = Tests CI Gate

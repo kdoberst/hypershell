@@ -1,14 +1,6 @@
----
-name: patternfly
-description: >
-  Implement UI with PatternFly 6 using HyperShell conventions. Use when
-  building or changing web-console, gateway-management-ui, or
-  operational-dashboard-ui screens. Not for UI audits - use ui-standards.
----
-
 # PatternFly Implementation
 
-Practical guidance for building UI with PatternFly 6. Normative requirements live in `specs/standards/ui/patternfly.spec.md`; audits use `skills/review/ui-standards`.
+Practical guidance for building UI with PatternFly 6. Normative requirements live in `specs/standards/ui/patternfly.spec.md`; audits use `skills/web-console/ui-change-flow/references/ui-standards.md`.
 
 ## Research Order
 
@@ -72,5 +64,5 @@ capture, inspection, correction, evidence, and terminal states.
 | Need | Use instead |
 |------|-------------|
 | Normative requirements (`SHALL`, `UI-PF-*`) | `specs/standards/ui/patternfly.spec.md` |
-| PR audit, acceptance criteria | `skills/review/ui-standards` |
+| PR audit, acceptance criteria | `skills/web-console/ui-change-flow/references/ui-standards.md` |
 | Application/domain logic | No PatternFly imports (`hexagonal-architecture.spec.md`) |

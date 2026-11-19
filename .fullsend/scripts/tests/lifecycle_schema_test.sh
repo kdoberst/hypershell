@@ -63,6 +63,8 @@ _expect pass code-review-result.schema.json "valid code-review result" \
   '{"schema_version":"1","phase":"code-review","outcome":"rejected","rationale":"ci red","pr_number":5,"head_sha":"abc1234","comment":"fix ci"}'
 _expect pass code-implementation-result.schema.json "valid code-implementation result" \
   '{"schema_version":"1","phase":"code-implementation","outcome":"completed","rationale":"done","pr_number":5,"head_sha":"abc1234"}'
+_expect pass code-implementation-result.schema.json "valid human-review code-implementation result" \
+  '{"schema_version":"1","phase":"code-implementation","outcome":"completed","rationale":"done","pr_number":5,"head_sha":"abc1234","human_review_required":true,"human_review_reason":"Tier 2 UI change"}'
 _expect pass spec-implementation-result.schema.json "valid spec-implementation result" \
   '{"schema_version":"1","phase":"spec-implementation","outcome":"completed","rationale":"spec pushed","pr_number":5,"head_sha":"abc1234"}'
 
@@ -94,6 +96,8 @@ _expect fail code-implementation-result.schema.json "completed code-impl require
   '{"schema_version":"1","phase":"code-implementation","outcome":"completed","rationale":"x"}'
 _expect pass code-implementation-result.schema.json "blocked code-impl needs no evidence" \
   '{"schema_version":"1","phase":"code-implementation","outcome":"blocked","rationale":"no PR"}'
+_expect fail code-implementation-result.schema.json "human-review code-impl requires a reason" \
+  '{"schema_version":"1","phase":"code-implementation","outcome":"completed","rationale":"done","pr_number":5,"head_sha":"abc1234","human_review_required":true}'
 
 # Malformed JSON is rejected (SDLC-HOOK-06.01).
 _expect fail triage-result.schema.json "malformed JSON is rejected" \

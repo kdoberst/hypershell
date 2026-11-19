@@ -39,11 +39,12 @@ include all preceding queued changes and merge in order after required checks.
 
 ### Requirement: CICD-MRG-02 -- Queue Rules
 
-Queue entry SHALL require `base = main`, `agent/review-code-approved`, non-draft
-status, and successful `Checks CI Gate` and `Tests CI Gate`. Branch protection
-injection SHALL remain `queue` so additional GitHub requirements apply at entry
-and merge. The queue SHALL squash with PR title, inherited body, and no trailers.
-Batch size and wait options SHALL be omitted (default size one).
+Queue entry SHALL require `base = main`, `agent/review-code-approved`, no
+`agent/human-review-required` label, non-draft status, and successful
+`Checks CI Gate` and `Tests CI Gate`. Branch protection injection SHALL remain
+`queue` so additional GitHub requirements apply at entry and merge. The queue
+SHALL squash with PR title, inherited body, and no trailers. Batch size and wait
+options SHALL be omitted (default size one).
 
 #### Scenario: CICD-MRG-02.01 -- Approval required
 
@@ -51,7 +52,14 @@ Batch size and wait options SHALL be omitted (default size one).
 - WHEN checks succeed
 - THEN the queue SHALL NOT accept it
 
-#### Scenario: CICD-MRG-02.02 -- Squash merge with PR title
+#### Scenario: CICD-MRG-02.02 -- Human review label blocks queue entry
+
+- GIVEN a non-draft PR to main has `agent/review-code-approved` and
+  `agent/human-review-required`
+- WHEN both required gates succeed
+- THEN the queue SHALL NOT accept it
+
+#### Scenario: CICD-MRG-02.03 -- Squash merge with PR title
 
 - GIVEN an approved PR passes required checks
 - WHEN it merges
@@ -358,8 +366,9 @@ Existing deployment validation and optional E2E routing SHALL be preserved.
 ### Requirement: CICD-MRG-12 -- Automatic Queue Entry
 
 `merge_protections_settings.auto_merge_conditions` SHALL automatically enqueue
-non-draft PRs to main with the approval label and both required CI gates
-successful. Merge Protections and Merge Queue are enabled for this repository;
+non-draft PRs to main with the approval label, no human-review-required label,
+and both required CI gates successful. Merge Protections and Merge Queue are
+enabled for this repository;
 Workflow Automation is disabled, so `pull_request_rules` SHALL NOT be used.
 With Merge Queue enabled, native auto-merge queues PRs rather than merging directly. The same conditions SHALL be present on the queue rule so
 manual commands cannot bypass them. Removing approval SHALL make the PR

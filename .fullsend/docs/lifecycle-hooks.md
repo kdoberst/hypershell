@@ -69,6 +69,8 @@ Common fields:
 | `comment` | optional (required for reviews) markdown posted by the post-script |
 | `pr_number` | PR the result concerns (verified against trusted input) |
 | `head_sha` | commit implemented or reviewed (evidence) |
+| `human_review_required` | code-implementation only; true when a human must verify the UI changes |
+| `human_review_reason` | required when `human_review_required` is true |
 
 Permitted outcomes:
 
@@ -106,9 +108,9 @@ transition cannot silently clear a human block.
 | spec-implementation | blocked | `agent/blocked` | none | none |
 | spec-review | approved | `agent/review-spec-approved` | `agent/reviewable-spec`, `agent/review-spec-rejected` | none |
 | spec-review | rejected | `agent/review-spec-rejected` (+ `agent/blocked` at limit 3) | `agent/reviewable-spec`, `agent/review-spec-approved` | none |
-| code-implementation | completed | `agent/reviewable-code` | `agent/review-code-rejected`, stale `agent/review-code-approved`, `agent/code-conflicts` | none |
+| code-implementation | completed | `agent/reviewable-code`, plus `agent/human-review-required` on the issue and linked PR when requested | `agent/review-code-rejected`, stale `agent/review-code-approved`, `agent/code-conflicts`, and `agent/human-review-required` on both places only when human review is not requested | none |
 | code-implementation | blocked | `agent/blocked` | none | none |
-| code-review | approved | `agent/review-code-approved` | `agent/reviewable-code`, `agent/review-code-rejected` | When automatic approval is enabled, add and verify `agent/review-code-approved` before issue approval; otherwise withhold/remove and verify its absence |
+| code-review | approved | `agent/review-code-approved` | `agent/reviewable-code`, `agent/review-code-rejected` | When automatic merge approval is enabled, add and verify `agent/review-code-approved` before issue approval; Mergify independently holds any PR carrying `agent/human-review-required` |
 | code-review | rejected | `agent/review-code-rejected` (+ `agent/blocked` at limit 10) | `agent/reviewable-code`, `agent/review-code-approved` | Remove `agent/review-code-approved` |
 
 The columns above distinguish the execution record (issue) from its linked PR.
@@ -117,6 +119,19 @@ label before completing the issue transition. If the PR write fails, the attempt
 fails and the issue remains recoverable; reapplication can also repair a missing
 PR label when the issue already has its approval. Scope and authorization labels
 on the execution record are not copied to the PR.
+
+When code implementation requests human UI review, the trusted post-script adds
+`agent/human-review-required` to the issue and linked PR and posts a visible
+instruction with the reason. The instruction tells the human to verify the UI
+changes and then manually remove the label from both places. Automated code
+review continues in parallel and does not inspect who added or removed the
+label. The post-script installs
+`agent/reviewable-code` and `agent/human-review-required` in one label-add
+request on the issue, then mirrors the gate to the PR, so review routing cannot
+observe reviewable code without its gate. Mergify cannot merge the PR while the
+gate label remains. The code-review post-script may apply the PR queue label,
+but Mergify still holds the merge until the human removes the gate from both
+places.
 
 Trusted runner policy `FULLSEND_AUTO_MERGE=disabled` (also `false` or `0`)
 keeps the issue verdict but withholds/removes the PR approval label and verifies

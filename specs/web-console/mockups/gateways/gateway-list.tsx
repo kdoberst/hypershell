@@ -35,7 +35,7 @@ import { ProvisionGatewayButton } from "../common/provision-gateway-button";
 import { MockupShell } from "../shell/mockup-template";
 import { GatewayBulkSelectControl } from "../../../../packages/gateway-management-ui/src/gateways/gateway-bulk-delete";
 import { GatewayConnectionCommandModal } from "../../../../packages/gateway-management-ui/src/gateways/gateway-connection-command-modal";
-import { GatewayStatus } from "../../../../packages/gateway-management-ui/src/gateways/gateway-status";
+import { HealthStatus } from "../common/health-status";
 import type { GatewayConnection } from "../../../../packages/gateway-management-ui/src/gateways/gateway-connections";
 import { GatewayListPageSurface } from "./gateway-list-page-surface";
 
@@ -460,7 +460,14 @@ function LoadedGatewayList({
               </Td>
               <Td dataLabel="Sandboxes">{gateway.activeSandboxCount ?? 0}</Td>
               <Td dataLabel="Status">
-                <GatewayStatus status={gateway.status} />
+                <HealthStatus
+                  appearance={
+                    gateway.status === "Attention required"
+                      ? "warning"
+                      : "success"
+                  }
+                  label={gateway.status}
+                />
               </Td>
               <Td dataLabel="Version">{gateway.gatewayVersion}</Td>
               <Td dataLabel="Created">{gateway.created}</Td>

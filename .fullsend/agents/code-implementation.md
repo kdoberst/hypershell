@@ -19,7 +19,9 @@ Write exactly one JSON object to `$FULLSEND_OUTPUT_DIR/agent-result.json`:
   "rationale": "one or two sentences on what was done or why it is blocked",
   "pr_number": 123,
   "head_sha": "<40-hex head commit you pushed>",
-  "comment": "optional markdown to post on the issue"
+  "comment": "optional markdown to post on the issue",
+  "human_review_required": false,
+  "human_review_reason": "required when human_review_required is true"
 }
 ```
 
@@ -80,6 +82,11 @@ as new specifications.
 
 Execute the [reconcile skill](../../../skills/build/reconcile/SKILL.md) against the specification changes identified in Step 3.
 
+If the change affects web-console UI, execute
+[ui-change-flow](../../../skills/web-console/ui-change-flow/SKILL.md) during
+implementation. Its applicability table, validation loop, PR evidence, and
+human-review decision are required before this phase can emit `completed`.
+
 
 ### Step 5: Review Changes
 
@@ -106,3 +113,10 @@ Do not add or remove any label. The trusted post-script reads this result,
 removes any stale `agent/review-code-rejected` or `agent/review-code-approved`,
 adds `agent/reviewable-code`, preserves `agent/review-spec-approved` as a
 completed prerequisite, and verifies the final state.
+
+Set `human_review_required` to `true` only when the work item's process requires
+a human design, pattern, accessibility, or other judgment call. Provide a
+specific `human_review_reason`. The trusted post-script adds
+`agent/human-review-required` to both the work item and its pull request.
+Automated code review continues in parallel; Mergify holds the pull request
+until a human manually removes that label from both places.

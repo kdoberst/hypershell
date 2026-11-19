@@ -55,6 +55,12 @@ treat each category differently:
   (see SDLC-JIRA-01). A transition SHALL NEVER add or remove `agent/allowed`.
 - **Execution record marker** (`agent/execution-record`) is the canonical-link
   marker (see SDLC-JIRA-04). A transition SHALL NEVER add or remove it.
+- **Human review gate** (`agent/human-review-required`) holds automatic merge
+  eligibility for human UI review; it does not hold automated code review. A
+  trusted code-implementation transition MAY add it to the execution record and
+  linked PR from a validated structured result. A human SHALL release the gate
+  by manually removing it from both places; no transition SHALL remove it as
+  part of merge release.
 - **Human blocks** (`agent/blocked` and any human-applied spec or code block gate)
   represent a human decision to hold the record. A transition SHALL NOT silently
   remove a human-applied block.
@@ -97,7 +103,7 @@ execution-record, human-block, and unrelated labels are preserved in every case.
 | Spec review | approved | `agent/reviewable-spec` | `agent/review-spec-approved` | `agent/reviewable-spec`, `agent/review-spec-rejected` |
 | Spec review | rejected (under limit) | `agent/reviewable-spec` | `agent/review-spec-rejected` | `agent/reviewable-spec`, `agent/review-spec-approved` |
 | Spec review | rejected (limit reached) | `agent/reviewable-spec` | `agent/review-spec-rejected`, `agent/blocked` | `agent/reviewable-spec`, `agent/review-spec-approved` |
-| Code implementation | completed | `agent/review-spec-approved`, `agent/review-code-rejected`, or `agent/code-conflicts` | `agent/reviewable-code` | `agent/review-code-rejected`, stale `agent/review-code-approved`, `agent/code-conflicts` |
+| Code implementation | completed | `agent/review-spec-approved`, `agent/review-code-rejected`, or `agent/code-conflicts` | `agent/reviewable-code`, plus `agent/human-review-required` on the execution record and linked PR when the validated result requests human UI review | `agent/review-code-rejected`, stale `agent/review-code-approved`, `agent/code-conflicts`, and `agent/human-review-required` on both places only when human review is not requested |
 | Code review | approved | `agent/reviewable-code` | `agent/review-code-approved` | `agent/reviewable-code`, `agent/review-code-rejected` |
 | Code review | rejected (under limit) | `agent/reviewable-code` | `agent/review-code-rejected` | `agent/reviewable-code`, `agent/review-code-approved` |
 | Code review | rejected (limit reached) | `agent/reviewable-code` | `agent/review-code-rejected`, `agent/blocked` | `agent/reviewable-code`, `agent/review-code-approved` |
@@ -106,6 +112,14 @@ The code-implementation completed transition preserves `agent/review-spec-approv
 the spec approval is a completed prerequisite the record still carries while the
 code phase runs. It removes any stale `agent/review-code-approved` so a new
 revision of the code is reviewable again.
+
+When a code-implementation result sets `human_review_required` to true, it SHALL
+provide `human_review_reason`. The trusted transition SHALL post a visible
+instruction explaining that a human must verify the UI changes and, after doing
+so, manually remove `agent/human-review-required` from the execution record and
+linked PR. Automated code review SHALL continue in parallel. An approved
+code-review verdict MAY apply the linked PR queue-approval label, but Mergify
+SHALL NOT merge the PR while its human-review gate remains.
 
 ---
 
@@ -532,6 +546,10 @@ post-script SHALL apply and verify
 verify the PR link and current authorization, head, base, checks, draft status,
 and mergeability. It SHALL label the PR before completing the issue transition;
 failure to label the PR SHALL fail the attempt and leave recovery possible.
+When a human UI review is required, the PR SHALL retain
+`agent/human-review-required`, and Mergify SHALL hold it even when automated
+code review is approved. A human SHALL release the gate by manually removing
+the label from both the execution record and linked PR after verifying the UI.
 Reapplication SHALL repair a missing PR label even when the issue already has its
 approval. Rejected or ineligible approval results SHALL NOT retain the PR queue
 label. A changed head SHALL require fresh review; a stale result SHALL never
@@ -611,6 +629,52 @@ across polling, retries, and partial GitHub writes.
 - THEN maintenance marks the execution record code-review rejected
 - AND code implementation becomes eligible without a fresh review LLM
 - AND unchanged polling neither posts duplicate records nor consumes more retries
+
+### Requirement: SDLC-HOOK-15 -- Human UI Review Gate
+
+A code-implementation result MAY request a human UI review with a boolean
+`human_review_required` field. When true, `human_review_reason` SHALL be
+required. The trusted code-implementation post-script SHALL add
+`agent/human-review-required` to the execution record and linked PR, remove any
+stale human-review gate labels from both places when review is not requested,
+and post a visible instruction telling the human to verify the UI changes and
+manually remove the gate label from both places.
+
+When human review is requested, the trusted transition SHALL install
+`agent/reviewable-code` and `agent/human-review-required` together in the same
+GitHub label-add request on the execution record, then add
+`agent/human-review-required` to the linked PR. A partial state that exposes
+`reviewable-code` without its required human gate SHALL NOT trigger merge
+eligibility. The linked PR SHALL also carry the human-review gate so Mergify
+can enforce it directly.
+
+The code-review dispatcher SHALL NOT route the initial
+`agent/reviewable-code` event while a competing code-review verdict is present.
+It SHALL route code review even while `agent/human-review-required` is active.
+An approved verdict MAY complete the execution-record code-review phase while
+the human gate remains unresolved. Automatic merge eligibility SHALL remain
+withheld by the PR's `agent/human-review-required` label until a human removes
+it from both the execution record and PR.
+
+#### Scenario: SDLC-HOOK-15.01 -- Required human review runs automated review but holds merge
+
+- GIVEN a completed code-implementation result with `human_review_required` true
+- WHEN the trusted transition completes
+- THEN the execution record has `agent/reviewable-code` and `agent/human-review-required`
+- AND both execution-record labels were added by one label-add request
+- AND the linked PR has `agent/human-review-required`
+- AND a visible record instructs a human to verify the UI and remove the gate label from both places
+- AND the code-review harness runs on the initial `agent/reviewable-code` event
+- WHEN that review approves the unchanged reviewed head
+- THEN the execution record has `agent/review-code-approved` and `agent/human-review-required`
+- AND the linked PR has `agent/review-code-approved` and `agent/human-review-required`
+
+#### Scenario: SDLC-HOOK-15.02 -- Human approval releases merge by manual label removal
+
+- GIVEN an execution record with `agent/review-code-approved` and `agent/human-review-required`
+- AND its linked PR has `agent/review-code-approved` and `agent/human-review-required`
+- WHEN a human verifies the UI and manually removes `agent/human-review-required` from both places
+- THEN the reviewed PR becomes eligible for the Mergify queue without another code review
 
 ### Requirement: SDLC-HOOK-13 -- Automated Tests and Documentation
 

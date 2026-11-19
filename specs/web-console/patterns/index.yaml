@@ -1,0 +1,156 @@
+version: 1
+foundations:
+  - id: terminology
+    path: foundations/terminology.md
+    status: approved
+    tags: [content, terminology, vocabulary]
+  - id: page-layout
+    path: foundations/page-layout.md
+    status: approved
+    tags: [layout, page, breadcrumbs]
+  - id: status-vocabulary
+    path: foundations/status-vocabulary.md
+    status: approved
+    tags: [status, icons, health]
+  - id: icon-status-tokens
+    path: foundations/icon-status-tokens.md
+    status: approved
+    tags: [icons, status, color, tokens, classes]
+  - id: state-coverage
+    path: foundations/state-coverage.md
+    status: approved
+    tags: [states, loading, empty, error, permissions]
+  - id: responsive-behavior
+    path: foundations/responsive-behavior.md
+    status: approved
+    tags: [responsive, breakpoints, narrow]
+  - id: content-and-data
+    path: foundations/content-and-data.md
+    status: approved
+    tags: [content, data, dates, fixtures]
+patterns:
+  - id: collection-table
+    path: patterns/collection-table.md
+    status: approved
+    story: Mockups/Gateways/Gateway list
+    tags: [table, collection, list, pagination, sorting]
+  - id: filter-toolbar
+    path: patterns/filter-toolbar.md
+    status: approved
+    story: Mockups/Gateways/Gateway list
+    tags: [toolbar, filters, search, bulk-actions]
+  - id: detail-page
+    path: patterns/detail-page.md
+    status: approved
+    story: Mockups/Gateways/Gateway detail
+    tags: [detail, navigation, sections]
+  - id: create-flow
+    path: patterns/create-flow.md
+    status: approved
+    story: Mockups/Gateways/Provision gateway
+    tags: [create, form, wizard, action]
+  - id: destructive-action
+    path: patterns/destructive-action.md
+    status: approved
+    story: Mockups/Gateways/Gateway list
+    tags: [danger, delete, confirmation, modal]
+  - id: empty-state
+    path: patterns/empty-state.md
+    status: approved
+    story: Mockups/Gateways/Gateway list
+    tags: [empty, onboarding, next-action]
+  - id: error-recovery
+    path: patterns/error-recovery.md
+    status: approved
+    story: Mockups/Gateways/Gateway list
+    tags: [error, alert, retry, recovery]
+  - id: dashboard-section
+    path: patterns/dashboard-section.md
+    status: approved
+    story: Mockups/Dashboards/Operational dashboard
+    tags: [dashboard, cards, widgets]
+  - id: status-summary
+    path: patterns/status-summary.md
+    status: approved
+    story: Mockups/Dashboards/Operational dashboard
+    tags: [status, summary, health, severity]
+  - id: form-section
+    path: patterns/form-section.md
+    status: approved
+    story: Mockups/Gateways/Provision gateway
+    tags: [form, inputs, validation]
+  - id: command-output
+    path: patterns/command-output.md
+    status: approved
+    story: Mockups/Gateways/Gateway list
+    tags: [command, cli, copy, code]
+  - id: application-shell
+    path: patterns/application-shell.md
+    status: approved
+    story: HyperShell/Shell
+    tags: [shell, navigation, masthead, breadcrumb, sidebar]
+  - id: dashboard-page
+    path: patterns/dashboard-page.md
+    status: approved
+    story: Production/Dashboards/Operational
+    tags: [dashboard, navigation, filters, purpose]
+  - id: placement-choice
+    path: patterns/placement-choice.md
+    status: approved
+    story: Production/Gateways/Create gateway
+    tags: [placement, choice, recommendation, provisioning]
+  - id: provisioning-progress
+    path: patterns/provisioning-progress.md
+    status: approved
+    story: Production/Gateways/Gateway detail
+    tags: [provisioning, progress, conditions, stepper]
+  - id: command-steps
+    path: patterns/command-steps.md
+    status: approved
+    story: Production/Gateways/Gateway detail
+    tags: [commands, setup, accordion, cli]
+  - id: inline-status
+    path: patterns/inline-status.md
+    status: approved
+    story: Production/Gateways/Gateway list
+    tags: [status, inline, icons, progress]
+  - id: operation-result
+    path: patterns/operation-result.md
+    status: approved
+    story: Production/Gateways/Gateway list
+    tags: [success, toast, notification, result]
+  - id: detail-tab-section
+    path: patterns/detail-tab-section.md
+    status: approved
+    story: Production/Gateways/Gateway detail
+    tags: [tabs, section, collection, detail]
+  - id: url-state-persistence
+    path: patterns/url-state-persistence.md
+    status: approved
+    story: Production/Gateways/Gateway list
+    tags: [url, state, sharing, routes]
+  - id: one-time-secret
+    path: patterns/one-time-secret.md
+    status: approved
+    story: Production/Gateways/Gateway detail
+    tags: [secret, credential, guard, confirmation]
+  - id: status-chart
+    path: patterns/status-chart.md
+    status: approved
+    story: Production/Dashboards/Operational
+    tags: [chart, donut, status, legend]
+  - id: metric-unavailable
+    path: patterns/metric-unavailable.md
+    status: approved
+    story: Production/Dashboards/Operational
+    tags: [metric, unavailable, empty, dashboard]
+  - id: permission-gate
+    path: patterns/permission-gate.md
+    status: candidate
+    tags: [permissions, access, gate, empty-state]
+  - id: landing-card-grid
+    path: patterns/landing-card-grid.md
+    status: approved
+    story: Production/Homepage
+    tags: [landing, cards, overview, quick-create]
+

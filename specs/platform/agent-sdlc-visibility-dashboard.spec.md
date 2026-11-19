@@ -1027,7 +1027,7 @@ PatternFly 6 components and design tokens, reuse canonical shared components rat
 than bespoke ones, and follow the repo UI standards; where the attached issue spike
 and an existing pattern or spec disagree, the existing pattern or spec SHALL win.
 The mockup TSX and CSS SHALL pass
-`skills/web-console/ui-spec/scripts/check_mockup_patternfly.py`, and the production
+`skills/web-console/ui-change-flow/scripts/check_mockup_patternfly.py`, and the production
 page SHALL go through `skills/build/ui-build-gate/SKILL.md`. The spike attached to
 HYPERSHELL-401 is illustrative only and SHALL NOT be copied literally.
 

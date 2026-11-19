@@ -58,7 +58,7 @@ frame, and desktop `1440x900` plus narrow `390x844` viewports unless the spec
 requires other dimensions.
 
 If the approved mockup has only a full-shell story, split it according to
-`skills/web-console/ui-spec/references/mockup-story-structure.md` before
+`skills/web-console/ui-change-flow/references/mockup-story-structure.md` before
 implementing or capturing production. Do not recreate mock shell chrome in the
 production component.
 

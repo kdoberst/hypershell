@@ -72,6 +72,10 @@ case "${method}:${path}" in
   GET:*/issues/*/labels) cat "${state}"; exit 0;;
   POST:*/issues/*/labels)
     if [[ "${path}" == */issues/5/labels && "${MOCK_PR_ADD_FAIL:-0}" == 1 ]]; then exit 1; fi
+    if [[ -n "${MOCK_LABEL_ADD_LOG:-}" ]]; then
+      printf 'CALL\n' >> "${MOCK_LABEL_ADD_LOG}"
+      for l in "${adds[@]}"; do printf '%s\n' "${l}" >> "${MOCK_LABEL_ADD_LOG}"; done
+    fi
     for l in "${adds[@]}"; do grep -qxF "${l}" "${state}" || printf '%s\n' "${l}" >> "${state}"; done
     exit 0;;
   DELETE:*/issues/*/labels/*)
@@ -273,6 +277,105 @@ if [[ "${rc}" != 0 ]] && [[ "${before}" == "${after}" ]]; then
   _ok "an unsupported outcome fails without changing labels"
 else
   _no "an unsupported outcome fails without changing labels" "rc=${rc} $(cat "${WORK}/F.out")"
+fi
+
+# ---- Human UI review gate -----------------------------------------------
+S="${WORK}/human-required.labels"
+_seed "${S}" agent/review-spec-approved agent/allowed "${REPO_SCOPE}"
+HUMAN_REQUIRED='{"schema_version":"1","phase":"code-implementation","outcome":"completed","rationale":"done","pr_number":5,"head_sha":"abc1234","human_review_required":true,"human_review_reason":"Tier 2 UI change requires design review"}'
+_run code-implementation "${HUMAN_REQUIRED}" \
+  MOCK_STATE="${S}" MOCK_HEAD_SHA=abc1234 LIFECYCLE_PR_NUMBER=5 LIFECYCLE_PR_HEAD_SHA=abc1234 \
+  MOCK_BODY="${WORK}/human-required.body" \
+  MOCK_LABEL_ADD_LOG="${WORK}/human-required.label-adds" \
+  > "${WORK}/human-required.out" 2>&1
+rc=$?
+if [[ "${rc}" == 0 ]] && _has_label "${S}" agent/reviewable-code \
+   && _has_label "${S}" agent/human-review-required \
+   && _has_label "${S}.pr" agent/human-review-required \
+   && grep -q "Human UI review required" "${WORK}/human-required.body" \
+   && grep -q "manually remove" "${WORK}/human-required.body"; then
+  _ok "code implementation adds the human-review gate to the issue and PR"
+else
+  _no "code implementation adds the human-review gate to the issue and PR" "rc=${rc} $(cat "${WORK}/human-required.out")"
+fi
+if [[ "$(grep -c '^CALL$' "${WORK}/human-required.label-adds")" == 2 ]] \
+   && grep -qxF agent/reviewable-code "${WORK}/human-required.label-adds" \
+   && [[ "$(grep -cx agent/human-review-required "${WORK}/human-required.label-adds")" == 2 ]]; then
+  _ok "code implementation installs reviewable-code and mirrors the human gate to the PR"
+else
+  _no "code implementation installs reviewable-code and mirrors the human gate to the PR" "$(cat "${WORK}/human-required.label-adds")"
+fi
+
+S="${WORK}/human-comment-fail.labels"
+_seed "${S}" agent/review-spec-approved agent/allowed "${REPO_SCOPE}"
+before="$(sort "${S}")"
+_run code-implementation "${HUMAN_REQUIRED}" \
+  MOCK_STATE="${S}" MOCK_HEAD_SHA=abc1234 LIFECYCLE_PR_NUMBER=5 LIFECYCLE_PR_HEAD_SHA=abc1234 \
+  MOCK_COMMENT_FAIL=1 \
+  > "${WORK}/human-comment-fail.out" 2>&1
+rc=$?
+after="$(sort "${S}")"
+if [[ "${rc}" != 0 ]] && [[ "${before}" == "${after}" ]] \
+   && grep -q "FAILED to post the required" "${WORK}/human-comment-fail.out"; then
+  _ok "a failed human-review instruction blocks the transition"
+else
+  _no "a failed human-review instruction blocks the transition" "rc=${rc} $(cat "${WORK}/human-comment-fail.out")"
+fi
+
+S="${WORK}/human-unapproved.labels"
+_seed "${S}" agent/reviewable-code agent/human-review-required agent/allowed "${REPO_SCOPE}"
+_seed "${S}.pr" agent/human-review-required
+_run code-review \
+  '{"schema_version":"1","phase":"code-review","outcome":"approved","rationale":"good","pr_number":5,"head_sha":"abc1234","comment":"approved"}' \
+  MOCK_STATE="${S}" MOCK_HEAD_SHA=abc1234 LIFECYCLE_PR_NUMBER=5 LIFECYCLE_PR_HEAD_SHA=abc1234 \
+  MOCK_CHECKRUNS='[{"id":1,"name":"CI","status":"completed","conclusion":"success"}]' \
+  > "${WORK}/human-unapproved.out" 2>&1
+rc=$?
+if [[ "${rc}" == 0 ]] && _has_label "${S}" agent/review-code-approved \
+   && ! _has_label "${S}" agent/reviewable-code \
+   && _has_label "${S}" agent/human-review-required \
+   && _has_label "${S}.pr" agent/review-code-approved \
+   && _has_label "${S}.pr" agent/human-review-required; then
+  _ok "code review approves while Mergify holds the PR on the human-review label"
+else
+  _no "code review approves while Mergify holds the PR on the human-review label" "rc=${rc} $(cat "${WORK}/human-unapproved.out")"
+fi
+
+S="${WORK}/human-manual-release.labels"
+_seed "${S}" agent/reviewable-code agent/human-review-required agent/human-review-approved agent/allowed "${REPO_SCOPE}"
+_seed "${S}.pr" agent/human-review-required
+_run code-review \
+  '{"schema_version":"1","phase":"code-review","outcome":"approved","rationale":"good","pr_number":5,"head_sha":"abc1234","comment":"approved"}' \
+  MOCK_STATE="${S}" MOCK_HEAD_SHA=abc1234 LIFECYCLE_PR_NUMBER=5 LIFECYCLE_PR_HEAD_SHA=abc1234 \
+  MOCK_CHECKRUNS='[{"id":1,"name":"CI","status":"completed","conclusion":"success"}]' \
+  > "${WORK}/human-approved.out" 2>&1
+rc=$?
+if [[ "${rc}" == 0 ]] && _has_label "${S}" agent/review-code-approved \
+   && ! _has_label "${S}" agent/reviewable-code \
+   && _has_label "${S}" agent/human-review-required \
+   && _has_label "${S}.pr" agent/human-review-required \
+   && _has_label "${S}.pr" agent/review-code-approved; then
+  _ok "human-review labels remain until a human removes them from both places"
+else
+  _no "human-review labels remain until a human removes them from both places" "rc=${rc} $(cat "${WORK}/human-manual-release.out")"
+fi
+
+S="${WORK}/human-stale-clear.labels"
+_seed "${S}" agent/review-spec-approved agent/human-review-required agent/human-review-approved agent/allowed "${REPO_SCOPE}"
+_seed "${S}.pr" agent/human-review-required agent/human-review-approved
+_run code-implementation \
+  '{"schema_version":"1","phase":"code-implementation","outcome":"completed","rationale":"done","pr_number":5,"head_sha":"abc1234","human_review_required":false}' \
+  MOCK_STATE="${S}" MOCK_HEAD_SHA=abc1234 LIFECYCLE_PR_NUMBER=5 LIFECYCLE_PR_HEAD_SHA=abc1234 \
+  > "${WORK}/human-stale-clear.out" 2>&1
+rc=$?
+if [[ "${rc}" == 0 ]] && _has_label "${S}" agent/reviewable-code \
+   && ! _has_label "${S}" agent/human-review-required \
+   && ! _has_label "${S}" agent/human-review-approved \
+   && ! _has_label "${S}.pr" agent/human-review-required \
+   && ! _has_label "${S}.pr" agent/human-review-approved; then
+  _ok "code implementation clears stale human-review labels from both places"
+else
+  _no "code implementation clears stale human-review labels from both places" "rc=${rc} $(cat "${WORK}/human-stale-clear.out")"
 fi
 
 # ---- Scenario G: no validated result does not advance (HOOK-06.02) --------

@@ -330,6 +330,7 @@ export function gatewayStatusAppearance(
     case "succeeded":
       return "success";
     case "degraded":
+    case "unavailable":
     case "warning":
       return "warning";
     case "expired":

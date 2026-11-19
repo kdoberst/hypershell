@@ -100,6 +100,8 @@ export {
   type GatewayPageProps,
   type GatewaysPageProps,
 } from "./pages/gateway-pages";
+export { GatewayStatus } from "./gateways/gateway-status";
+export type { GatewayStatusAppearance } from "./gateways/gateway-connections";
 export { messages as gatewayMessages } from "./messages";
 export {
   buildClientCredentialsScript,

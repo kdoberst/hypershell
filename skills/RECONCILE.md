@@ -23,7 +23,6 @@ skills/
 │   ├── reconcile/            # Meta-orchestrator: reads this file, executes waves
 │   ├── full-stack-pipeline/  # Single-spec wave-based implementation pipeline
 │   ├── dev-cluster/          # Kind cluster lifecycle for local testing
-│   └── patternfly/           # PatternFly 6 component selection and implementation patterns
 ├── deploy/
 │   ├── cloud-hub-ingress-bootstrap/  # Shared Gateway API ingress per cloud hub
 │   ├── deploy-cluster/       # OpenShift deployment (Keycloak, OIDC, kustomize)
@@ -33,8 +32,9 @@ skills/
 │   └── spec/                 # Spec authoring (desired state)
 ├── review/
 │   ├── amber-review/         # General code and security review
-│   ├── review-guidance/      # PR review checklists
-│   └── ui-standards/         # UI audit and intent-driven recommendations
+│   └── review-guidance/      # PR review checklists
+├── web-console/
+│   └── ui-change-flow/       # Canonical UI change process
 └── tooling/
     ├── align/                # Convention compliance scoring
     ├── jira-log/             # Jira work logging
@@ -2031,7 +2031,7 @@ label-selected pod informer.
 | 2026-08-27 | 9984ed0 | Completed Gateway Console GC-W1 | 82% | Added mode-selected Route exposure, admission readiness, lifecycle cleanup, custom-host RBAC, and tests. All nine console requirements are present. |
 | 2026-08-27 | 612b373 | Gateway Console scoped gap analysis | 81% | Added the console spec to the registry and found four partial requirements. Planned one control-plane wave for OpenShift Route exposure, readiness, cleanup, RBAC, and tests. |
 | 2026-08-03 | initial | Initial setup | 100% | Baseline with 6 Kinds fully implemented |
-| 2026-08-05 | working tree | Registered UI standards | 100% platform | UI standards are evaluated by `/ui-standards`, not counted as feature reconciliation requirements |
+| 2026-08-05 | working tree | Registered UI standards | 100% platform | UI standards are evaluated by the canonical UI change flow, not counted as feature reconciliation requirements |
 | 2026-08-05 | working tree | Added PatternFly standard | 100% platform | PatternFly 6, canonical reuse, and duplicate-component prevention apply to the web console |
 | 2026-08-05 | working tree | Added UI architecture and observability standards | 100% platform | Narrow ports/adapters boundaries and typed fan-out domain probes apply to browser and BFF workflows |
 | 2026-08-05 | working tree | Web-console bootstrap increments 1-3 | 64% overall | Root pnpm migration, browser-compatible SDK, React Router/PatternFly scaffold, secure static BFF, tests, and production container; authenticated product increments remain open |

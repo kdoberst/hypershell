@@ -1,4 +1,0 @@
-interface:
-  display_name: "UI Standards"
-  short_description: "Audit UI, architecture, probes, reuse, and brand"
-  default_prompt: "Use $ui-standards to audit this UI or design it with PatternFly, narrow hexagonal boundaries, and domain probes."
