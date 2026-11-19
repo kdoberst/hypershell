@@ -37,8 +37,6 @@ import {
   CodeIcon,
   CompassIcon,
   CubesIcon,
-  ExclamationCircleIcon,
-  ExclamationTriangleIcon,
   HashtagIcon,
   RocketIcon,
   ServerAltIcon,
@@ -50,7 +48,10 @@ import { Link, useNavigate } from "react-router";
 import { useId, useState } from "react";
 
 import styles from "./homepage.module.css";
-import { externalLinkUrls } from "@openshift-online/hypershell-gateway-management-ui";
+import {
+  externalLinkUrls,
+  GatewayStatus,
+} from "@openshift-online/hypershell-gateway-management-ui";
 import type {
   HomepagePlatformOverview,
   HomepageSummary,
@@ -89,42 +90,20 @@ const statusDonutTextStyle = {
 
 const chartColors: Record<string, string> = {
   Active: "var(--pf-t--global--color--status--success--default)",
-  Degraded: "#f0ab00",
-  Expiring: "#f0ab00",
-  Failed: "#c9190b",
+  Degraded: "var(--pf-t--global--color--status--warning--default)",
+  Expiring: "var(--pf-t--global--color--status--warning--default)",
+  Failed: "var(--pf-t--global--color--status--danger--default)",
   Healthy: "var(--pf-t--global--color--status--success--default)",
-  Idle: "#0066cc",
-  Orphaned: "#c9190b",
-  Pending: "#0066cc",
-  Provisioning: "#0066cc",
+  Idle: "var(--pf-t--global--color--status--info--default)",
+  Orphaned: "var(--pf-t--global--color--status--danger--default)",
+  Pending: "var(--pf-t--global--color--status--info--default)",
+  Provisioning: "var(--pf-t--global--color--status--info--default)",
   Running: "var(--pf-t--global--color--status--success--default)",
   active: "var(--pf-t--global--color--status--success--default)",
-  expiring: "#f0ab00",
-  idle: "#0066cc",
-  orphaned: "#c9190b",
+  expiring: "var(--pf-t--global--color--status--warning--default)",
+  idle: "var(--pf-t--global--color--status--info--default)",
+  orphaned: "var(--pf-t--global--color--status--danger--default)",
 };
-
-function statusTone(status: string): StatusTone {
-  const normalized = status.trim().toLowerCase();
-  if (["failed", "error", "orphaned"].includes(normalized)) {
-    return "danger";
-  }
-  if (["degraded", "expiring", "unavailable", "warning"].includes(normalized)) {
-    return "warning";
-  }
-  return "success";
-}
-
-function StatusIcon({ status }: { status: string }) {
-  const tone = statusTone(status);
-  const IconComponent =
-    tone === "danger" ? ExclamationCircleIcon : ExclamationTriangleIcon;
-  return (
-    <Icon status={tone === "success" ? "success" : tone} title={status}>
-      <IconComponent aria-hidden />
-    </Icon>
-  );
-}
 
 function HomepageCard({
   children,
@@ -434,8 +413,10 @@ function GatewayHealthCard({
                             alignItems={{ default: "alignItemsCenter" }}
                             gap={{ default: "gapXs" }}
                           >
-                            <StatusIcon status={gateway.status} />
-                            <span>{gateway.status}</span>
+                            <GatewayStatus
+                              status={gateway.status}
+                              label={gateway.status}
+                            />
                           </Flex>
                         </FlexItem>
                       </Flex>
@@ -664,12 +645,12 @@ function PlatformOverviewCard({
                       alignItems={{ default: "alignItemsCenter" }}
                       gap={{ default: "gapXs" }}
                     >
-                      <StatusIcon status={cluster.status} />
-                      <span>
-                        <FormattedMessage
-                          {...messages.homepageClusterUnavailableStatus}
-                        />
-                      </span>
+                      <GatewayStatus
+                        status={cluster.status}
+                        label={intl.formatMessage(
+                          messages.homepageClusterUnavailableStatus,
+                        )}
+                      />
                     </Flex>
                   </FlexItem>
                 </Flex>
@@ -848,77 +829,94 @@ export function HomepagePageSurface({
   summaryIsLoading: boolean;
 }>) {
   return (
-    <PageSection
-      hasBodyWrapper={false}
-      isFilled
-      style={{
-        backgroundColor:
-          "var(--pf-t--global--background--color--secondary--default)",
-      }}
-      variant="secondary"
-    >
-      {announcement ? (
-        <Alert
-          className="pf-v6-u-mb-lg"
-          isInline
-          title={<FormattedMessage {...announcement.title} />}
-          variant="info"
-        >
-          <FormattedMessage {...announcement.body} />
-        </Alert>
-      ) : null}
-      <Grid hasGutter>
-        <GridItem xl={8}>
-          <Stack hasGutter>
-            <StackItem>
-              <WelcomeCard
-                onQuickCreate={quickCreate}
-                quickCreatePlacement={quickCreatePlacement}
-                quickCreateError={quickCreateError}
-                quickCreateIsPending={quickCreateIsPending}
-                quickCreateOpen={quickCreateOpen}
-                setQuickCreateOpen={setQuickCreateOpen}
-              />
-            </StackItem>
-            <StackItem>
-              <GatewayHealthCard
-                isLoading={summaryIsLoading}
-                summary={summary}
-              />
-            </StackItem>
-            <StackItem>
-              <SupportCard />
-            </StackItem>
-          </Stack>
-        </GridItem>
-        <GridItem xl={4}>
-          <Stack hasGutter>
-            <StackItem>
-              {sessionIsLoading ? (
-                <HomepageCard
-                  icon={<ChartLineIcon />}
-                  title={
-                    <FormattedMessage {...messages.homepageRoleLoadingTitle} />
-                  }
-                >
-                  <LoadingContent />
-                </HomepageCard>
-              ) : isAdmin ? (
-                <PlatformOverviewCard
-                  isLoading={platformOverviewIsLoading}
-                  overview={platformOverview}
+    <>
+      <PageSection
+        data-page-region="header"
+        hasBodyWrapper={false}
+        variant="default"
+      >
+        <Title headingLevel="h1" size="2xl">
+          <FormattedMessage {...messages.homepageTitle} />
+        </Title>
+        <Content>
+          <FormattedMessage {...messages.homepageMetaDescription} />
+        </Content>
+      </PageSection>
+      <PageSection
+        data-page-region="body"
+        hasBodyWrapper={false}
+        isFilled
+        style={{
+          backgroundColor:
+            "var(--pf-t--global--background--color--secondary--default)",
+        }}
+        variant="secondary"
+      >
+        {announcement ? (
+          <Alert
+            className="pf-v6-u-mb-lg"
+            isInline
+            title={<FormattedMessage {...announcement.title} />}
+            variant="info"
+          >
+            <FormattedMessage {...announcement.body} />
+          </Alert>
+        ) : null}
+        <Grid hasGutter>
+          <GridItem xl={8}>
+            <Stack hasGutter>
+              <StackItem>
+                <WelcomeCard
+                  onQuickCreate={quickCreate}
+                  quickCreatePlacement={quickCreatePlacement}
+                  quickCreateError={quickCreateError}
+                  quickCreateIsPending={quickCreateIsPending}
+                  quickCreateOpen={quickCreateOpen}
+                  setQuickCreateOpen={setQuickCreateOpen}
                 />
-              ) : (
-                <DashboardCard />
-              )}
-            </StackItem>
-            <StackItem>
-              <LearnCard />
-            </StackItem>
-          </Stack>
-        </GridItem>
-      </Grid>
-    </PageSection>
+              </StackItem>
+              <StackItem>
+                <GatewayHealthCard
+                  isLoading={summaryIsLoading}
+                  summary={summary}
+                />
+              </StackItem>
+              <StackItem>
+                <SupportCard />
+              </StackItem>
+            </Stack>
+          </GridItem>
+          <GridItem xl={4}>
+            <Stack hasGutter>
+              <StackItem>
+                {sessionIsLoading ? (
+                  <HomepageCard
+                    icon={<ChartLineIcon />}
+                    title={
+                      <FormattedMessage
+                        {...messages.homepageRoleLoadingTitle}
+                      />
+                    }
+                  >
+                    <LoadingContent />
+                  </HomepageCard>
+                ) : isAdmin ? (
+                  <PlatformOverviewCard
+                    isLoading={platformOverviewIsLoading}
+                    overview={platformOverview}
+                  />
+                ) : (
+                  <DashboardCard />
+                )}
+              </StackItem>
+              <StackItem>
+                <LearnCard />
+              </StackItem>
+            </Stack>
+          </GridItem>
+        </Grid>
+      </PageSection>
+    </>
   );
 }
 

@@ -104,13 +104,15 @@ as incomplete as implementation work, exactly like a failing test.
 
 ## UI completion contract
 
-For a new or materially changed production page with an approved mockup,
-execute `skills/build/ui-build-gate/SKILL.md` before closing its wave. Pending
-gate work is not a terminal state.
+For every new or changed web-console UI, execute
+`skills/web-console/ui-change-flow/SKILL.md` before closing its wave. The flow
+records the UI tier, applicable checks, validation loop, and human-review
+decision.
 
-If the UI change has no corresponding mockup, warn the user and continue the
-wave. Do not create a mockup unless the task includes mockup or spec work. Skip
-`ui-build-gate` and all mockup-to-production parity checks; run the remaining
+For a new or materially changed production page with an approved mockup, execute
+`skills/build/ui-build-gate/SKILL.md` from the canonical flow. Pending gate work
+is not a terminal state. If the UI change has no corresponding mockup, do not
+create one unless the task includes mockup or spec work; continue the remaining
 wave checks.
 
 ## User Input

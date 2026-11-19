@@ -233,13 +233,50 @@ describe("HomepagePageSurface", () => {
   });
 
   it("marks unavailable clusters with a warning icon", () => {
-    const { getByTitle } = renderSurface();
+    const { container } = renderSurface();
 
     expect(
-      getByTitle("Unavailable")
-        .querySelector(".pf-v6-c-icon__content")
-        ?.getAttribute("class"),
-    ).toContain("pf-m-warning");
+      container.querySelector(".pf-v6-c-icon__content.pf-m-warning svg"),
+    ).toBeTruthy();
+  });
+
+  it("renders gateway attention status with the shared warning icon", () => {
+    const { container } = renderSurface();
+
+    expect(screen.getByText("Degraded")).toBeTruthy();
+    expect(
+      container.querySelector(".pf-v6-c-icon__content.pf-m-warning svg"),
+    ).toBeTruthy();
+  });
+
+  it("renders failed gateway health with a danger icon", () => {
+    const { container } = renderSurface({
+      summaryValue: {
+        gatewayHealth: {
+          attention: [
+            {
+              gatewayId: "gateway-18",
+              name: "failed-gateway",
+              reason: "Connection failed",
+              status: "Failed",
+            },
+          ],
+          attentionCount: 1,
+          healthy: 0,
+          total: 1,
+        },
+      },
+    });
+
+    expect(
+      container.querySelector(".pf-v6-c-icon__content.pf-m-danger svg"),
+    ).toBeTruthy();
+  });
+
+  it("renders the unavailable cluster label exactly once", () => {
+    renderSurface();
+
+    expect(screen.getAllByText("Unavailable").length).toBe(1);
   });
 
   it("links gateway needs attention to the gateway context", () => {

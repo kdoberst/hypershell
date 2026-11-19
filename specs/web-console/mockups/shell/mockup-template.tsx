@@ -35,16 +35,22 @@ import { useState } from "react";
 import logo from "../../../../images/brand/logo.png";
 import styles from "./mockup-template.module.css";
 
-export type MockupNavigationSection = "overview" | "gateways" | "dashboard";
+export type MockupNavigationSection =
+  "overview" | "gateways" | "gateway-compare" | "dashboard";
 
 const primaryNavigation = [
   { href: "/", label: "Overview", section: "overview" },
   { href: "/gateways", label: "Gateways", section: "gateways" },
+  {
+    href: "/gateways/compare",
+    label: "Gateway compare",
+    section: "gateway-compare",
+  },
   { href: "/dashboard", label: "Dashboard", section: "dashboard" },
 ] as const;
 
 export type MockupTemplateProps = {
-  activeSection?: "overview" | "gateways" | "dashboard";
+  activeSection?: MockupNavigationSection;
   breadcrumbs?: string[];
   children: React.ReactNode;
   contentVariant?: "default" | "secondary";

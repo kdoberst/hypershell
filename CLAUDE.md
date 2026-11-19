@@ -2,22 +2,12 @@
 
 Distributed API gateway fleet management platform that orchestrates gateway deployments across multiple Kubernetes clusters and cloud providers. Built with Go (API server, control plane). PostgreSQL is the source of truth; the control plane reconciles via gRPC watch streams.
 
-## Mandatory web-console completion gate
+## Mandatory UI change flow
 
-For every new or materially changed production page with an approved mockup,
-read and execute `skills/build/ui-build-gate/SKILL.md`. Do not report or hand
-off the page until the gate returns a completion state. In image-capable runs,
-treat pending stories, fixtures, captures, inspection, or mismatches as
-implementation work.
-
-If the current agent runtime cannot inspect images, follow the gate's
-`Complete without visual review` path: skip screenshot capture and comparison,
-record the capability reason, and continue all non-parity checks.
-
-When a build or reconcile task changes UI and no corresponding mockup exists,
-warn the user and continue. Do not create a mockup unless the task includes
-mockup or spec work. Skip `ui-build-gate` and all mockup-to-production parity
-checks. Continue running all non-parity checks required by the task.
+For every new or changed HyperShell web-console UI, read and execute
+`skills/web-console/ui-change-flow/SKILL.md`. Classify the change, make the
+spec decision, determine every applicable check, and validate to completion
+before reporting the UI work.
 
 ## Before Developing
 
@@ -45,7 +35,7 @@ React elements or use an approved parser that returns React elements.
 - `packages/operational-dashboard-ui/` - Private reusable React package containing the operational metrics dashboard
 - `packages/spec-viewer-ui/` - Spec viewer: search and read `specs/` with test traceability; local via `make spec-ui`, deployed inside the fleet dashboard at `/specs/`
 - `specs/` - Desired state of the system ([platform](specs/platform/), [standards](specs/standards/))
-- `skills/` - Agent skills: [reconcile](skills/build/reconcile), [spec](skills/plan/spec), [full-stack-pipeline](skills/build/full-stack-pipeline), [ui-spec](skills/web-console/ui-spec), [dev-cluster](skills/build/dev-cluster), [patternfly](skills/build/patternfly), [ibm-cluster](skills/deploy/ibm-cluster), [deploy-cluster](skills/deploy/deploy-cluster), [cloud-hub-ingress-bootstrap](skills/deploy/cloud-hub-ingress-bootstrap), [review](skills/review/review-guidance), [amber-review](skills/review/amber-review), [ui-standards](skills/review/ui-standards), [tooling](skills/tooling/), [security-audit](skills/security/run-security-audit)
+- `skills/` - Agent skills: [reconcile](skills/build/reconcile), [spec](skills/plan/spec), [full-stack-pipeline](skills/build/full-stack-pipeline), [ui-change-flow](skills/web-console/ui-change-flow), [dev-cluster](skills/build/dev-cluster), [ibm-cluster](skills/deploy/ibm-cluster), [deploy-cluster](skills/deploy/deploy-cluster), [cloud-hub-ingress-bootstrap](skills/deploy/cloud-hub-ingress-bootstrap), [review](skills/review/review-guidance), [amber-review](skills/review/amber-review), [tooling](skills/tooling/), [security-audit](skills/security/run-security-audit)
 - `apm.yml` - APM manifest declaring upstream skill dependencies
 
 ## Key Files
@@ -102,8 +92,7 @@ Support skills available at any point:
 - `/cloud-hub-ingress-bootstrap` -- one-time shared Gateway + wildcard DNS/TLS per Cloud Hub (AWS/IBM)
 - `/review-guidance` -- PR review checklist
 - `/amber-review` -- Amber agent comprehensive code review
-- `/ui-standards` -- UI/UX audit or intent-driven design guidance
-- `/patternfly` -- PatternFly 6 component selection and implementation patterns
+- `/ui-change-flow` -- End-to-end UI intake, implementation, validation, and review flow
 - `/align` -- convention health check
 - `/maintain-ci` -- CI workflow and component registration maintenance
 - `/update-openshell` -- sync HyperShell to a new upstream OpenShell release (self-reinforcing)

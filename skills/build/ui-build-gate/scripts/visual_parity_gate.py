@@ -214,7 +214,7 @@ def capture(args: argparse.Namespace) -> None:
         sys.executable,
         str(
             ROOT
-            / "skills/web-console/ui-spec/scripts/check_mockup_patternfly.py"
+            / "skills/web-console/ui-change-flow/scripts/check_mockup_patternfly.py"
         ),
         args.mockup_story_file,
         args.mockup_view,

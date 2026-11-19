@@ -109,6 +109,7 @@ fi
 # ---------------------------------------------------------------------------
 _field_str() { jq -r --arg k "$1" 'if (.[$k] | type) == "string" then .[$k] else empty end' "${RESULT_FILE}"; }
 _field_num() { jq -r --arg k "$1" 'if (.[$k] | type) == "number" then (.[$k] | floor | tostring) else empty end' "${RESULT_FILE}"; }
+_field_bool() { jq -r --arg k "$1" 'if (.[$k] | type) == "boolean" then (.[$k] | tostring) else empty end' "${RESULT_FILE}"; }
 # Flatten CR/LF so an untrusted scalar echoed into the runner log cannot forge a
 # log line (SEC-STD-02), matching the pre-script's skip-reason handling. The
 # comment body is intentionally NOT flattened: it is posted verbatim as markdown.
@@ -120,11 +121,14 @@ outcome="$(_oneline "$(_field_str outcome)")"
 comment="$(_field_str comment)"
 r_pr_number="$(_field_num pr_number)"
 r_head_sha="$(_oneline "$(_field_str head_sha)")"
+human_review_required="$(_field_bool human_review_required)"
+human_review_reason="$(_field_str human_review_reason)"
 
 if [[ "${schema_version}" != "1" ]]; then
   echo "post-lifecycle: unsupported or missing schema_version (got '${schema_version:0:16}')" >&2
   exit 1
 fi
+
 if [[ "${r_phase}" != "${PHASE}" ]]; then
   echo "post-lifecycle: result phase '${r_phase:0:32}' does not match harness PHASE '${PHASE}'" >&2
   exit 1
@@ -207,7 +211,6 @@ _authorized() {
   [[ -z "${LABEL_SCOPE:-}" ]] || grep -qxF "${LABEL_SCOPE}" <<< "${labels}"
 }
 _authorized || { echo "post-lifecycle: authorization/scope removed or blocked; no mutation" >&2; exit 0; }
-
 
 # A review verdict normally applies while the record is still awaiting that
 # review (the reviewable-* label is present). When the reviewable-* label is
@@ -383,6 +386,37 @@ while IFS='=' read -r k v; do
   esac
 done < <(lifecycle_transition "${PHASE}" "${outcome}")
 
+if [[ "${PHASE}" == "code-implementation" && "${outcome}" == "completed" ]]; then
+  remove="${remove} agent/human-review-approved"
+  if [[ "${human_review_required}" == "true" ]]; then
+    [[ -n "${human_review_reason}" ]] || {
+      echo "post-lifecycle: human_review_required is true but human_review_reason is missing" >&2
+      exit 1
+    }
+    add="${add} agent/human-review-required"
+    human_review_notice="**Human UI review required.** ${human_review_reason}
+
+After verifying the UI changes, manually remove the \`agent/human-review-required\` label from both this work item and its pull request. Automated code review continues in parallel; Mergify cannot merge the pull request while that label remains on it."
+    if [[ -n "${comment}" ]]; then
+      comment="$(printf '%s\n\n---\n\n%s' "${comment}" "${human_review_notice}")"
+    else
+      comment="${human_review_notice}"
+    fi
+  elif [[ -n "${human_review_required}" && "${human_review_required}" != "false" ]]; then
+    echo "post-lifecycle: human_review_required must be boolean" >&2
+    exit 1
+  fi
+  if [[ "${human_review_required}" != "true" ]]; then
+    remove="${remove} agent/human-review-required"
+  fi
+fi
+
+comment_required=0
+lifecycle_phase_requires_comment "${PHASE}" && comment_required=1
+if [[ "${PHASE}" == "code-implementation" && "${outcome}" == "completed" && "${human_review_required}" == "true" ]]; then
+  comment_required=1
+fi
+
 if lifecycle_phase_is_review "${PHASE}" && [[ "${outcome}" == "rejected" ]]; then
   read -r rej_label threshold < <(lifecycle_block_rule "${PHASE}")
   # The block decision depends on authoritative timeline evidence (SDLC-HOOK-12).
@@ -439,7 +473,7 @@ fi
 # a review transition when the comment is empty rather than silently skipping the
 # required-record post below (where the hard-fail is nested inside "comment is
 # non-empty") and applying the verdict labels with no record.
-if lifecycle_phase_requires_comment "${PHASE}" && [[ -z "${comment}" ]]; then
+if (( comment_required )) && [[ -z "${comment}" ]]; then
   echo "post-lifecycle: ${PHASE} requires a review comment but the result has none; not applying the transition" >&2
   exit 1
 fi
@@ -458,7 +492,7 @@ if [[ -n "${comment}" ]]; then
   else
     cat "${_comment_err}" >&2 || true
     rm -f "${_comment_err}"
-    if lifecycle_phase_requires_comment "${PHASE}"; then
+    if (( comment_required )); then
       echo "post-lifecycle: FAILED to post the required ${PHASE} review comment; not applying the transition so a rerun can retry the comment and the labels" >&2
       exit 1
     fi
@@ -510,9 +544,18 @@ fi
 # steps complete.
 # shellcheck disable=SC2086
 gh_add_labels "${REPO}" "${NUMBER}" ${add}
+if [[ "${PHASE}" == "code-implementation" && "${outcome}" == "completed" ]]; then
+  gh_remove_label "${REPO}" "${trusted_pr}" agent/human-review-approved
+  if [[ "${human_review_required}" == "true" ]]; then
+    gh_add_labels "${REPO}" "${trusted_pr}" agent/human-review-required
+  fi
+fi
 for label in ${remove}; do
   gh_remove_label "${REPO}" "${NUMBER}" "${label}"
 done
+if [[ "${PHASE}" == "code-implementation" && "${outcome}" == "completed" && "${human_review_required}" != "true" ]]; then
+  gh_remove_label "${REPO}" "${trusted_pr}" agent/human-review-required
+fi
 
 if [[ "${close}" == "1" ]]; then
   gh_close_issue "${REPO}" "${NUMBER}"
@@ -525,6 +568,18 @@ final_labels="$(gh_get_labels "${REPO}" "${NUMBER}")"
 if ! printf '%s\n' "${final_labels}" | lifecycle_verify_final "${add}" "${remove}"; then
   echo "post-lifecycle: final-state verification FAILED for ${REPO}#${NUMBER}; the transition did not complete" >&2
   exit 1
+fi
+if [[ "${PHASE}" == "code-implementation" && "${outcome}" == "completed" ]]; then
+  pr_final_labels="$(gh_get_labels "${REPO}" "${trusted_pr}")"
+  if [[ "${human_review_required}" == "true" ]]; then
+    grep -qxF agent/human-review-required <<< "${pr_final_labels}" || {
+      echo "post-lifecycle: final-state verification FAILED for ${REPO}#${trusted_pr}; the human-review gate is missing" >&2
+      exit 1
+    }
+  elif grep -qxF agent/human-review-required <<< "${pr_final_labels}"; then
+    echo "post-lifecycle: final-state verification FAILED for ${REPO}#${trusted_pr}; the stale human-review gate remains" >&2
+    exit 1
+  fi
 fi
 
 echo "post-lifecycle: ${PHASE}/${outcome} applied and verified for ${REPO}#${NUMBER}" >&2

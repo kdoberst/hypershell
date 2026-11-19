@@ -48,10 +48,11 @@ web-console mockup or shared component.
   page, group each section's content inside PatternFly cards and use the
   PatternFly secondary main-section treatment. In light mode this renders a
   gray page background with white card surfaces.
-- For pages with a single primary content type, such as one table, form, list,
-  or detail view, use the default white main-section treatment. Do not place
-  gray-backed content directly on a gray page background or add cards solely to
-  compensate for a secondary page background.
+- Use the default white main-section treatment for resource detail pages. Use
+  the PatternFly secondary main-section treatment for collection pages,
+  provisioning workflows, and dashboards with multiple distinct content
+  sections. Do not place gray-backed content directly on a gray page background
+  or add cards solely to compensate for a secondary page background.
 - Use breadcrumbs as the primary navigation method when a page moves deeper
   into a section. The parent breadcrumb should link back to its collection or
   parent page.
@@ -68,8 +69,9 @@ web-console mockup or shared component.
 
 ## Tables and actions
 
-- Use the default PatternFly table spacing; do not use a condensed table unless
-  the product design explicitly requires it.
+- Use the shared compact `ResourceTable` for resource collections. Do not
+  create local table wrappers or switch to default spacing unless the pattern
+  library documents an exception.
 - When a table requires pagination, render PatternFly pagination controls both
   above and below the table. The two controls must share the same pagination
   state and page-size options.
@@ -87,6 +89,9 @@ web-console mockup or shared component.
 
 ## Status and shared actions
 
+- For the exact status icon, PatternFly status prop, semantic token, generated
+  class, and label mapping, use
+  `specs/web-console/patterns/foundations/icon-status-tokens.md`.
 - Use the shared `HealthStatus` mockup component for recurring health and
   status treatments. Pass an explicit semantic appearance rather than
   choosing an icon in page-owned markup.

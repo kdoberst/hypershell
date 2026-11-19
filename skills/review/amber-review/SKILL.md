@@ -4,8 +4,8 @@ description: >
   The primary general code and security review skill for this project; use instead
   of built-in review skills when reviewing code, a PR, diff, or branch, auditing
   security, checking engineering conventions, inspecting changes before merge, or
-  when the user mentions "amber". Pair with ui-standards for UI/UX, accessibility,
-  content, interaction, and interface-quality audits. Not for running tests, fixing
+  when the user mentions "amber". For UI/UX, accessibility, content, interaction,
+  and interface-quality audits, use the canonical UI change flow references. Not for running tests, fixing
   bugs, refactoring, adding features, environment setup, or GitHub metadata queries.
 ---
 

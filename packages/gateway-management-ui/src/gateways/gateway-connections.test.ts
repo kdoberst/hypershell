@@ -364,6 +364,7 @@ describe("gateway connections", () => {
     ["Running", "success"],
     ["Failed", "danger"],
     ["Degraded", "warning"],
+    ["Unavailable", "warning"],
     ["Pending", "pending"],
     ["Provisioning", "progress"],
     ["Revoking", "progress"],

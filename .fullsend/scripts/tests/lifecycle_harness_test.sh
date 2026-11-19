@@ -403,6 +403,30 @@ else
   else
     _skip "dispatch does not route a reviewable-code event with no scope label" "fullsend dispatch failed (environment)"
   fi
+
+  # A5: reviewable-code with an unresolved human-review gate -> code-review.
+  E="${WORK}/a5.json"
+  _write_event "${E}" "agent/reviewable-code" "agent/reviewable-code,agent/human-review-required,${SCOPE},agent/allowed"
+  if a5="$(_dispatch_agents "${E}")"; then
+    case ",${a5}," in
+      *,code-review,*) _ok "dispatch runs code-review while human review is required" ;;
+      *) _no "dispatch runs code-review while human review is required" "agents=[${a5}]" ;;
+    esac
+  else
+    _skip "dispatch blocks code-review while human review is required" "fullsend dispatch failed (environment)"
+  fi
+
+  # A6: the obsolete approval label no longer routes code-review.
+  E="${WORK}/a6.json"
+  _write_event "${E}" "agent/human-review-approved" "agent/reviewable-code,agent/human-review-required,agent/human-review-approved,${SCOPE},agent/allowed"
+  if a6="$(_dispatch_agents "${E}")"; then
+    case ",${a6}," in
+      *,code-review,*) _no "dispatch ignores obsolete human-review approval routing" "agents=[${a6}]" ;;
+      *) _ok "dispatch ignores obsolete human-review approval routing" ;;
+    esac
+  else
+    _skip "dispatch ignores obsolete human-review approval routing" "fullsend dispatch failed (environment)"
+  fi
 fi
 
 printf '\n%d passed, %d failed, %d skipped\n' "${PASS}" "${FAIL}" "${SKIP}"

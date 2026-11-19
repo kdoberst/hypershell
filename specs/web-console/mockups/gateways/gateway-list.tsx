@@ -477,7 +477,9 @@ function LoadedGatewayList({
               <Td dataLabel="Status">
                 <HealthStatus
                   appearance={
-                    gateway.status === "Attention required" ? "warning" : "good"
+                    gateway.status === "Attention required"
+                      ? "warning"
+                      : "success"
                   }
                   label={gateway.status}
                 />
