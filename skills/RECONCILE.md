@@ -869,7 +869,7 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 | WEB-HOME-08 | Cluster availability | Present | `bff/src/homepage.ts`, `homepage.tsx` | HOME-W1 ✅ |
 | WEB-HOME-09 | Configured support channel | Present | `bff/src/config.ts`, `bff/src/homepage.ts`, `homepage.tsx` | HOME-W1 ✅ |
 | WEB-HOME-10 | Loading and isolated failure states | Present | `homepage.tsx`, `homepage.test.tsx` | HOME-W1 ✅ |
-| WEB-HOME-11 | Registry-backed homepage actions | Present | `homepage.tsx`, `shared/routes.ts` | HOME-W1 ✅ |
+| WEB-HOME-11 | Registry-backed homepage actions, including the role-neutral Gateway health link | Present | `homepage.tsx`, `homepage.test.tsx`, `shared/routes.ts` | HOME-W1 ✅ |
 | WEB-HOME-12 | Real Quick Create, placement exclusion, invalidation, navigation | Present | `app/application/homepage/quick-create.ts`, `use-homepage.ts`, `use-homepage.test.tsx` | HOME-W1 ✅ |
 | WEB-HOME-13 | Secure bounded unique-name generation | Present | `app/adapters/security/browser-random.ts`, `quick-create.ts`, `quick-create.test.ts` | HOME-W1 ✅ |
 | WEB-HOME-14 | External link registry | Present | `packages/gateway-management-ui/src/application/external-links.json` | HOME-W1 ✅ |
@@ -881,6 +881,13 @@ Local-dev lifecycle (`make openshift-up` / `down` / component swaps) is implemen
 - Quick Create submits `selector: ["network/public", "provider/ibm"]` and `excludedSelector: ["runtime/kata"]`; the API placement contract validates and persists the exclusion.
 - The BFF platform-overview route is admin-only and the browser hook remains idle for non-administrators.
 - UI gate: screenshot capture and comparison are intentionally skipped because the user disabled snapshots for this conversation. Production/story data-boundary and PatternFly mockup checks passed, and the web-console package built both production and mockup Storybooks.
+- Issue #1 / PR #13 (2026-11-23, head `931b0c1`): WEB-HOME-11 and scenario
+  WEB-HOME-11.02 are Present. The Gateway health card uses localized
+  `View gateways` for administrator and non-administrator roles and retains
+  the `/gateways` route; `homepage.test.tsx` verifies the accessible name,
+  native anchor, keyboard focus, and Enter navigation. The web-console package
+  check passed all 201 tests, typechecking, production and Storybook builds;
+  the spec-ID, mockup PatternFly, and forbidden DOM-injection checks also passed.
 
 ### web-console/usage-dashboard.spec.md (issue 544, PR 563)
 
