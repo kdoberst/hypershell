@@ -344,7 +344,7 @@ function GatewayHealthCard({ state }: { state: HomepageState }) {
             icon={<ArrowRightIcon />}
             variant="link"
           >
-            View my gateways
+            View gateways
           </Button>
         </StackItem>
       </Stack>

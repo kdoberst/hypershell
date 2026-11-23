@@ -434,7 +434,7 @@ function GatewayHealthCard({
             icon={<ArrowRightIcon />}
             variant="link"
           >
-            <FormattedMessage {...messages.homepageViewMyGateways} />
+            <FormattedMessage {...messages.homepageViewGateways} />
           </Button>
         </StackItem>
       </Stack>

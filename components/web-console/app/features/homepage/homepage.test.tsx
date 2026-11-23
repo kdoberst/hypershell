@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { externalLinkUrls } from "@openshift-online/hypershell-gateway-management-ui";
@@ -25,6 +26,11 @@ vi.mock("./use-homepage", () => ({
 vi.mock("../shell/use-session", () => ({
   useSession: vi.fn(),
 }));
+
+function CurrentPath() {
+  const { pathname } = useLocation();
+  return <span data-testid="current-path">{pathname}</span>;
+}
 
 const summary: HomepageSummary = {
   quickCreate: {
@@ -113,6 +119,7 @@ function renderSurface({
           summary={summaryValue}
           summaryIsLoading={summaryIsLoading}
         />
+        <CurrentPath />
       </MemoryRouter>
     </IntlProvider>,
   );
@@ -153,6 +160,41 @@ describe("HomepagePageSurface", () => {
     expect(screen.getByText("42")).toBeTruthy();
     expect(screen.getByText("128")).toBeTruthy();
   });
+
+  it.each([
+    { role: "administrator", isAdmin: true },
+    { role: "non-administrator", isAdmin: false },
+  ])(
+    "uses a role-neutral gateway health link for $role",
+    async ({ isAdmin }) => {
+      const user = userEvent.setup();
+      renderSurface({
+        isAdmin,
+        platformOverview: isAdmin ? overview : undefined,
+      });
+
+      const gatewayLinks = screen.getAllByRole("link", {
+        name: "View gateways",
+      });
+      expect(gatewayLinks).toHaveLength(2);
+      const healthLink = gatewayLinks.at(-1);
+      expect(healthLink).toBeDefined();
+      if (healthLink === undefined) return;
+      expect(healthLink.tagName).toBe("A");
+      expect(healthLink.getAttribute("href")).toBe("/gateways");
+
+      for (
+        let index = 0;
+        index < 20 && document.activeElement !== healthLink;
+        index++
+      ) {
+        await user.tab();
+      }
+      expect(document.activeElement).toBe(healthLink);
+      await user.keyboard("{Enter}");
+      expect(screen.getByTestId("current-path").textContent).toBe("/gateways");
+    },
+  );
 
   it("renders the non-administrator dashboard card", () => {
     renderSurface({ isAdmin: false, platformOverview: undefined });

@@ -2611,10 +2611,6 @@
     "defaultMessage": "View gateways",
     "description": "Action that opens the gateway list."
   },
-  "app.homepage.actions.viewMyGateways": {
-    "defaultMessage": "View my gateways",
-    "description": "Action in the gateway health card."
-  },
   "app.homepage.announcement.example.body": {
     "defaultMessage": "HyperShell will be unavailable on Oct 24 from 02:00 to 03:00 CT while we upgrade the platform.",
     "description": "Body of the example homepage announcement."

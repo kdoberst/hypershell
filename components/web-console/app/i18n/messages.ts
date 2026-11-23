@@ -136,11 +136,6 @@ export const messages = defineMessages({
     defaultMessage: "Quick create",
     description: "Action that opens the gateway quick-create dialog.",
   },
-  homepageViewMyGateways: {
-    id: "app.homepage.actions.viewMyGateways",
-    defaultMessage: "View my gateways",
-    description: "Action in the gateway health card.",
-  },
   homepageDashboard: {
     id: "app.homepage.actions.dashboard",
     defaultMessage: "Dashboard",
