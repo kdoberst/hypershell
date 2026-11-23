@@ -219,7 +219,7 @@ the rest of `WEB` here for lookup convenience.
 | `WEB-DOCS` | `platform/openshell-install-docs-link.spec.md` | 2 |
 | `WEB-DPLY` | `web-console/architecture.spec.md` | 2 |
 | `WEB-GLIS` | `web-console/gateway-list-detail.spec.md` | 25 |
-| `WEB-HOME` | `web-console/homepage.spec.md` | 16 |
+| `WEB-HOME` | `web-console/homepage.spec.md` | 17 |
 | `WEB-I18N` | `web-console/architecture.spec.md` | 1 |
 | `WEB-OBS` | `web-console/architecture.spec.md` | 2 |
 | `WEB-OPS` | `web-console/operational-dashboard.spec.md` | 29 |

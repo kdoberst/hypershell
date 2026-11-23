@@ -41,7 +41,7 @@ The landing page is a friendly entry point for every authenticated user; the gat
 | Primary action | Provision a gateway or review platform health summary | Provision a gateway | Provision a gateway |
 | Summary | Gateway count, failed provisioning, and cluster health | Gateway count, failed gateways, and service-account warnings | Gateway count and gateways needing attention |
 | Platform overview | Authorized platform-wide gateway, cluster, sandbox, and incident summaries with dashboard links | Not shown unless explicitly authorized | Not shown unless explicitly authorized |
-| Gateway list link | View all gateways | View my gateways | View my gateways |
+| Gateway list link | View gateways | View gateways | View gateways |
 | Needs attention | Failed or degraded gateways and platform incidents | Failed gateways, incomplete setup, and expiring service accounts | Gateways that are unavailable or still provisioning |
 | Quick actions | Open dashboards, investigate, or delete a gateway | Create gateway, copy CLI command, or manage service accounts | Open console, request access, or contact the owner |
 | Recent activity | Recent failures and gateway creation | Recently used gateways and automation identities | Recently opened gateways |
@@ -49,7 +49,7 @@ The landing page is a friendly entry point for every authenticated user; the gat
 
 The landing page should also provide these shared controls:
 
-- View my gateways
+- View gateways
 - Clear status and recovery guidance
 - Recent or frequently used gateways
 - Notifications that require action
@@ -169,7 +169,7 @@ config:
 ---
 flowchart LR
     user["👤"] --> login["Login (RH auth)"]
-    login --> list["View my gateways"]
+    login --> list["View gateways"]
     list --> start["Select Create gateway"]
     start --> name["Enter gateway name"]
     name --> placement{"Managed placement available?"}

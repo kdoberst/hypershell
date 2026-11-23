@@ -245,13 +245,20 @@ Each data-backed card SHALL render a stable loading state that avoids layout shi
 
 ### Requirement: WEB-HOME-11 -- Homepage Actions
 
-Create a gateway SHALL navigate to `/gateways/new`. View gateways and View my gateways SHALL navigate to `/gateways`. Dashboard links SHALL navigate to `/dashboard`. Every action SHALL use the internal route registry and preserve normal browser behavior for modifier keys and middle-click navigation.
+Create a gateway SHALL navigate to `/gateways/new`. The Gateway health card SHALL provide a localized gateway-list link. Its English label SHALL be `View gateways` for every homepage role, and it SHALL navigate to `/gateways`. Dashboard links SHALL navigate to `/dashboard`. Every action SHALL use the internal route registry and preserve normal browser behavior for modifier keys and middle-click navigation.
 
 #### Scenario: WEB-HOME-11.01 -- Primary actions navigate correctly
 
 - GIVEN the homepage is rendered
 - WHEN the user activates Create a gateway, View gateways, or a dashboard link
 - THEN the SPA SHALL navigate to the corresponding registry-backed route
+
+#### Scenario: WEB-HOME-11.02 -- Gateway list action has role-neutral text
+
+- GIVEN the homepage is rendered for any supported role
+- WHEN the Gateway health card is visible
+- THEN its gateway-list link SHALL be labeled `View gateways`
+- AND activating the link SHALL navigate to `/gateways`
 
 ### Requirement: WEB-HOME-12 -- Quick Create Gateway
 
