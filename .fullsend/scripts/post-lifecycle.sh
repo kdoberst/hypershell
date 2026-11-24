@@ -485,19 +485,25 @@ fi
 # transition. For a non-review phase the comment is optional and best effort. The
 # sticky marker makes a reapplied result converge without a duplicate (HOOK-09).
 if [[ -n "${comment}" ]]; then
-  _comment_err="$(mktemp)"
-  if gh_post_sticky_comment "${REPO}" "${NUMBER}" "${MARKER}" "${comment}" \
-        >/dev/null 2>"${_comment_err}"; then
-    rm -f "${_comment_err}"
-  else
-    cat "${_comment_err}" >&2 || true
-    rm -f "${_comment_err}"
-    if (( comment_required )); then
-      echo "post-lifecycle: FAILED to post the required ${PHASE} review comment; not applying the transition so a rerun can retry the comment and the labels" >&2
-      exit 1
-    fi
-    echo "post-lifecycle: WARNING: failed to post the optional ${PHASE} comment; continuing with the transition" >&2
+  comment_targets=("${NUMBER}")
+  if [[ "${PHASE}" == "code-implementation" && "${outcome}" == "completed" && "${human_review_required}" == "true" ]]; then
+    comment_targets+=("${trusted_pr}")
   fi
+  for comment_target in "${comment_targets[@]}"; do
+    _comment_err="$(mktemp)"
+    if gh_post_sticky_comment "${REPO}" "${comment_target}" "${MARKER}" "${comment}" \
+          >/dev/null 2>"${_comment_err}"; then
+      rm -f "${_comment_err}"
+    else
+      cat "${_comment_err}" >&2 || true
+      rm -f "${_comment_err}"
+      if (( comment_required )); then
+        echo "post-lifecycle: FAILED to post the required ${PHASE} comment to ${REPO}#${comment_target}; not applying the transition so a rerun can retry the comments and labels" >&2
+        exit 1
+      fi
+      echo "post-lifecycle: WARNING: failed to post the optional ${PHASE} comment to ${REPO}#${comment_target}; continuing with the transition" >&2
+    fi
+  done
 fi
 
 # Queue eligibility is granted only for the same open, conflict-free, green

@@ -114,10 +114,11 @@ code phase runs. It removes any stale `agent/review-code-approved` so a new
 revision of the code is reviewable again.
 
 When a code-implementation result sets `human_review_required` to true, it SHALL
-provide `human_review_reason`. The trusted transition SHALL post a visible
-instruction explaining that a human must verify the UI changes and, after doing
-so, manually remove `agent/human-review-required` from the execution record and
-linked PR. Automated code review SHALL continue in parallel. An approved
+provide `human_review_reason`. The trusted transition SHALL post the same
+visible instruction to both the execution record and linked PR, explaining that
+a human must verify the UI changes and, after doing so, manually remove
+`agent/human-review-required` from both places. Automated code review SHALL
+continue in parallel. An approved
 code-review verdict MAY apply the linked PR queue-approval label, but Mergify
 SHALL NOT merge the PR while its human-review gate remains.
 
@@ -637,8 +638,9 @@ A code-implementation result MAY request a human UI review with a boolean
 required. The trusted code-implementation post-script SHALL add
 `agent/human-review-required` to the execution record and linked PR, remove any
 stale human-review gate labels from both places when review is not requested,
-and post a visible instruction telling the human to verify the UI changes and
-manually remove the gate label from both places.
+and post the same visible instruction to both the execution record and linked
+PR telling the human to verify the UI changes and manually remove the gate
+label from both places.
 
 When human review is requested, the trusted transition SHALL install
 `agent/reviewable-code` and `agent/human-review-required` together in the same

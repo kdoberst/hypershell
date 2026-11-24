@@ -232,11 +232,11 @@ When a trigger applies, the completed code-implementation result includes both:
 ```
 
 Fullsend adds `agent/reviewable-code` and `agent/human-review-required` together
-in one issue label-add request, then adds the human-review gate to the linked
-PR. Automated code review continues. Mergify cannot merge the PR while it has
-`agent/human-review-required`; after human review, a person manually removes
-that label from both the issue and PR. Non-UI PRs are not blocked by the
-absence of UI review labels.
+in one issue label-add request, then adds the human-review gate and the same
+review explanation to the linked PR. Automated code review continues. Mergify
+cannot merge the PR while it has `agent/human-review-required`; after human
+review, a person manually removes that label from both the issue and PR.
+Non-UI PRs are not blocked by the absence of UI review labels.
 
 ## 8. Publish PR evidence
 

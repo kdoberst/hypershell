@@ -123,6 +123,7 @@ completed prerequisite, and verifies the final state.
 Set `human_review_required` to `true` only when the work item's process requires
 a human design, pattern, accessibility, or other judgment call. Provide a
 specific `human_review_reason`. The trusted post-script adds
-`agent/human-review-required` to both the work item and its pull request.
+`agent/human-review-required` and the same review explanation to both the work
+item and its pull request.
 Automated code review continues in parallel; Mergify holds the pull request
 until a human manually removes that label from both places.

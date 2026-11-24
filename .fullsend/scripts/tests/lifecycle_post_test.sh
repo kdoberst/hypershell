@@ -292,9 +292,9 @@ rc=$?
 if [[ "${rc}" == 0 ]] && _has_label "${S}" agent/reviewable-code \
    && _has_label "${S}" agent/human-review-required \
    && _has_label "${S}.pr" agent/human-review-required \
-   && grep -q "Human UI review required" "${WORK}/human-required.body" \
-   && grep -q "manually remove" "${WORK}/human-required.body"; then
-  _ok "code implementation adds the human-review gate to the issue and PR"
+   && [[ "$(grep -c "Human UI review required" "${WORK}/human-required.body")" == 2 ]] \
+   && [[ "$(grep -c "manually remove" "${WORK}/human-required.body")" == 2 ]]; then
+  _ok "code implementation adds the human-review gate and mirrored instruction to the issue and PR"
 else
   _no "code implementation adds the human-review gate to the issue and PR" "rc=${rc} $(cat "${WORK}/human-required.out")"
 fi
@@ -608,7 +608,7 @@ _run spec-review \
 rc=$?
 after="$(sort "${S}")"
 if [[ "${rc}" != 0 ]] && [[ "${before}" == "${after}" ]] \
-   && grep -q "required spec-review review comment" "${WORK}/S.out"; then
+   && grep -q "required spec-review comment" "${WORK}/S.out"; then
   _ok "a failed required review comment blocks the transition and fails visibly"
 else
   _no "a failed required review comment blocks the transition and fails visibly" "rc=${rc} $(cat "${WORK}/S.out")"
