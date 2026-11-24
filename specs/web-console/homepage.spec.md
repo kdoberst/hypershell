@@ -245,12 +245,12 @@ Each data-backed card SHALL render a stable loading state that avoids layout shi
 
 ### Requirement: WEB-HOME-11 -- Homepage Actions
 
-Create a gateway SHALL navigate to `/gateways/new`. View gateways and View my gateways SHALL navigate to `/gateways`. Dashboard links SHALL navigate to `/dashboard`. Every action SHALL use the internal route registry and preserve normal browser behavior for modifier keys and middle-click navigation.
+The gateway-creation action SHALL navigate to `/gateways/new`. Gateway-list actions, including role-specific variants, SHALL navigate to `/gateways`. Dashboard actions SHALL navigate to `/dashboard`. Every action SHALL use the internal route registry and preserve normal browser behavior for modifier keys and middle-click navigation. Localized action wording SHALL identify the destination without binding the spec to exact link text.
 
 #### Scenario: WEB-HOME-11.01 -- Primary actions navigate correctly
 
 - GIVEN the homepage is rendered
-- WHEN the user activates Create a gateway, View gateways, or a dashboard link
+- WHEN the user activates a gateway-creation, gateway-list, or dashboard action
 - THEN the SPA SHALL navigate to the corresponding registry-backed route
 
 ### Requirement: WEB-HOME-12 -- Quick Create Gateway

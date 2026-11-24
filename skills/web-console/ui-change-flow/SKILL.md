@@ -19,8 +19,10 @@ or PatternFly workflow.
 
 - Specs, not attached issues or mockups, are the durable source of intent.
 - A mockup is an optional input. Never create one only to satisfy this flow.
-- Classify risk as Tier 0, Tier 1, or Tier 2, but never use the tier to narrow
-  validation. A check may be omitted only when it cannot apply to the changed UI.
+- Classify risk as Tier 0, Tier 1, or Tier 2. Use the Tier 0 copy-only fast
+  path only when every eligibility condition in this flow is met; otherwise do
+  not use the tier to narrow validation. A check may be omitted only when it
+  cannot apply to the changed UI.
 - Run implementation → validation → fix until every applicable check passes or
   a real blocker is documented. A failed check is implementation work.
 - Fullsend owns all `agent/*` labels. Emit a structured result; never add or
@@ -40,15 +42,35 @@ or PatternFly workflow.
 2. Inspect the affected production component, owning spec, positive pattern
    library, and relevant shared UI package before choosing a tier.
 3. Classify the change:
-   - **Tier 0: cosmetic:** text, token, prop, fixture, or small layout change
-     that uses an existing approved pattern.
-   - **Tier 1: normalized implementation:** a new composition that uses only
-     existing approved patterns, components, terminology, and interaction conventions.
-   - **Tier 2: structural or pattern risk:** new page, navigation change,
-     cross-page change, new shared component or pattern, materially changed
-     responsive behavior, or any deviation from an established pattern.
+   - **Tier 0: exact match.** The implementation already matches the approved
+     spec, mockup, and established pattern; only localized copy, tokens, props,
+     or fixtures change.
+   - **Tier 1: normalized implementation.** A new composition uses only existing
+     approved patterns, components, terminology, and interaction conventions,
+     and still matches the approved spec or mockup.
+   - **Tier 2: structural or divergence risk.** The change introduces a new page,
+     navigation change, cross-page change, new shared component or pattern,
+     materially changed responsive behavior, or any deviation from the approved
+     spec, mockup, or established pattern.
 4. Record the tier and a one-to-three sentence rationale. If classification is
    uncertain, choose the higher tier and say why.
+
+### Tier 0 copy-only fast path
+
+Use this fast path only when all of the following are true:
+
+- The production component, route, props, state, data flow, layout, navigation,
+  and accessibility semantics are unchanged.
+- The only production change is localized text or a message ID used by an
+  existing approved PatternFly component.
+- The component still uses the same existing HyperShell or approved
+  PatternFly component.
+- Any repository mockup change only updates the same visible text.
+
+If any condition is uncertain, use the normal Tier 0 process rather than the
+fast path. The fast path does not apply to new or changed components, routes,
+layouts, interactions, states, props, fixtures, tokens, visual hierarchy,
+accessibility semantics, shared packages, or non-localized user-visible copy.
 
 Required evidence: tier, rationale, input inventory, affected surfaces, and
 whether each input is text, static, interactive, or an existing UI.
@@ -93,9 +115,12 @@ conformance, and any intentional deviation with authority to make it.
 
 ## 4. Determine every applicable check
 
-Read all check files in `references/checks/`. Build a written applicability
-table; do not copy their requirements into the PR. For each check, record
-`applies`, `does not apply`, or `blocked`, plus evidence.
+For a Tier 0 copy-only change, use the precomputed applicability matrix below.
+Read an individual check reference only when a matrix entry is unclear or the
+change fails an eligibility condition. For every other UI change, read all
+check files in `references/checks/`. Build a written applicability table; do
+not copy their requirements into the PR. For each check, record `applies`,
+`does not apply`, or `blocked`, plus evidence.
 
 | Check | Reference | Always consider |
 |---|---|---|
@@ -107,9 +132,22 @@ table; do not copy their requirements into the PR. For each check, record
 | Visual input | `references/checks/visual-input.md` | Input normalization, deviations, transient artifacts, mockup reuse |
 | New pattern | `references/checks/new-pattern-determination.md` | Reuse search, candidate contract, library admission, human review |
 
-A Tier 0 link change still receives applicable accessibility, design, coverage,
-conformance, and usability checks. For example, link text, semantics, keyboard
-operability, focus, target, and surrounding state must be checked.
+Tier 0 copy-only applicability matrix:
+
+| Check | Applicability | Required evidence |
+|---|---|---|
+| Rules and design | Applies | Confirm the component and PatternFly usage are unchanged and the text remains in the localized message model. |
+| Coverage | Applies | Run the focused tests for the affected component or feature and confirm existing states are unchanged. |
+| Accessibility | Applies | Inspect the rendered element or its test to confirm label text, semantics, keyboard operability, focus behavior, and target are unchanged. |
+| Usability heuristics | Applies | Confirm the new text is clear, accurate, and does not change an action or state meaning. |
+| Conformance and automation | Applies | Run i18n extraction/check, the focused component test, the forbidden DOM-injection scan, and the affected package gate required by repository policy. |
+| Visual input | Applies only when a repository mockup changes | Update the same text in the existing mockup and run its focused test or typecheck. |
+| New pattern | Does not apply | The existing component and pattern remain unchanged. |
+
+A Tier 0 change that is not copy-only still receives applicable accessibility,
+design, coverage, conformance, and usability checks. For example, link text,
+semantics, keyboard operability, focus, target, and surrounding state must be
+checked.
 
 Required evidence: the applicability table and the reason each omitted check
 cannot apply to this change.
@@ -155,6 +193,8 @@ index entry, story, checker result, and human-review trigger.
 
 5. Run the broader repository checks required by the changed packages. Do not
    replace type, lint, unit, build, or Storybook checks with a visual review.
+   For a Tier 0 copy-only change, run the affected package gate and repository
+   policy checks; do not run unrelated frontend package gates.
 6. For a new or materially changed production page with an approved repository
    mockup, execute `skills/build/ui-build-gate/SKILL.md` and wait for its terminal
    state. If the runtime cannot inspect images, use its documented
@@ -169,10 +209,10 @@ rerun result, build-gate terminal state when applicable, and any documented bloc
 
 Set `human_review_required: true` when any trigger applies:
 
-- The change is Tier 2.
-- The change is beyond Tier 0 and no static or interactive mockup was provided.
+- The final built item differs from the approved spec, work item, or mockup.
+- The change introduces structural or pattern risk, including Tier 2 work.
+- No static or interactive mockup was provided and the change is beyond Tier 0.
 - No visual input was provided and the agent made Tier 1 or Tier 2 design decisions.
-- The final built item materially differs from the provided text or mockup.
 - A spec, requirement, status model, interaction pattern, or shared component
   contract changed.
 - Accessibility or usability risk could not be resolved automatically.
