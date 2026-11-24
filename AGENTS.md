@@ -22,9 +22,8 @@ critical conventions.
 ## Secret safety
 
 Never print, log, copy, transmit, or otherwise expose secret values. Do not
-dump complete environments, credential files, keychains, process environments,
-or authenticated client state. When environment inspection is necessary, list
-only explicitly allowlisted variable names or use a command that reports a
+expose broad runtime context or signed-in client state. When checking
+configuration, inspect only explicitly allowlisted variable names, or report a
 variable as present or absent without emitting its value. If a command might
 return secrets, redirect or filter it before output and never paste raw output
 into the conversation.
