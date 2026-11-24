@@ -31,6 +31,7 @@ $ARGUMENTS
 - **Desired state only.** Ask what the system should do, not what's broken.
 - **Scope boundary.** Which components does this change touch? (API, gRPC, CP, plugins)
 - **Reserved terms check.** Verify no collision with HyperShell domain terms (Gateway, ManagedCluster).
+- **UI intent check.** Describe user intent, role, route, state, and accessibility semantics. Do not bind localized link or button wording to the requirement unless the exact string is itself a legal, branding, API, or accessibility contract.
 - **Visual deliverable check.** If the spec describes a new or materially changed visual web-console page and the user provides an approved screenshot or visual reference, the deliverable includes a repository mockup under `specs/web-console/mockups/` and its Storybook design-review story. Treat both the written spec and visual artifact as required before finalizing.
 
 ### Phase 2 -- Ground in the codebase
@@ -142,6 +143,9 @@ same way.
   availability, placement capability labels, and application features. Describe
   platform-specific outcomes directly rather than defining one platform through
   features excluded from another.
+- **UI copy and labels.** Keep localized labels, link text, and other cosmetic
+  wording out of requirements. Name the semantic action and its destination;
+  exact strings belong in the implementation and localized message catalogs.
 
 During the critic pass, check for required settings with defaults, contradictory
 omission behavior, bug-specific exclusions, and rollout workarounds presented as

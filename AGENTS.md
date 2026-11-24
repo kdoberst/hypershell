@@ -19,6 +19,16 @@ eligibility but not automated code review.
 Read `CLAUDE.md` before implementation and follow its repository commands and
 critical conventions.
 
+## Secret safety
+
+Never print, log, copy, transmit, or otherwise expose secret values. Do not
+dump complete environments, credential files, keychains, process environments,
+or authenticated client state. When environment inspection is necessary, list
+only explicitly allowlisted variable names or use a command that reports a
+variable as present or absent without emitting its value. If a command might
+return secrets, redirect or filter it before output and never paste raw output
+into the conversation.
+
 ## Forbidden browser DOM injection
 
 Never use React's raw-HTML prop, DOM HTML properties or methods, or equivalent

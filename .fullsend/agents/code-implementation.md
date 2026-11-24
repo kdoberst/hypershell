@@ -80,12 +80,17 @@ as new specifications.
 
 ### Step 4: Reconcile Specifications
 
-Execute the [reconcile skill](../../../skills/build/reconcile/SKILL.md) against the specification changes identified in Step 3.
+Execute the [reconcile skill](../../../skills/build/reconcile/SKILL.md) once
+per owning specification identified in Step 3, using its `--spec <path>` mode.
+Do not perform whole-codebase reconciliation or read the full historical
+checkpoint for a PR that changes a small set of specifications.
 
 If the change affects web-console UI, execute
 [ui-change-flow](../../../skills/web-console/ui-change-flow/SKILL.md) during
 implementation. Its applicability table, validation loop, PR evidence, and
-human-review decision are required before this phase can emit `completed`.
+human-review decision are required before this phase can emit `completed`. Use
+the Tier 0 copy-only fast path only when every eligibility condition in that
+flow is met.
 
 
 ### Step 5: Review Changes
@@ -96,9 +101,10 @@ If the review produces findings:
 - Return to Step 4 and address the findings
 Else:
 - Address any failing CI checks found in Step 2. Before pushing, run the
-  authoritative CI-equivalent gate locally (the commands in the reconcile skill
-  Phase 6 step 3, or `make lint`) and require it green to avoid format/gofmt/SDK
-  drift CI ping-pong.
+  authoritative CI-equivalent gates for the changed paths (the mapping in the
+  reconcile skill Phase 6 step 3, plus the applicable Tier 0 copy-only commands
+  when that fast path is eligible) and require them green to avoid
+  format/gofmt/SDK drift CI ping-pong. Do not run unrelated package gates.
 - Address any merge conflicts found in Step 2.
 - Commit (if not already) and push code to `$LINKED_PULL_REQUEST`.
 
