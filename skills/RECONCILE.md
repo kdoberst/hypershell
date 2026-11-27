@@ -49,6 +49,19 @@ skills/
 
 ## Reconciliation State
 
+### Gateway rename field presentation (complete, issue #2 / PR #15)
+
+Scoped reconciliation of `specs/web-console/gateway-list-detail.spec.md`
+(`WEB-GLIS-27`) found one frontend gap: the rename dialog rendered a visible
+`Gateway name` field label. `GatewayRenameDialog` now omits that visible label
+and uses the existing localized gateway-name message as the input's accessible
+name. The component test and production gateway-detail Storybook interaction
+cover the no-visible-label and accessible-name requirements. No other scoped
+requirement gap was found.
+
+**Last analyzed**: 2026-11-27 at implementation commit
+`e63f26fddc51ca297754bc7f0b7b0992cbd76b64` (PR #15).
+
 ### PlatformGatewayPolicy / Cedar (in progress, branch implementer/spec-HYPERSHELL-563-platform-gateway-policy)
 
 Scoped reconciliation of the PlatformGatewayPolicy spec set introduced by #1148

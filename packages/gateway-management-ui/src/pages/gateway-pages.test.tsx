@@ -278,6 +278,9 @@ describe("gateway shell pages", () => {
     const renameDialog = screen.getByRole("dialog", {
       name: "Rename Team gateway",
     });
+    expect(
+      within(renameDialog).queryByText("Gateway name", { exact: true }),
+    ).toBeNull();
     const nameInput = within(renameDialog).getByRole("textbox", {
       name: "Gateway name",
     });

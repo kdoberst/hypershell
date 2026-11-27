@@ -8,6 +8,7 @@ import {
   GatewayUiProvider,
 } from "@openshift-online/hypershell-gateway-management-ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { IntlProvider } from "react-intl";
 
 const gateway: GatewayRecord = {
@@ -50,6 +51,8 @@ const gatewayOperations = {
       name: "Cluster East",
       status: "Ready",
     }),
+  renameGateway: (_gatewayId: string, name: string) =>
+    Promise.resolve({ ...gateway, name }),
   listGatewayAccess: () =>
     Promise.resolve({
       capabilities: {
@@ -121,6 +124,28 @@ type Story = StoryObj<typeof meta>;
 
 export const Details: Story = {
   args: { activeTab: "details" },
+};
+
+export const RenameDialog: Story = {
+  args: { activeTab: "details" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Actions" }));
+    await userEvent.click(
+      canvas.getByRole("menuitem", { name: "Rename gateway" }),
+    );
+
+    const page = within(canvasElement.ownerDocument.body);
+    const dialog = await page.findByRole("dialog", {
+      name: "Rename payments-gateway",
+    });
+    await expect(
+      within(dialog).queryByText("Gateway name", { exact: true }),
+    ).toBeNull();
+    await expect(
+      within(dialog).getByRole("textbox", { name: "Gateway name" }),
+    ).toBeVisible();
+  },
 };
 
 export const Connection: Story = {
