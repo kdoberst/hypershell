@@ -98,12 +98,9 @@ export function GatewayRenameDialog({
           ) : null}
           <StackItem>
             <Form id={formId} onSubmit={submit}>
-              <FormGroup
-                fieldId={fieldId}
-                isRequired
-                label={intl.formatMessage(messages.gatewayName)}
-              >
+              <FormGroup fieldId={fieldId} isRequired>
                 <TextInput
+                  aria-label={intl.formatMessage(messages.gatewayName)}
                   aria-describedby={
                     showRequired ? `${fieldId}-helper` : undefined
                   }
