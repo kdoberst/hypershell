@@ -969,6 +969,7 @@ The gateway management UI package SHALL include unit/component tests (running th
 - Service accounts tab availability during provisioning, expandable rows, and setup modal
 - Attention alerts and role-aware sandbox links
 - Dialog treatments (danger vs. primary styling)
+- Gateway rename dialog field presentation and accessible name
 - Tab loading, refresh scoping, and stale cache behavior
 - Probe emission (one started + one terminal per operation)
 
@@ -1011,6 +1012,13 @@ The repository UI completion gate SHALL be executed per `skills/build/ui-build-g
 - THEN screenshot capture and comparison SHALL be skipped
 - AND the handoff SHALL record that visual review was unavailable
 - AND all non-parity checks SHALL still run
+
+#### Scenario: WEB-GLIS-25.06 -- CI covers rename field accessibility
+
+- WHEN the UI test suite runs
+- THEN it SHALL assert that the rename dialog shows no visible field label
+- AND it SHALL assert that the name input has an accessible name that identifies
+  it as the Gateway name
 
 ---
 
@@ -1065,6 +1073,20 @@ mandatory web-console completion gate.
 - GIVEN the Policies tab with audit findings for this gateway
 - WHEN the user switches "My operations / All operations" and the outcome filter
 - THEN the findings list SHALL update to match the selected scope and outcome
+
+### Requirement: WEB-GLIS-27 -- Gateway Rename Field Presentation
+
+The gateway rename dialog SHALL present its name input without a visible field
+label. The input SHALL retain an accessible name that identifies it as the
+Gateway name. Placeholder text SHALL NOT be the input's only accessible name.
+
+#### Scenario: WEB-GLIS-27.01 -- Rename input retains an accessible name
+
+- GIVEN a user opens the rename dialog for a Gateway
+- WHEN the dialog renders
+- THEN the name input SHALL have no visible field label
+- AND the input SHALL have an accessible name that identifies it as the Gateway name
+- AND placeholder text SHALL NOT be its only accessible name
 
 ## Non-Goals
 
